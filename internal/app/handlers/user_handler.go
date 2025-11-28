@@ -1,0 +1,199 @@
+package handlers
+
+import (
+	"net/http"
+	"strconv"
+
+	"dvra-api/internal/app/dtos"
+	"dvra-api/internal/app/services"
+	"github.com/geomark27/loom-go/pkg/helpers"
+	"github.com/gin-gonic/gin"
+)
+
+// UserHandler handles user-related routes
+type UserHandler struct {
+	userService services.UserService
+	logger      helpers.Logger
+}
+
+// NewUserHandler creates a new UserHandler instance
+func NewUserHandler(userService services.UserService) *UserHandler {
+	return &UserHandler{
+		userService: userService,
+		logger:      helpers.NewLogger(),
+	}
+}
+
+// GetUsers retrieves all users
+func (h *UserHandler) GetUsers(c *gin.Context) {
+	users, err := h.userService.GetAllUsers()
+	if err != nil {
+		h.logger.Error("Failed to get users", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to retrieve users",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Users retrieved successfully",
+		"data": gin.H{
+			"users": users,
+			"count": len(users),
+		},
+	})
+}
+
+// GetUser retrieves a user by ID
+func (h *UserHandler) GetUser(c *gin.Context) {
+	idParam, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid user ID",
+		})
+		return
+	}
+	id := uint(idParam)
+
+	user, err := h.userService.GetUserByID(id)
+	if err != nil {
+		if err.Error() == "user not found" {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "User not found",
+			})
+			return
+		}
+		h.logger.Error("Failed to get user", "error", err, "user_id", id)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to retrieve user",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "User retrieved successfully",
+		"data":    user,
+	})
+}
+
+// CreateUser creates a new user
+func (h *UserHandler) CreateUser(c *gin.Context) {
+	var dto dtos.CreateUserDTO
+
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request body",
+			"details": err.Error(),
+		})
+		return
+	}
+	// Validate DTO
+	if errors := helpers.ValidateStruct(&dto); len(errors) > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Validation failed",
+			"details": errors,
+		})
+		return
+	}
+
+	user, err := h.userService.CreateUser(dto)
+	if err != nil {
+		h.logger.Error("Failed to create user", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to create user",
+		})
+		return
+	}
+	h.logger.Info("User created successfully", "user_id", user.ID)
+	
+	c.JSON(http.StatusCreated, gin.H{
+		"status":  "success",
+		"message": "User created successfully",
+		"data":    user,
+	})
+}
+
+// UpdateUser updates an existing user
+func (h *UserHandler) UpdateUser(c *gin.Context) {
+	idParam, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid user ID",
+		})
+		return
+	}
+	id := uint(idParam)
+
+	var dto dtos.UpdateUserDTO
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request body",
+			"details": err.Error(),
+		})
+		return
+	}
+	// Validate DTO
+	if errors := helpers.ValidateStruct(&dto); len(errors) > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Validation failed",
+			"details": errors,
+		})
+		return
+	}
+
+	user, err := h.userService.UpdateUser(id, dto)
+	if err != nil {
+		if err.Error() == "user not found" {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "User not found",
+			})
+			return
+		}
+		h.logger.Error("Failed to update user", "error", err, "user_id", id)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to update user",
+		})
+		return
+	}
+	h.logger.Info("User updated successfully", "user_id", id)
+	
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "User updated successfully",
+		"data":    user,
+	})
+}
+
+// DeleteUser deletes a user
+func (h *UserHandler) DeleteUser(c *gin.Context) {
+	idParam, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid user ID",
+		})
+		return
+	}
+	id := uint(idParam)
+
+	if err := h.userService.DeleteUser(id); err != nil {
+		if err.Error() == "user not found" {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "User not found",
+			})
+			return
+		}
+		h.logger.Error("Failed to delete user", "error", err, "user_id", id)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to delete user",
+		})
+		return
+	}
+	h.logger.Info("User deleted successfully", "user_id", id)
+	
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "User deleted successfully",
+	})
+}
