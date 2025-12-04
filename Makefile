@@ -55,18 +55,63 @@ clean: ## Limpia archivos generados
 	@rm -f coverage.out coverage.html
 	@go clean
 
-dev: ## Modo desarrollo (requiere air para hot reload)
+dev: ## Modo desarrollo con hot reload (requiere air)
 	@echo "🔥 Iniciando en modo desarrollo..."
 	@air
+
+dev-full: ## Setup completo desarrollo (DB + migrate + seed + run)
+	@echo "🚀 Starting development environment..."
+	@$(MAKE) db-up
+	@echo "⏳ Waiting for PostgreSQL..."
+	@sleep 3
+	@loom db:migrate --seed
+	@echo "✅ Ready! Starting API..."
+	@go run $(CMD_DIR)/main.go
+
+fresh: ## Reset completo (clean DB + migrate + seed)
+	@echo "🔄 Fresh install..."
+	@$(MAKE) db-clean
+	@$(MAKE) db-up
+	@echo "⏳ Waiting for PostgreSQL..."
+	@sleep 3
+	@loom db:fresh --seed
+	@echo "✅ Database fresh and seeded!"
 
 install-tools: ## Instala herramientas de desarrollo
 	@echo "🛠️  Instalando herramientas de desarrollo..."
 	@go install github.com/cosmtrek/air@latest
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
-# Comandos de base de datos (para futuras implementaciones)
-db-migrate: ## Ejecuta migraciones (cuando se implemente)
-	@echo "🗃️  Migraciones de base de datos no implementadas aún"
+# Comandos de Docker
+db-up: ## Inicia PostgreSQL en Docker
+	@echo "🐳 Starting PostgreSQL..."
+	@docker-compose up -d
+	@echo "✅ PostgreSQL running on localhost:5433"
 
-db-seed: ## Ejecuta seeders (cuando se implemente)
-	@echo "🌱 Seeders de base de datos no implementados aún"
+db-down: ## Detiene PostgreSQL
+	@echo "🛑 Stopping PostgreSQL..."
+	@docker-compose down
+
+db-restart: ## Reinicia PostgreSQL
+	@echo "🔄 Restarting PostgreSQL..."
+	@docker-compose restart
+
+db-logs: ## Muestra logs de PostgreSQL
+	@docker-compose logs -f postgres
+
+db-clean: ## Elimina PostgreSQL y volumenes
+	@echo "🧹 Cleaning database..."
+	@docker-compose down -v
+	@echo "✅ Database cleaned"
+
+db-shell: ## Accede a psql en el contenedor
+	@docker exec -it dvra-postgres psql -U ramosmg -d dvra_db
+
+# Comandos de base de datos con LOOM
+db-migrate: ## Ejecuta migraciones con LOOM
+	@echo "🗃️  Running migrations..."
+	@loom db:migrate
+
+db-seed: ## Ejecuta seeders con LOOM
+	@echo "🌱 Running seeders..."
+	@loom db:seed

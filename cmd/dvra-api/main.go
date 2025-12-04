@@ -5,9 +5,14 @@ import (
 
 	"dvra-api/internal/platform/config"
 	"dvra-api/internal/platform/server"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Cargar variables de entorno desde .env
+	_ = godotenv.Load()
+
 	// Cargar configuración
 	cfg := config.Load()
 
