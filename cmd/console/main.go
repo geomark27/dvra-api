@@ -7,11 +7,15 @@ import (
 	"dvra-api/internal/database/seeders"
 	"dvra-api/internal/platform/config"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"gorm.io/gorm"
 )
 
 func main() {
+	// Cargar variables de entorno desde .env
+	_ = godotenv.Load()
+
 	rootCmd := &cobra.Command{
 		Use:   "console",
 		Short: "Database console tools for <no value>",
