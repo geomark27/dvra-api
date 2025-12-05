@@ -34,7 +34,12 @@ func (h *MembershipHandler) GetMemberships(c *gin.Context) {
 }
 
 func (h *MembershipHandler) GetMembership(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "ID inválido"})
+		return
+	}
+
 	membership, err := h.membershipService.GetMembershipByID(uint(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -58,25 +63,38 @@ func (h *MembershipHandler) CreateMembership(c *gin.Context) {
 }
 
 func (h *MembershipHandler) UpdateMembership(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "ID inválido"})
+		return
+	}
+
 	var dto dtos.UpdateMembershipDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	membership, err := h.membershipService.UpdateMembership(uint(id), dto)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": membership})
 }
 
 func (h *MembershipHandler) DeleteMembership(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "ID inválido"})
+		return
+	}
+
 	if err := h.membershipService.DeleteMembership(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Membership deleted"})
 }
