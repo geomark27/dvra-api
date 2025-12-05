@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"dvra-api/internal/database"
 	"dvra-api/internal/platform/config"
 	"dvra-api/internal/platform/server"
 
@@ -16,8 +17,24 @@ func main() {
 	// Cargar configuración
 	cfg := config.Load()
 
+	// Inicializar base de datos
+	db, err := database.InitDB(cfg)
+	if err != nil {
+		log.Fatal("Error conectando a la base de datos:", err)
+	}
+	defer func() {
+		if err := database.CloseDB(); err != nil {
+			log.Printf("Error cerrando la base de datos: %v", err)
+		}
+	}()
+
+	// Ejecutar migraciones automáticas
+	if err := database.AutoMigrate(db); err != nil {
+		log.Fatal("Error ejecutando migraciones:", err)
+	}
+
 	// Crear servidor
-	srv := server.New(cfg)
+	srv := server.New(cfg, db)
 
 	// Mensaje de inicio
 	log.Printf("🚀 Servidor %s iniciado en http://localhost:%s", "dvra-api", cfg.Port)

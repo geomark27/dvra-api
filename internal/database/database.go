@@ -40,7 +40,7 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 
 	DB = db
 	log.Println("✅ Database connection established successfully")
-	
+
 	return db, nil
 }
 
@@ -65,5 +65,17 @@ func CloseDB() error {
 	}
 
 	log.Println("✅ Database connection closed")
+	return nil
+}
+
+// AutoMigrate runs database migrations for all models
+func AutoMigrate(db *gorm.DB) error {
+	log.Println("🔄 Running database migrations...")
+
+	if err := db.AutoMigrate(AllModels...); err != nil {
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	log.Println("✅ Database migrations completed successfully")
 	return nil
 }

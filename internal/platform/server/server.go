@@ -11,6 +11,7 @@ import (
 	"dvra-api/internal/platform/config"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // Server represents the HTTP server
@@ -18,16 +19,17 @@ type Server struct {
 	config     *config.Config
 	router     *gin.Engine
 	httpServer *http.Server
+	db         *gorm.DB
 }
 
 // New creates a new server instance with all dependencies injected
-func New(cfg *config.Config) *Server {
+func New(cfg *config.Config, db *gorm.DB) *Server {
 	// Set Gin mode based on environment
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Create repositories
+	// Create repositories (injecting DB connection)
 	userRepo := repositories.NewUserRepository()
 
 	// Create services (injecting repositories)
@@ -59,6 +61,7 @@ func New(cfg *config.Config) *Server {
 		config:     cfg,
 		router:     router,
 		httpServer: httpServer,
+		db:         db,
 	}
 }
 
@@ -76,7 +79,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 func corsMiddleware(allowedOrigins []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
-		
+
 		// Check if origin is allowed
 		allowed := false
 		for _, allowedOrigin := range allowedOrigins {
