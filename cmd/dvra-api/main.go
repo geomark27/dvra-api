@@ -28,10 +28,13 @@ func main() {
 		}
 	}()
 
-	// Ejecutar migraciones automáticas
-	if err := database.AutoMigrate(db); err != nil {
-		log.Fatal("Error ejecutando migraciones:", err)
-	}
+	// NOTA: Las migraciones se ejecutan manualmente con:
+	// go run cmd/console/main.go migrate
+	// O con: loom db:migrate
+	//
+	// Si err := database.AutoMigrate(db); err != nil {
+	// 	log.Fatal("Error ejecutando migraciones:", err)
+	// }
 
 	// Crear servidor
 	srv := server.New(cfg, db)
@@ -39,7 +42,6 @@ func main() {
 	// Mensaje de inicio
 	log.Printf("🚀 Servidor %s iniciado en http://localhost:%s", "dvra-api", cfg.Port)
 	log.Printf("✨ Proyecto generado con Loom")
-	log.Printf("📖 Documentación disponible en: docs/API.md")
 
 	// Iniciar servidor
 	if err := srv.Start(); err != nil {

@@ -6,6 +6,7 @@ import (
 
 var AllModels = []interface{}{
 	&models.User{},
+	&models.Role{},
 	&models.Company{},
 	&models.Job{},
 	&models.Membership{},

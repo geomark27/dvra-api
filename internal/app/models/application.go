@@ -9,11 +9,11 @@ import (
 // Application represents the application entity in the database
 type Application struct {
 	gorm.Model
-	JobID       string `gorm:"type:uuid;not null;index" json:"job_id"`
-	CandidateID string `gorm:"type:uuid;not null;index" json:"candidate_id"`
+	JobID       uint `gorm:"not null;index" json:"job_id"`
+	CandidateID uint `gorm:"not null;index" json:"candidate_id"`
 
 	// ⚠️ CRÍTICO: company_id (redundante pero útil para queries)
-	CompanyID string `gorm:"type:uuid;not null;index:idx_applications_company_stage,priority:1" json:"company_id"`
+	CompanyID uint `gorm:"not null;index:idx_applications_company_stage,priority:1" json:"company_id"`
 
 	// Pipeline
 	Stage string `gorm:"type:varchar(100);not null;index:idx_applications_company_stage,priority:2" json:"stage"`
@@ -26,11 +26,6 @@ type Application struct {
 	AppliedAt  time.Time  `gorm:"type:timestamp;default:now()" json:"applied_at"`
 	RejectedAt *time.Time `gorm:"type:timestamp" json:"rejected_at,omitempty"`
 	HiredAt    *time.Time `gorm:"type:timestamp" json:"hired_at,omitempty"`
-
-	// Timestamps
-	CreatedAt time.Time      `gorm:"type:timestamp;default:now()" json:"created_at"`
-	UpdatedAt time.Time      `gorm:"type:timestamp;default:now()" json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relaciones
 	Job       *Job       `gorm:"foreignKey:JobID" json:"job,omitempty"`

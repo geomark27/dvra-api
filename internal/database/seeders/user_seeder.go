@@ -14,39 +14,67 @@ type UserSeeder struct{}
 
 // Run executes the user seeder
 func (s *UserSeeder) Run(db *gorm.DB) error {
-	// Check if admin user already exists
-	var existing models.User
-	result := db.Where("email = ?", "admin@example.com").First(&existing)
 
-	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
-		log.Printf("❌ Error checking existing user: %v", result.Error)
-		return result.Error
-	}
+	// 1. Crear SuperAdmin (modo dios - sin empresa)
+	var superAdmin models.User
+	result := db.Where("email = ?", "superadmin@dvra.com").First(&superAdmin)
 
-	// If user doesn't exist, create it
 	if result.Error == gorm.ErrRecordNotFound {
-		// Hash password
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("SuperAdmin123!"), bcrypt.DefaultCost)
 		if err != nil {
-			log.Printf("❌ Error hashing password: %v", err)
+			log.Printf("❌ Error hashing superadmin password: %v", err)
 			return err
 		}
 
-		admin := models.User{
-			Name:         "Admin User",
-			Email:        "admin@example.com",
+		superAdmin = models.User{
+			Name:         "Super Admin",
+			Email:        "superadmin@dvra.com",
 			PasswordHash: string(hashedPassword),
 			IsActive:     true,
 		}
 
-		if err := db.Create(&admin).Error; err != nil {
-			log.Printf("❌ Error creating admin user: %v", err)
+		if err := db.Create(&superAdmin).Error; err != nil {
+			log.Printf("❌ Error creating superadmin user: %v", err)
 			return err
 		}
 
-		log.Println("✅ Admin user created successfully")
+		log.Println("✅ SuperAdmin created successfully (email: superadmin@dvra.com, password: SuperAdmin123!)")
+	} else if result.Error != nil {
+		log.Printf("❌ Error checking superadmin: %v", result.Error)
+		return result.Error
 	} else {
-		log.Println("⏭️  Admin user already exists, skipping")
+		log.Println("⏭️  SuperAdmin already exists, skipping")
+	}
+
+	// 2. Crear Admin de empresa (para Azentic Sys)
+	var companyAdmin models.User
+	result = db.Where("email = ?", "admin@azentic.com").First(&companyAdmin)
+
+	if result.Error == gorm.ErrRecordNotFound {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("Admin123!"), bcrypt.DefaultCost)
+		if err != nil {
+			log.Printf("❌ Error hashing admin password: %v", err)
+			return err
+		}
+
+		companyAdmin = models.User{
+			Name:         "Admin Azentic",
+			Email:        "admin@azentic.com",
+			PasswordHash: string(hashedPassword),
+			IsActive:     true,
+		}
+
+		if err := db.Create(&companyAdmin).Error; err != nil {
+			log.Printf("❌ Error creating company admin user: %v", err)
+			return err
+		}
+
+		log.Println("✅ Company Admin created successfully (email: admin@azentic.com, password: Admin123!)")
+	} else if result.Error != nil {
+		log.Printf("❌ Error checking company admin: %v", result.Error)
+		return result.Error
+	} else {
+		log.Println("⏭️  Company Admin already exists, skipping")
 	}
 
 	return nil

@@ -18,8 +18,9 @@ build: ## Compila la aplicación
 	@go build -o $(BUILD_DIR)/$(APP_NAME) $(CMD_DIR)/main.go
 	@echo "✅ Compilación exitosa: $(BUILD_DIR)/$(APP_NAME)"
 
-run: ## Ejecuta la aplicación
+run: ## Ejecuta la aplicación (sin migraciones)
 	@echo "🚀 Ejecutando $(APP_NAME)..."
+	@echo "💡 Nota: Para migraciones usa 'make db-migrate' o 'loom db:migrate'"
 	@go run $(CMD_DIR)/main.go
 
 test: ## Ejecuta los tests

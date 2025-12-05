@@ -6,6 +6,7 @@ import (
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+
 	"github.com/geomark27/loom-go/pkg/helpers"
 	"github.com/gin-gonic/gin"
 )
@@ -84,7 +85,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request body",
+			"error":   "Invalid request body",
 			"details": err.Error(),
 		})
 		return
@@ -92,7 +93,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	// Validate DTO
 	if errors := helpers.ValidateStruct(&dto); len(errors) > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Validation failed",
+			"error":   "Validation failed",
 			"details": errors,
 		})
 		return
@@ -107,7 +108,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 	h.logger.Info("User created successfully", "user_id", user.ID)
-	
+
 	c.JSON(http.StatusCreated, gin.H{
 		"status":  "success",
 		"message": "User created successfully",
@@ -129,7 +130,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	var dto dtos.UpdateUserDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request body",
+			"error":   "Invalid request body",
 			"details": err.Error(),
 		})
 		return
@@ -137,7 +138,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	// Validate DTO
 	if errors := helpers.ValidateStruct(&dto); len(errors) > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Validation failed",
+			"error":   "Validation failed",
 			"details": errors,
 		})
 		return
@@ -158,7 +159,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 	h.logger.Info("User updated successfully", "user_id", id)
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "User updated successfully",
@@ -191,7 +192,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 	h.logger.Info("User deleted successfully", "user_id", id)
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "User deleted successfully",

@@ -31,13 +31,28 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 
 	// Create repositories (injecting DB connection)
 	userRepo := repositories.NewUserRepository()
+	companyRepo := repositories.NewCompanyRepository()
+	membershipRepo := repositories.NewMembershipRepository()
+	candidateRepo := repositories.NewCandidateRepository()
+	applicationRepo := repositories.NewApplicationRepository()
+	jobRepo := repositories.NewJobRepository()
 
 	// Create services (injecting repositories)
 	userService := services.NewUserService(userRepo)
+	companyService := services.NewCompanyService(companyRepo)
+	membershipService := services.NewMembershipService(membershipRepo)
+	candidateService := services.NewCandidateService(candidateRepo)
+	applicationService := services.NewApplicationService(applicationRepo)
+	jobService := services.NewJobService(jobRepo)
 
 	// Create handlers (injecting services)
 	healthHandler := handlers.NewHealthHandler()
 	userHandler := handlers.NewUserHandler(userService)
+	companyHandler := handlers.NewCompanyHandler(companyService)
+	membershipHandler := handlers.NewMembershipHandler(membershipService)
+	candidateHandler := handlers.NewCandidateHandler(candidateService)
+	applicationHandler := handlers.NewApplicationHandler(applicationService)
+	jobHandler := handlers.NewJobHandler(jobService)
 
 	// Create Gin router
 	router := gin.Default()
@@ -46,7 +61,7 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	router.Use(corsMiddleware(cfg.CorsAllowedOrigins))
 
 	// Register routes
-	registerRoutes(router, healthHandler, userHandler)
+	registerRoutes(router, healthHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler)
 
 	// Configure HTTP server
 	httpServer := &http.Server{
