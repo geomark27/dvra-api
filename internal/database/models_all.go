@@ -8,4 +8,7 @@ var AllModels = []interface{}{
 	&models.User{},
 	&models.Company{},
 	&models.Job{},
+	&models.Membership{},
+	&models.Candidate{},
+	&models.Application{},
 }

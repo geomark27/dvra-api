@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"dvra-api/internal/app/models"
+
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -32,10 +33,10 @@ func (s *UserSeeder) Run(db *gorm.DB) error {
 		}
 
 		admin := models.User{
-			Name:     "Admin User",
-			Email:    "admin@example.com",
-			Password: string(hashedPassword),
-			IsActive: true,
+			Name:         "Admin User",
+			Email:        "admin@example.com",
+			PasswordHash: string(hashedPassword),
+			IsActive:     true,
 		}
 
 		if err := db.Create(&admin).Error; err != nil {

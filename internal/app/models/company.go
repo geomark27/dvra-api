@@ -1,20 +1,33 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 // Company represents the company entity in the database
 type Company struct {
 	gorm.Model
-	Name        string `gorm:"size:100;not null" json:"name"`
-	Description string `gorm:"type:text" json:"description"`
-	// Add your fields here
-	// Example:
-	// Price    float64 `gorm:"not null;default:0" json:"price"`
-	// Stock    int     `gorm:"default:0" json:"stock"`
-	// IsActive bool    `gorm:"default:true" json:"is_active"`
+	Name        string         `gorm:"type:varchar(255);not null" json:"name"`
+	Slug        string         `gorm:"type:varchar(100);uniqueIndex;not null" json:"slug"`
+	LogoURL     string         `gorm:"type:text" json:"logo_url,omitempty"`
+	PlanTier    string         `gorm:"type:varchar(50);not null;default:'free'" json:"plan_tier"`
+	TrialEndsAt *time.Time     `gorm:"type:timestamp" json:"trial_ends_at,omitempty"`
+	Timezone    string         `gorm:"type:varchar(100);default:'America/Bogota'" json:"timezone"`
+	CreatedAt   time.Time      `gorm:"type:timestamp;default:now()" json:"created_at"`
+	UpdatedAt   time.Time      `gorm:"type:timestamp;default:now()" json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+	Memberships []Membership   `gorm:"many2many:company_memberships;" json:"memberships,omitempty"`
 }
 
-// TableName overrides the table name (optional)
-// func (Company) TableName() string {
-//     return "companys"
-// }
+func (Company) TableName() string {
+	return "companies"
+}
+
+func (c *Company) IsTrialActive() bool {
+	if c.TrialEndsAt == nil {
+		return false
+	}
+	return time.Now().Before(*c.TrialEndsAt)
+}
