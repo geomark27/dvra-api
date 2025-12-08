@@ -12,6 +12,7 @@ import (
 type UserService interface {
 	GetAllUsers() ([]models.User, error)
 	GetUserByID(id uint) (*models.User, error)
+	GetUsersByCompanyID(companyID uint) ([]models.User, error)
 	CreateUser(dto dtos.CreateUserDTO) (*models.User, error)
 	UpdateUser(id uint, dto dtos.UpdateUserDTO) (*models.User, error)
 	DeleteUser(id uint) error
@@ -32,6 +33,11 @@ func NewUserService(userRepo repositories.UserRepository) UserService {
 // GetAllUsers obtiene todos los usuarios
 func (s *userService) GetAllUsers() ([]models.User, error) {
 	return s.userRepo.GetAll()
+}
+
+// GetUsersByCompanyID obtiene usuarios de una empresa específica
+func (s *userService) GetUsersByCompanyID(companyID uint) ([]models.User, error) {
+	return s.userRepo.GetByCompanyID(companyID)
 }
 
 // GetUserByID obtiene un usuario por su ID
@@ -64,9 +70,9 @@ func (s *userService) CreateUser(dto dtos.CreateUserDTO) (*models.User, error) {
 	}
 
 	user := &models.User{
-		Name:  dto.Name,
-		Email: dto.Email,
-		Age:   dto.Age,
+		FirstName: dto.FirstName,
+		LastName:  dto.LastName,
+		Email:     dto.Email,
 	}
 
 	createdUser, err := s.userRepo.Create(user)
@@ -88,14 +94,14 @@ func (s *userService) UpdateUser(id uint, dto dtos.UpdateUserDTO) (*models.User,
 	}
 
 	// Actualizar campos si se proporcionan
-	if dto.Name != nil {
-		existingUser.Name = *dto.Name
+	if dto.FirstName != nil {
+		existingUser.FirstName = *dto.FirstName
+	}
+	if dto.LastName != nil {
+		existingUser.LastName = *dto.LastName
 	}
 	if dto.Email != nil {
 		existingUser.Email = *dto.Email
-	}
-	if dto.Age != nil {
-		existingUser.Age = *dto.Age
 	}
 
 	updatedUser, err := s.userRepo.Update(existingUser)

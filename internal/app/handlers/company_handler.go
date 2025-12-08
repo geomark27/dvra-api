@@ -27,19 +27,48 @@ func NewCompanyHandler(companyService services.CompanyService) *CompanyHandler {
 
 // GetCompanies retrieves all companies
 func (h *CompanyHandler) GetCompanies(c *gin.Context) {
-	companies, err := h.companyService.GetAllCompanies()
+	role, _ := c.Get("role")
+
+	// SuperAdmin puede ver todas las empresas
+	if role == "superadmin" {
+		companies, err := h.companyService.GetAllCompanies()
+		if err != nil {
+			h.logger.Error("Failed to get companies", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve companies"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "success",
+			"message": "Companies retrieved successfully",
+			"data": gin.H{
+				"companies": companies,
+				"count":     len(companies),
+			},
+		})
+		return
+	}
+
+	// Usuarios normales solo ven su empresa
+	companyIDVal, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+		return
+	}
+
+	companyID := companyIDVal.(uint)
+	company, err := h.companyService.GetCompanyByID(companyID)
 	if err != nil {
-		h.logger.Error("Failed to get companies", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve companies"})
+		h.logger.Error("Failed to get company", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve company"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
-		"message": "Companies retrieved successfully",
+		"message": "Company retrieved successfully",
 		"data": gin.H{
-			"companies": companies,
-			"count":     len(companies),
+			"companies": []interface{}{company},
+			"count":     1,
 		},
 	})
 }
@@ -50,6 +79,22 @@ func (h *CompanyHandler) GetCompany(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid company ID"})
 		return
+	}
+
+	role, _ := c.Get("role")
+
+	// Validar acceso: SuperAdmin o miembro de la empresa
+	if role != "superadmin" {
+		companyIDVal, exists := c.Get("company_id")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+			return
+		}
+		companyID := companyIDVal.(uint)
+		if uint(id) != companyID {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+			return
+		}
 	}
 
 	company, err := h.companyService.GetCompanyByID(uint(id))
@@ -105,6 +150,21 @@ func (h *CompanyHandler) UpdateCompany(c *gin.Context) {
 		return
 	}
 
+	// Validar acceso: SuperAdmin o miembro de esa empresa
+	role, _ := c.Get("role")
+	if role != "superadmin" {
+		companyIDVal, exists := c.Get("company_id")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+			return
+		}
+		companyID := companyIDVal.(uint)
+		if uint(id) != companyID {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+			return
+		}
+	}
+
 	var dto dtos.UpdateCompanyDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
@@ -139,6 +199,13 @@ func (h *CompanyHandler) DeleteCompany(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid company ID"})
+		return
+	}
+
+	// Validar acceso: Solo SuperAdmin puede eliminar empresas
+	role, _ := c.Get("role")
+	if role != "superadmin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only superadmin can delete companies"})
 		return
 	}
 

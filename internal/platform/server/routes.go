@@ -2,6 +2,9 @@ package server
 
 import (
 	"dvra-api/internal/app/handlers"
+	adminHandlers "dvra-api/internal/app/handlers/admin"
+	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/middleware"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,28 +14,33 @@ import (
 func registerRoutes(
 	router *gin.Engine,
 	healthHandler *handlers.HealthHandler,
+	authHandler *handlers.AuthHandler,
 	userHandler *handlers.UserHandler,
 	companyHandler *handlers.CompanyHandler,
 	membershipHandler *handlers.MembershipHandler,
 	candidateHandler *handlers.CandidateHandler,
 	applicationHandler *handlers.ApplicationHandler,
 	jobHandler *handlers.JobHandler,
+	superAdminHandler *adminHandlers.SuperAdminCompaniesHandler,
+	jwtService services.JWTService,
 ) {
 	// Root route
 	router.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message":        "Welcome to dvra-api!",
 			"status":         "success",
-			"version":        "v1.1.0",
+			"version":        "v1.2.0",
 			"generated_with": "Loom",
 			"endpoints": gin.H{
 				"health":       "/api/v1/health",
+				"auth":         "/api/v1/auth",
 				"users":        "/api/v1/users",
 				"companies":    "/api/v1/companies",
 				"memberships":  "/api/v1/memberships",
 				"jobs":         "/api/v1/jobs",
 				"candidates":   "/api/v1/candidates",
 				"applications": "/api/v1/applications",
+				"admin":        "/api/v1/admin (SuperAdmin only)",
 			},
 		})
 	})
@@ -40,68 +48,113 @@ func registerRoutes(
 	// API v1 group
 	api := router.Group("/api/v1")
 	{
-		// Health routes
+		// Health routes (public)
 		api.GET("/health", healthHandler.Health)
 		api.GET("/health/ready", healthHandler.Ready)
 
-		// User routes
-		users := api.Group("/users")
+		// Auth routes (public)
+		auth := api.Group("/auth")
 		{
-			users.GET("", userHandler.GetUsers)
-			users.POST("", userHandler.CreateUser)
-			users.GET("/:id", userHandler.GetUser)
-			users.PUT("/:id", userHandler.UpdateUser)
-			users.DELETE("/:id", userHandler.DeleteUser)
+			// Public routes
+			auth.POST("/register-company", authHandler.RegisterCompany)
+			auth.POST("/register", authHandler.Register) // Deprecated: use register-company
+			auth.POST("/login", authHandler.Login)
+			auth.POST("/refresh", authHandler.RefreshToken)
+
+			// SuperAdmin login (separate endpoint)
+			auth.POST("/superadmin/login", authHandler.SuperAdminLogin)
+
+			// Protected auth routes
+			authProtected := auth.Group("")
+			authProtected.Use(middleware.AuthMiddleware(jwtService))
+			{
+				authProtected.GET("/me", authHandler.GetMe)
+				authProtected.POST("/change-password", authHandler.ChangePassword)
+				authProtected.POST("/logout", authHandler.Logout)
+				authProtected.POST("/switch-company", authHandler.SwitchCompany)
+				authProtected.GET("/my-companies", authHandler.GetMyCompanies)
+			}
 		}
 
-		// Company routes
-		companies := api.Group("/companies")
+		// Protected routes (require authentication)
+		protected := api.Group("")
+		protected.Use(middleware.AuthMiddleware(jwtService))
 		{
-			companies.GET("", companyHandler.GetCompanies)
-			companies.POST("", companyHandler.CreateCompany)
-			companies.GET("/:id", companyHandler.GetCompany)
-			companies.PUT("/:id", companyHandler.UpdateCompany)
-			companies.DELETE("/:id", companyHandler.DeleteCompany)
+			// User routes
+			users := protected.Group("/users")
+			{
+				users.GET("", userHandler.GetUsers)
+				users.POST("", userHandler.CreateUser)
+				users.GET("/:id", userHandler.GetUser)
+				users.PUT("/:id", userHandler.UpdateUser)
+				users.DELETE("/:id", userHandler.DeleteUser)
+			}
+
+			// Company routes
+			companies := protected.Group("/companies")
+			{
+				companies.GET("", companyHandler.GetCompanies)
+				companies.POST("", companyHandler.CreateCompany)
+				companies.GET("/:id", companyHandler.GetCompany)
+				companies.PUT("/:id", companyHandler.UpdateCompany)
+				companies.DELETE("/:id", companyHandler.DeleteCompany)
+			}
+
+			// Membership routes
+			memberships := protected.Group("/memberships")
+			{
+				memberships.GET("", membershipHandler.GetMemberships)
+				memberships.POST("", membershipHandler.CreateMembership)
+				memberships.GET("/:id", membershipHandler.GetMembership)
+				memberships.PUT("/:id", membershipHandler.UpdateMembership)
+				memberships.DELETE("/:id", membershipHandler.DeleteMembership)
+			}
+
+			// Job routes
+			jobs := protected.Group("/jobs")
+			{
+				jobs.GET("", jobHandler.GetJobs)
+				jobs.POST("", jobHandler.CreateJob)
+				jobs.GET("/:id", jobHandler.GetJob)
+				jobs.PUT("/:id", jobHandler.UpdateJob)
+				jobs.DELETE("/:id", jobHandler.DeleteJob)
+			}
+
+			// Candidate routes
+			candidates := protected.Group("/candidates")
+			{
+				candidates.GET("", candidateHandler.GetCandidates)
+				candidates.POST("", candidateHandler.CreateCandidate)
+				candidates.GET("/:id", candidateHandler.GetCandidate)
+				candidates.PUT("/:id", candidateHandler.UpdateCandidate)
+				candidates.DELETE("/:id", candidateHandler.DeleteCandidate)
+			}
+
+			// Application routes
+			applications := protected.Group("/applications")
+			{
+				applications.GET("", applicationHandler.GetApplications)
+				applications.POST("", applicationHandler.CreateApplication)
+				applications.GET("/:id", applicationHandler.GetApplication)
+				applications.PUT("/:id", applicationHandler.UpdateApplication)
+				applications.DELETE("/:id", applicationHandler.DeleteApplication)
+			}
 		}
 
-		// Membership routes
-		memberships := api.Group("/memberships")
+		// SuperAdmin routes (Global - No company scope required)
+		admin := api.Group("/admin")
+		admin.Use(middleware.AuthMiddleware(jwtService))
+		admin.Use(middleware.RequireSuperAdmin())
 		{
-			memberships.GET("", membershipHandler.GetMemberships)
-			memberships.POST("", membershipHandler.CreateMembership)
-			memberships.GET("/:id", membershipHandler.GetMembership)
-			memberships.PUT("/:id", membershipHandler.UpdateMembership)
-			memberships.DELETE("/:id", membershipHandler.DeleteMembership)
-		}
+			// Company management
+			admin.GET("/companies", superAdminHandler.GetAllCompanies)
+			admin.POST("/companies", superAdminHandler.CreateCompany)
+			admin.PUT("/companies/:id/plan", superAdminHandler.ChangeCompanyPlan)
+			admin.POST("/companies/:id/suspend", superAdminHandler.SuspendCompany)
+			admin.GET("/companies/:id/users", superAdminHandler.GetCompanyUsers)
 
-		// Job routes
-		jobs := api.Group("/jobs")
-		{
-			jobs.GET("", jobHandler.GetJobs)
-			jobs.POST("", jobHandler.CreateJob)
-			jobs.GET("/:id", jobHandler.GetJob)
-			jobs.PUT("/:id", jobHandler.UpdateJob)
-			jobs.DELETE("/:id", jobHandler.DeleteJob)
-		}
-
-		// Candidate routes
-		candidates := api.Group("/candidates")
-		{
-			candidates.GET("", candidateHandler.GetCandidates)
-			candidates.POST("", candidateHandler.CreateCandidate)
-			candidates.GET("/:id", candidateHandler.GetCandidate)
-			candidates.PUT("/:id", candidateHandler.UpdateCandidate)
-			candidates.DELETE("/:id", candidateHandler.DeleteCandidate)
-		}
-
-		// Application routes
-		applications := api.Group("/applications")
-		{
-			applications.GET("", applicationHandler.GetApplications)
-			applications.POST("", applicationHandler.CreateApplication)
-			applications.GET("/:id", applicationHandler.GetApplication)
-			applications.PUT("/:id", applicationHandler.UpdateApplication)
-			applications.DELETE("/:id", applicationHandler.DeleteApplication)
+			// Analytics and reports
+			admin.GET("/analytics", superAdminHandler.GetGlobalAnalytics)
 		}
 	}
 }

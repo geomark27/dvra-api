@@ -6,6 +6,7 @@ import (
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+
 	"github.com/geomark27/loom-go/pkg/helpers"
 	"github.com/gin-gonic/gin"
 )
@@ -20,7 +21,28 @@ func NewCandidateHandler(candidateService services.CandidateService) *CandidateH
 }
 
 func (h *CandidateHandler) GetCandidates(c *gin.Context) {
-	candidates, err := h.candidateService.GetAllCandidates()
+	role, _ := c.Get("role")
+
+	// SuperAdmin puede ver todos los candidates
+	if role == "superadmin" {
+		candidates, err := h.candidateService.GetAllCandidates()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve candidates"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "success", "data": gin.H{"candidates": candidates, "count": len(candidates)}})
+		return
+	}
+
+	// Usuarios normales solo ven candidates de su empresa
+	companyIDVal, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+		return
+	}
+
+	companyID := companyIDVal.(uint)
+	candidates, err := h.candidateService.GetCandidatesByCompanyID(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve candidates"})
 		return
@@ -35,6 +57,22 @@ func (h *CandidateHandler) GetCandidate(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Validar acceso: SuperAdmin o miembro de la misma empresa
+	role, _ := c.Get("role")
+	if role != "superadmin" {
+		companyIDVal, exists := c.Get("company_id")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+			return
+		}
+		companyID := companyIDVal.(uint)
+		if candidate.CompanyID != companyID {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+			return
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": candidate})
 }
 
@@ -44,6 +82,19 @@ func (h *CandidateHandler) CreateCandidate(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Forzar company_id del token para usuarios normales
+	role, _ := c.Get("role")
+	if role != "superadmin" {
+		companyIDVal, exists := c.Get("company_id")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+			return
+		}
+		companyID := companyIDVal.(uint)
+		dto.CompanyID = companyID
+	}
+
 	candidate, err := h.candidateService.CreateCandidate(dto)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -54,6 +105,27 @@ func (h *CandidateHandler) CreateCandidate(c *gin.Context) {
 
 func (h *CandidateHandler) UpdateCandidate(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+
+	// Validar que el candidate pertenece a la empresa del usuario
+	role, _ := c.Get("role")
+	if role != "superadmin" {
+		candidate, err := h.candidateService.GetCandidateByID(uint(id))
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Candidate not found"})
+			return
+		}
+		companyIDVal, exists := c.Get("company_id")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+			return
+		}
+		companyID := companyIDVal.(uint)
+		if candidate.CompanyID != companyID {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+			return
+		}
+	}
+
 	var dto dtos.UpdateCandidateDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -69,6 +141,27 @@ func (h *CandidateHandler) UpdateCandidate(c *gin.Context) {
 
 func (h *CandidateHandler) DeleteCandidate(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+
+	// Validar que el candidate pertenece a la empresa del usuario
+	role, _ := c.Get("role")
+	if role != "superadmin" {
+		candidate, err := h.candidateService.GetCandidateByID(uint(id))
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Candidate not found"})
+			return
+		}
+		companyIDVal, exists := c.Get("company_id")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+			return
+		}
+		companyID := companyIDVal.(uint)
+		if candidate.CompanyID != companyID {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+			return
+		}
+	}
+
 	if err := h.candidateService.DeleteCandidate(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

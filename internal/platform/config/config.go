@@ -25,7 +25,8 @@ type Config struct {
 	DBSSLMode   string
 
 	// JWT (para futuras implementaciones)
-	JWTSecret string
+	JWTSecret        string
+	JWTRefreshSecret string
 }
 
 // Load carga la configuración desde variables de entorno
@@ -48,7 +49,8 @@ func Load() *Config {
 		DBSSLMode:   getEnv("DB_SSLMODE", "disable"),
 
 		// JWT
-		JWTSecret: getEnv("JWT_SECRET", "your-default-secret-change-in-production"),
+		JWTSecret:        getEnv("JWT_SECRET", "your-default-secret-change-in-production"),
+		JWTRefreshSecret: getEnv("JWT_REFRESH_SECRET", "your-refresh-secret-change-in-production"),
 	}
 }
 

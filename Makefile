@@ -86,23 +86,23 @@ install-tools: ## Instala herramientas de desarrollo
 # Comandos de Docker
 db-up: ## Inicia PostgreSQL en Docker
 	@echo "🐳 Starting PostgreSQL..."
-	@docker-compose up -d
+	@docker compose up -d
 	@echo "✅ PostgreSQL running on localhost:5433"
 
 db-down: ## Detiene PostgreSQL
 	@echo "🛑 Stopping PostgreSQL..."
-	@docker-compose down
+	@docker compose down
 
 db-restart: ## Reinicia PostgreSQL
 	@echo "🔄 Restarting PostgreSQL..."
-	@docker-compose restart
+	@docker compose restart
 
 db-logs: ## Muestra logs de PostgreSQL
-	@docker-compose logs -f postgres
+	@docker compose logs -f postgres
 
 db-clean: ## Elimina PostgreSQL y volumenes
 	@echo "🧹 Cleaning database..."
-	@docker-compose down -v
+	@docker compose down -v
 	@echo "✅ Database cleaned"
 
 db-shell: ## Accede a psql en el contenedor

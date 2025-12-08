@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"dvra-api/internal/app/handlers"
+	adminHandlers "dvra-api/internal/app/handlers/admin"
 	"dvra-api/internal/app/repositories"
 	"dvra-api/internal/app/services"
+	adminServices "dvra-api/internal/app/services/admin"
 	"dvra-api/internal/platform/config"
 
 	"github.com/gin-gonic/gin"
@@ -29,6 +31,9 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
+	// Create JWT service
+	jwtService := services.NewJWTService(cfg.JWTSecret, cfg.JWTRefreshSecret)
+
 	// Create repositories (injecting DB connection)
 	userRepo := repositories.NewUserRepository()
 	companyRepo := repositories.NewCompanyRepository()
@@ -38,6 +43,7 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	jobRepo := repositories.NewJobRepository()
 
 	// Create services (injecting repositories)
+	authService := services.NewAuthService(userRepo, jwtService, db)
 	userService := services.NewUserService(userRepo)
 	companyService := services.NewCompanyService(companyRepo)
 	membershipService := services.NewMembershipService(membershipRepo)
@@ -45,14 +51,21 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	applicationService := services.NewApplicationService(applicationRepo)
 	jobService := services.NewJobService(jobRepo)
 
+	// Create admin services
+	superAdminCompaniesService := adminServices.NewSuperAdminCompaniesService(db, companyRepo, userRepo, membershipRepo)
+
 	// Create handlers (injecting services)
 	healthHandler := handlers.NewHealthHandler()
+	authHandler := handlers.NewAuthHandler(authService)
 	userHandler := handlers.NewUserHandler(userService)
 	companyHandler := handlers.NewCompanyHandler(companyService)
 	membershipHandler := handlers.NewMembershipHandler(membershipService)
 	candidateHandler := handlers.NewCandidateHandler(candidateService)
 	applicationHandler := handlers.NewApplicationHandler(applicationService)
 	jobHandler := handlers.NewJobHandler(jobService)
+
+	// Create admin handlers
+	superAdminHandler := adminHandlers.NewSuperAdminCompaniesHandler(superAdminCompaniesService)
 
 	// Create Gin router
 	router := gin.Default()
@@ -61,7 +74,7 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	router.Use(corsMiddleware(cfg.CorsAllowedOrigins))
 
 	// Register routes
-	registerRoutes(router, healthHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler)
+	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, superAdminHandler, jwtService)
 
 	// Configure HTTP server
 	httpServer := &http.Server{

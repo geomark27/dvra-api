@@ -11,11 +11,16 @@ import (
 type UserRepository interface {
 	GetAll() ([]models.User, error)
 	GetByID(id uint) (*models.User, error)
+	GetByCompanyID(companyID uint) ([]models.User, error)
 	Create(user *models.User) (*models.User, error)
 	Update(user *models.User) (*models.User, error)
 	Delete(id uint) error
 	GetByEmail(email string) (*models.User, error)
 	GetUserWithMemberships(userID uint) (*models.User, error)
+	FindByEmail(email string) (*models.User, error)
+	FindByID(id int) (*models.User, error)
+	UpdateLastLogin(userID uint) error
+	UpdatePassword(userID uint, hashedPassword string) error
 }
 
 // userRepository es la implementación con GORM
@@ -38,13 +43,26 @@ func (r *userRepository) GetAll() ([]models.User, error) {
 // GetByID obtiene un usuario por su ID
 func (r *userRepository) GetByID(id uint) (*models.User, error) {
 	var user models.User
-	if err := database.DB.First(&user, id).Error; err != nil {
+	if err := database.DB.Preload("Memberships").First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
 		return nil, err
 	}
 	return &user, nil
+}
+
+// GetByCompanyID obtiene usuarios de una empresa específica
+func (r *userRepository) GetByCompanyID(companyID uint) ([]models.User, error) {
+	var users []models.User
+	err := database.DB.
+		Joins("JOIN memberships ON memberships.user_id = users.id").
+		Where("memberships.company_id = ?", companyID).
+		Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
 }
 
 // GetByEmail obtiene un usuario por su email
@@ -90,4 +108,28 @@ func (r *userRepository) GetUserWithMemberships(userID uint) (*models.User, erro
 		return nil, err
 	}
 	return &user, nil
+}
+
+// FindByEmail is an alias for GetByEmail (used by auth service)
+func (r *userRepository) FindByEmail(email string) (*models.User, error) {
+	return r.GetByEmail(email)
+}
+
+// FindByID gets a user by ID (int version for compatibility)
+func (r *userRepository) FindByID(id int) (*models.User, error) {
+	return r.GetByID(uint(id))
+}
+
+// UpdateLastLogin updates the last login timestamp
+func (r *userRepository) UpdateLastLogin(userID uint) error {
+	return database.DB.Model(&models.User{}).
+		Where("id = ?", userID).
+		Update("last_login_at", gorm.Expr("NOW()")).Error
+}
+
+// UpdatePassword updates user password
+func (r *userRepository) UpdatePassword(userID uint, hashedPassword string) error {
+	return database.DB.Model(&models.User{}).
+		Where("id = ?", userID).
+		Update("password_hash", hashedPassword).Error
 }

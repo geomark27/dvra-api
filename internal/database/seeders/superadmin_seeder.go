@@ -20,6 +20,16 @@ func (s *SuperAdminSeeder) Run(db *gorm.DB) error {
 		return err
 	}
 
+	// Marcar como SuperAdmin si aún no lo está
+	if !superAdmin.IsSuperAdmin {
+		superAdmin.IsSuperAdmin = true
+		if err := db.Save(&superAdmin).Error; err != nil {
+			log.Printf("❌ Error marking user as SuperAdmin: %v", err)
+			return err
+		}
+		log.Printf("✅ User marked as SuperAdmin: '%s %s'", superAdmin.FirstName, superAdmin.LastName)
+	}
+
 	// Verificar si ya tiene un membership con rol superadmin
 	// NOTA: SuperAdmin NO pertenece a ninguna empresa específica
 	// Pero podríamos crear un membership especial con CompanyID = 0 o NULL
@@ -45,7 +55,7 @@ func (s *SuperAdminSeeder) Run(db *gorm.DB) error {
 			return err
 		}
 
-		log.Printf("✅ SuperAdmin role assigned to '%s' (Global access)", superAdmin.Name)
+		log.Printf("✅ SuperAdmin role assigned to '%s %s' (Global access)", superAdmin.FirstName, superAdmin.LastName)
 	} else if result.Error != nil {
 		log.Printf("❌ Error checking superadmin membership: %v", result.Error)
 		return result.Error

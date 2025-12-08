@@ -62,7 +62,8 @@ func (s *CompanySeeder) Run(db *gorm.DB) error {
 			return err
 		}
 
-		log.Printf("✅ Membership created: User '%s' is admin of '%s'", adminUser.Name, company.Name)
+		name := adminUser.FirstName + " " + adminUser.LastName
+		log.Printf("✅ Membership created: User '%s' is admin of '%s'", name, company.Name)
 	} else {
 		log.Println("⏭️  Company 'Azentic Sys' already exists, skipping")
 	}

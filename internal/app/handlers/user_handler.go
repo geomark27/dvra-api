@@ -27,7 +27,38 @@ func NewUserHandler(userService services.UserService) *UserHandler {
 
 // GetUsers retrieves all users
 func (h *UserHandler) GetUsers(c *gin.Context) {
-	users, err := h.userService.GetAllUsers()
+	role, _ := c.Get("role")
+
+	// SuperAdmin puede ver todos los usuarios
+	if role == "superadmin" {
+		users, err := h.userService.GetAllUsers()
+		if err != nil {
+			h.logger.Error("Failed to get users", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to retrieve users",
+			})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "success",
+			"message": "Users retrieved successfully",
+			"data": gin.H{
+				"users": users,
+				"count": len(users),
+			},
+		})
+		return
+	}
+
+	// Usuarios normales solo ven usuarios de su empresa
+	companyIDVal, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+		return
+	}
+
+	companyID := companyIDVal.(uint)
+	users, err := h.userService.GetUsersByCompanyID(companyID)
 	if err != nil {
 		h.logger.Error("Failed to get users", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -70,6 +101,32 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 			"error": "Failed to retrieve user",
 		})
 		return
+	}
+
+	// Validar acceso: SuperAdmin puede ver cualquier user
+	// Usuarios normales solo pueden ver users de su empresa
+	role, _ := c.Get("role")
+	if role != "superadmin" {
+		companyIDVal, exists := c.Get("company_id")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+			return
+		}
+		companyID := companyIDVal.(uint)
+
+		// Verificar si el user pertenece a la empresa
+		userBelongsToCompany := false
+		for _, membership := range user.Memberships {
+			if membership.CompanyID != nil && *membership.CompanyID == companyID {
+				userBelongsToCompany = true
+				break
+			}
+		}
+
+		if !userBelongsToCompany {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{

@@ -27,7 +27,8 @@ func (s *UserSeeder) Run(db *gorm.DB) error {
 		}
 
 		superAdmin = models.User{
-			Name:         "Super Admin",
+			FirstName:    "Super",
+			LastName:     "Admin",
 			Email:        "superadmin@dvra.com",
 			PasswordHash: string(hashedPassword),
 			IsActive:     true,
@@ -58,7 +59,8 @@ func (s *UserSeeder) Run(db *gorm.DB) error {
 		}
 
 		companyAdmin = models.User{
-			Name:         "Admin Azentic",
+			FirstName:    "Azentic",
+			LastName:     "Systems",
 			Email:        "admin@azentic.com",
 			PasswordHash: string(hashedPassword),
 			IsActive:     true,
