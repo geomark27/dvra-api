@@ -373,7 +373,7 @@ Todos los endpoints de creación ahora **fuerzan el `company_id` del token** par
 | `POST /jobs` | ✅ Fuerza `dto.CompanyID = company_id_del_token` |
 | `POST /candidates` | ✅ Fuerza `dto.CompanyID = company_id_del_token` |
 | `POST /applications` | ✅ Fuerza `dto.CompanyID = company_id_del_token` |
-| `POST /memberships` | ✅ Fuerza `dto.CompanyID = &company_id_del_token` |
+| `POST /admin/memberships` | ✅ **SOLO SuperAdmin** - Requiere `dto.CompanyID` explícito |
 
 **Antes:**
 ```go
@@ -388,6 +388,16 @@ Todos los endpoints de creación ahora **fuerzan el `company_id` del token** par
 ```go
 // ✅ Se ignora el company_id enviado y se fuerza el del token
 dto.CompanyID = companyID_from_token
+```
+
+**Excepción - Memberships (MVP):**
+```go
+// ✅ POST /admin/memberships - SOLO SuperAdmin
+// Clientes obtienen 403 Forbidden con mensaje:
+// "Only superadmin can assign users to companies. Regular users should create new users instead."
+if role != "superadmin" {
+    return 403
+}
 ```
 
 ### Endpoints UPDATE (Actualización)

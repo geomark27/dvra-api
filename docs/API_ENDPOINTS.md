@@ -48,7 +48,7 @@ POST /api/v1/auth/register-company
 
 **Acceso:** Público
 
-**Descripción:** Crea una nueva empresa con su primer usuario administrador. Este es el flujo principal de registro.
+**Descripción:** Crea una nueva empresa con su primer usuario administrador. Este es el flujo principal de registro. La empresa se crea con el plan "free" por defecto, validando que el plan exista y esté activo en la base de datos.
 
 **Request Body:**
 ```json
@@ -749,41 +749,7 @@ GET /api/v1/memberships/:id
 
 ---
 
-### Crear Membership
-
-```http
-POST /api/v1/memberships
-```
-
-**Acceso:** Protegido (Admin only)  
-**Headers:** `Authorization: Bearer <token>`
-
-**Request Body:**
-```json
-{
-  "user_id": 2,
-  "company_id": 1,
-  "role": "recruiter"
-}
-```
-
-**Response (201):**
-```json
-{
-  "id": 2,
-  "user_id": 2,
-  "company_id": 1,
-  "role": "recruiter",
-  "status": "active"
-}
-```
-
-**Roles disponibles:**
-- `superadmin` (100)
-- `admin` (50)
-- `recruiter` (30)
-- `hiring_manager` (20)
-- `user` (10)
+> **NOTA MVP:** La creación de memberships (asignar usuarios a empresas) está **restringida a SuperAdmin** únicamente. Los administradores de empresa solo pueden ver, actualizar roles y eliminar memberships de su propia empresa. Ver [sección SuperAdmin](#crear-membership-asignar-usuario-a-empresa) para crear memberships.
 
 ---
 
@@ -1271,9 +1237,12 @@ POST /api/v1/admin/companies
   "admin_email": "admin@techcorp.com",
   "admin_password": "SecurePass123!",
   "admin_first_name": "Juan",
-  "admin_last_name": "Pérez"
+  "admin_last_name": "Pérez",
+  "plan_slug": "starter"  // Opcional: free, starter, professional, enterprise (default: free)
 }
 ```
+
+**Validación:** El sistema valida que el plan elegido exista en la base de datos y esté activo usando `FindActiveBySlug()`. Si no se especifica plan_slug, se asigna "free" por defecto.
 
 **Response (201):**
 ```json
@@ -1282,7 +1251,7 @@ POST /api/v1/admin/companies
     "id": 46,
     "name": "TechCorp SA",
     "slug": "techcorp-sa",
-    "plan_tier": "professional"
+    "plan_tier": "starter"
   },
   "admin": {
     "id": 120,
@@ -1377,6 +1346,53 @@ GET /api/v1/admin/companies/:id/users
   "count": 5
 }
 ```
+
+---
+
+### Crear Membership (Asignar Usuario a Empresa)
+
+```http
+POST /api/v1/admin/memberships
+```
+
+**Acceso:** SuperAdmin ÚNICAMENTE  
+**Headers:** `Authorization: Bearer <superadmin_token>`
+
+**Descripción:** Asigna un usuario existente a una empresa. Solo SuperAdmin puede realizar esta operación para evitar manipulación cross-company.
+
+**Request Body:**
+```json
+{
+  "user_id": 2,
+  "company_id": 1,
+  "role": "recruiter"
+}
+```
+
+**Response (201):**
+```json
+{
+  "id": 5,
+  "user_id": 2,
+  "company_id": 1,
+  "role": "recruiter",
+  "status": "active"
+}
+```
+
+**Roles disponibles:**
+- `superadmin` (100) - Acceso global
+- `admin` (50) - Administrador de empresa
+- `recruiter` (30) - Reclutador
+- `hiring_manager` (20) - Gerente de contratación
+- `user` (10) - Usuario básico
+
+**Errores:**
+- `403` - Usuario no es SuperAdmin
+- `400` - company_id es requerido
+- `404` - Usuario o empresa no encontrados
+
+**Nota:** Los clientes (admins de empresa) deben crear nuevos usuarios en lugar de asignar usuarios existentes. Sistema de invitación por email vendrá en Fase 2.
 
 ---
 

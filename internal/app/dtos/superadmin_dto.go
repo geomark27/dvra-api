@@ -2,12 +2,13 @@ package dtos
 
 // CreateCompanyWithAdminDTO - Crear empresa con primer admin
 type CreateCompanyWithAdminDTO struct {
-	CompanyName    string `json:"company_name" validate:"required"`
-	CompanySlug    string `json:"company_slug" validate:"required"`
-	AdminEmail     string `json:"admin_email" validate:"required,email"`
-	AdminPassword  string `json:"admin_password" validate:"required,min=8"`
-	AdminFirstName string `json:"admin_first_name" validate:"required"`
-	AdminLastName  string `json:"admin_last_name" validate:"required"`
+	CompanyName    string  `json:"company_name" validate:"required"`
+	CompanySlug    string  `json:"company_slug" validate:"required"`
+	PlanSlug       *string `json:"plan_slug" validate:"omitempty"` // Opcional, default "free"
+	AdminEmail     string  `json:"admin_email" validate:"required,email"`
+	AdminPassword  string  `json:"admin_password" validate:"required,min=8"`
+	AdminFirstName string  `json:"admin_first_name" validate:"required"`
+	AdminLastName  string  `json:"admin_last_name" validate:"required"`
 }
 
 // ChangePlanDTO - Cambiar plan de empresa

@@ -17,6 +17,7 @@ type SuperAdminCompaniesService struct {
 	companyRepo    repositories.CompanyRepository
 	userRepo       repositories.UserRepository
 	membershipRepo repositories.MembershipRepository
+	planRepo       repositories.PlanRepository
 }
 
 // NewSuperAdminCompaniesService creates a new SuperAdminCompaniesService
@@ -25,12 +26,14 @@ func NewSuperAdminCompaniesService(
 	companyRepo repositories.CompanyRepository,
 	userRepo repositories.UserRepository,
 	membershipRepo repositories.MembershipRepository,
+	planRepo repositories.PlanRepository,
 ) *SuperAdminCompaniesService {
 	return &SuperAdminCompaniesService{
 		db:             db,
 		companyRepo:    companyRepo,
 		userRepo:       userRepo,
 		membershipRepo: membershipRepo,
+		planRepo:       planRepo,
 	}
 }
 
@@ -100,6 +103,21 @@ func (s *SuperAdminCompaniesService) CreateCompanyWithAdmin(dto dtos.CreateCompa
 		return nil, nil, errors.New("admin email already exists")
 	}
 
+	// Determine which plan to use (default to "free" if not specified)
+	planSlug := "free"
+	if dto.PlanSlug != nil && *dto.PlanSlug != "" {
+		planSlug = *dto.PlanSlug
+	}
+
+	// Verify that the plan exists and is active
+	plan, err := s.planRepo.FindActiveBySlug(planSlug)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, errors.New("plan '" + planSlug + "' is not available or inactive")
+		}
+		return nil, nil, err
+	}
+
 	// Start transaction
 	tx := s.db.Begin()
 	defer func() {
@@ -108,12 +126,12 @@ func (s *SuperAdminCompaniesService) CreateCompanyWithAdmin(dto dtos.CreateCompa
 		}
 	}()
 
-	// 1. Create company
+	// 1. Create company with validated plan
 	trialEnds := time.Now().AddDate(0, 1, 0) // 1 month trial
 	company := models.Company{
 		Name:        dto.CompanyName,
 		Slug:        dto.CompanySlug,
-		PlanTier:    "professional", // Default for new clients
+		PlanTier:    plan.Slug, // Use validated plan slug
 		TrialEndsAt: &trialEnds,
 		Timezone:    "America/Bogota",
 	}

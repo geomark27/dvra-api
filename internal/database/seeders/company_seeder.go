@@ -23,13 +23,12 @@ func (s *CompanySeeder) Run(db *gorm.DB) error {
 
 	if result.Error == gorm.ErrRecordNotFound {
 		// Crear empresa inicial
-		trialEnds := time.Now().AddDate(0, 1, 0) // 1 mes de trial
 		company := models.Company{
 			Name:        "Azentic Sys",
 			Slug:        "azentic-sys",
 			LogoURL:     "",
 			PlanTier:    "free",
-			TrialEndsAt: &trialEnds,
+			TrialEndsAt: nil,
 			Timezone:    "America/Bogota",
 		}
 

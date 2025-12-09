@@ -194,9 +194,13 @@ User (Nivel 10)
 - Puede acceder a cualquier empresa via admin panel
 - No aparece en listado de team members de empresas
 
-**RN-MEMB-004: Solo Admin puede invitar**
-- Recruiter/Hiring Manager no pueden invitar nuevos usuarios
-- Evita growth descontrolado de seats (futuro: per-seat pricing)
+**RN-MEMB-004: Creación de Memberships (MVP - Restringido)**
+- **MVP:** Solo SuperAdmin puede crear memberships (POST /admin/memberships)
+- Admin de empresa NO puede agregar usuarios existentes a su empresa
+- Razón: Evitar manipulación cross-company de usuarios
+- Admin puede: ver, actualizar roles, eliminar memberships de su empresa
+- **Fase 2:** Sistema de invitaciones por email para que admins puedan invitar de forma segura
+- Workaround temporal: Admin crea nuevos usuarios, SuperAdmin asigna usuarios existentes
 
 **RN-MEMB-005: Lifecycle de membresía**
 - Estados: `pending` (invitado), `active`, `suspended`, `removed`

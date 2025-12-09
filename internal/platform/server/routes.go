@@ -21,6 +21,7 @@ func registerRoutes(
 	candidateHandler *handlers.CandidateHandler,
 	applicationHandler *handlers.ApplicationHandler,
 	jobHandler *handlers.JobHandler,
+	planHandler *handlers.PlanHandler,
 	superAdminHandler *adminHandlers.SuperAdminCompaniesHandler,
 	jwtService services.JWTService,
 ) {
@@ -40,6 +41,7 @@ func registerRoutes(
 				"jobs":         "/api/v1/jobs",
 				"candidates":   "/api/v1/candidates",
 				"applications": "/api/v1/applications",
+				"plans":        "/api/v1/plans (public)",
 				"admin":        "/api/v1/admin (SuperAdmin only)",
 			},
 		})
@@ -100,14 +102,13 @@ func registerRoutes(
 				companies.DELETE("/:id", companyHandler.DeleteCompany)
 			}
 
-			// Membership routes
+			// Membership routes (READ-ONLY for clients)
 			memberships := protected.Group("/memberships")
 			{
-				memberships.GET("", membershipHandler.GetMemberships)
-				memberships.POST("", membershipHandler.CreateMembership)
-				memberships.GET("/:id", membershipHandler.GetMembership)
-				memberships.PUT("/:id", membershipHandler.UpdateMembership)
-				memberships.DELETE("/:id", membershipHandler.DeleteMembership)
+				memberships.GET("", membershipHandler.GetMemberships)    // Ver memberships de mi empresa
+				memberships.GET("/:id", membershipHandler.GetMembership) // Ver detalle
+				memberships.PUT("/:id", membershipHandler.UpdateMembership)    // Actualizar roles
+				memberships.DELETE("/:id", membershipHandler.DeleteMembership) // Remover de empresa
 			}
 
 			// Job routes
@@ -141,17 +142,42 @@ func registerRoutes(
 			}
 		}
 
+		// Public Plans routes (no auth required)
+		plans := api.Group("/plans")
+		{
+			plans.GET("", planHandler.GetPublicPlans)      // Public pricing page
+			plans.GET("/:slug", planHandler.GetPlanBySlug) // Get plan details by slug
+		}
+
 		// SuperAdmin routes (Global - No company scope required)
 		admin := api.Group("/admin")
 		admin.Use(middleware.AuthMiddleware(jwtService))
 		admin.Use(middleware.RequireSuperAdmin())
 		{
+			// Plan management (SuperAdmin only)
+			adminPlans := admin.Group("/plans")
+			{
+				adminPlans.GET("", planHandler.GetPlans)
+				adminPlans.POST("", planHandler.CreatePlan)
+				adminPlans.GET("/:id", planHandler.GetPlanByID)
+				adminPlans.PUT("/:id", planHandler.UpdatePlan)
+				adminPlans.PATCH("/:id/toggle", planHandler.TogglePlanStatus)
+				adminPlans.DELETE("/:id", planHandler.DeletePlan)
+				adminPlans.POST("/assign", planHandler.AssignPlanToCompany)
+			}
+
 			// Company management
 			admin.GET("/companies", superAdminHandler.GetAllCompanies)
 			admin.POST("/companies", superAdminHandler.CreateCompany)
 			admin.PUT("/companies/:id/plan", superAdminHandler.ChangeCompanyPlan)
 			admin.POST("/companies/:id/suspend", superAdminHandler.SuspendCompany)
 			admin.GET("/companies/:id/users", superAdminHandler.GetCompanyUsers)
+
+			// Membership management (Assign users to companies)
+			adminMemberships := admin.Group("/memberships")
+			{
+				adminMemberships.POST("", membershipHandler.CreateMembership) // Asignar usuario a empresa
+			}
 
 			// Analytics and reports
 			admin.GET("/analytics", superAdminHandler.GetGlobalAnalytics)

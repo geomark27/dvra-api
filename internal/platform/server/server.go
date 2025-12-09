@@ -41,18 +41,20 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	candidateRepo := repositories.NewCandidateRepository()
 	applicationRepo := repositories.NewApplicationRepository()
 	jobRepo := repositories.NewJobRepository()
+	planRepo := repositories.NewPlanRepository(db)
 
 	// Create services (injecting repositories)
-	authService := services.NewAuthService(userRepo, jwtService, db)
+	authService := services.NewAuthService(userRepo, planRepo, jwtService, db)
 	userService := services.NewUserService(userRepo)
 	companyService := services.NewCompanyService(companyRepo)
 	membershipService := services.NewMembershipService(membershipRepo)
 	candidateService := services.NewCandidateService(candidateRepo)
 	applicationService := services.NewApplicationService(applicationRepo)
 	jobService := services.NewJobService(jobRepo)
+	planService := services.NewPlanService(planRepo, companyRepo, db)
 
 	// Create admin services
-	superAdminCompaniesService := adminServices.NewSuperAdminCompaniesService(db, companyRepo, userRepo, membershipRepo)
+	superAdminCompaniesService := adminServices.NewSuperAdminCompaniesService(db, companyRepo, userRepo, membershipRepo, planRepo)
 
 	// Create handlers (injecting services)
 	healthHandler := handlers.NewHealthHandler()
@@ -63,6 +65,7 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	candidateHandler := handlers.NewCandidateHandler(candidateService)
 	applicationHandler := handlers.NewApplicationHandler(applicationService)
 	jobHandler := handlers.NewJobHandler(jobService)
+	planHandler := handlers.NewPlanHandler(planService)
 
 	// Create admin handlers
 	superAdminHandler := adminHandlers.NewSuperAdminCompaniesHandler(superAdminCompaniesService)
@@ -74,7 +77,7 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	router.Use(corsMiddleware(cfg.CorsAllowedOrigins))
 
 	// Register routes
-	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, superAdminHandler, jwtService)
+	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, planHandler, superAdminHandler, jwtService)
 
 	// Configure HTTP server
 	httpServer := &http.Server{

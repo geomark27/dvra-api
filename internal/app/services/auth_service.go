@@ -24,14 +24,16 @@ var (
 // AuthService handles authentication business logic
 type AuthService struct {
 	userRepo   repositories.UserRepository
+	planRepo   repositories.PlanRepository
 	jwtService JWTService
 	db         *gorm.DB
 }
 
 // NewAuthService creates a new auth service
-func NewAuthService(userRepo repositories.UserRepository, jwtService JWTService, db *gorm.DB) *AuthService {
+func NewAuthService(userRepo repositories.UserRepository, planRepo repositories.PlanRepository, jwtService JWTService, db *gorm.DB) *AuthService {
 	return &AuthService{
 		userRepo:   userRepo,
+		planRepo:   planRepo,
 		jwtService: jwtService,
 		db:         db,
 	}
@@ -296,6 +298,15 @@ func (s *AuthService) RegisterCompany(dto *dtos.RegisterCompanyDTO) (*dtos.Regis
 		return nil, ErrEmailExists
 	}
 
+	// Verify that the free plan exists and is active
+	freePlan, err := s.planRepo.FindActiveBySlug("free")
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("free plan is not available, please contact support")
+		}
+		return nil, err
+	}
+
 	// Start transaction
 	tx := s.db.Begin()
 	defer func() {
@@ -304,7 +315,7 @@ func (s *AuthService) RegisterCompany(dto *dtos.RegisterCompanyDTO) (*dtos.Regis
 		}
 	}()
 
-	// 1. Create company
+	// 1. Create company with validated free plan
 	timezone := dto.Timezone
 	if timezone == "" {
 		timezone = "America/Bogota"
@@ -313,7 +324,7 @@ func (s *AuthService) RegisterCompany(dto *dtos.RegisterCompanyDTO) (*dtos.Regis
 	company := models.Company{
 		Name:     dto.CompanyName,
 		Slug:     dto.CompanySlug,
-		PlanTier: "free", // Default plan
+		PlanTier: freePlan.Slug, // Use validated free plan slug
 		Timezone: timezone,
 	}
 

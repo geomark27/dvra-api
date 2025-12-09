@@ -12,4 +12,5 @@ var AllModels = []interface{}{
 	&models.Membership{},
 	&models.Candidate{},
 	&models.Application{},
+	&models.Plan{},
 }

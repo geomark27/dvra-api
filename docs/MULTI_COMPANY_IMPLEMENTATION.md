@@ -300,30 +300,40 @@ Authorization: Bearer <token_empresa_2>
 
 ---
 
-### **Flujo 3: Agregar Usuario a Segunda Empresa**
+### **Flujo 3: Agregar Usuario a Segunda Empresa (MVP - SuperAdmin)**
 
 #### **Situación:**
 - Marcos ya tiene cuenta (empresa 1)
 - Ahora quiere agregar empresa 2
 
-#### **Admin de Empresa 2 invita a Marcos:**
+#### **SuperAdmin asigna a Marcos:**
 ```bash
-POST /memberships
-Authorization: Bearer <admin_empresa_2_token>
+POST /admin/memberships
+Authorization: Bearer <superadmin_token>
 {
-  "user_email": "marcos@email.com",  // Usuario YA existe
+  "user_id": 1,
+  "company_id": 2,
   "role": "recruiter"
 }
 ```
 
+**Restricción MVP:**
+- **SOLO SuperAdmin** puede crear memberships
+- Clientes intentando POST /memberships reciben: `403 Forbidden`
+- Mensaje: "Only superadmin can assign users to companies. Regular users should create new users instead."
+
 **Sistema:**
-1. Busca user por email (encuentra id: 1)
+1. Valida que role == "superadmin"
 2. Crea nuevo Membership (user: 1, company: 2, role: recruiter)
 
 **Resultado:**
 - Marcos ahora tiene 2 memberships
 - Mismo email, misma password
 - Puede hacer switch entre empresas
+
+**Fase 2 (Futuro):**
+- Sistema de invitación por email
+- Admin envía invitación → Usuario acepta → Membership creado
 
 ---
 
@@ -503,15 +513,18 @@ curl -X POST http://localhost:8001/api/v1/auth/switch-company \
 
 ## 🎯 **Próximos Pasos**
 
-### **Fase 1: Invitaciones** (Opcional)
+### **Fase 2: Sistema de Invitaciones** (PRIORITARIO)
 - `POST /memberships/invite` - Admin invita por email
 - `POST /auth/accept-invite` - Usuario acepta invitación
 - Sistema de tokens de invitación con expiración
+- **Razón:** Actualmente solo SuperAdmin puede crear memberships, necesitamos que admins de empresa puedan invitar usuarios de forma segura
 
-### **Fase 2: Gestión de Memberships**
-- `PUT /memberships/:id` - Cambiar role
-- `DELETE /memberships/:id` - Remover usuario de empresa
-- `PUT /memberships/set-default` - Cambiar empresa por defecto
+### **Gestión de Memberships** (✅ Implementado)
+- `GET /memberships` - Ver memberships de mi empresa ✅
+- `GET /memberships/:id` - Ver detalle ✅
+- `PUT /memberships/:id` - Cambiar role ✅
+- `DELETE /memberships/:id` - Remover usuario de empresa ✅
+- `POST /admin/memberships` - SuperAdmin asigna usuarios ✅
 
 ### **Fase 3: Onboarding**
 - Tutorial post-registro

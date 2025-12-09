@@ -87,22 +87,27 @@ func (h *MembershipHandler) GetMembership(c *gin.Context) {
 }
 
 func (h *MembershipHandler) CreateMembership(c *gin.Context) {
+	// SOLO SuperAdmin puede crear memberships (MVP)
+	// Los clientes crean usuarios que automáticamente se agregan a su empresa
+	// Sistema de invitaciones → Fase 2
+	role, _ := c.Get("role")
+	if role != "superadmin" {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Only superadmin can assign users to companies. Regular users should create new users instead.",
+		})
+		return
+	}
+
 	var dto dtos.CreateMembershipDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Forzar company_id del token para usuarios normales
-	role, _ := c.Get("role")
-	if role != "superadmin" {
-		companyIDVal, exists := c.Get("company_id")
-		if !exists {
-			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
-			return
-		}
-		companyID := companyIDVal.(uint)
-		dto.CompanyID = &companyID // Forzar company del token
+	// SuperAdmin debe especificar company_id explícitamente
+	if dto.CompanyID == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "company_id is required"})
+		return
 	}
 
 	membership, err := h.membershipService.CreateMembership(dto)
