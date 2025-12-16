@@ -11,6 +11,8 @@ require (
 	golang.org/x/crypto v0.46.0
 	gorm.io/driver/postgres v1.5.4
 	gorm.io/gorm v1.31.1
+	gorm.io/datatypes v1.2.0
+	gorm.io/hints v1.1.2
 )
 
 require (
