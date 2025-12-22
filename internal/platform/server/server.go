@@ -42,6 +42,7 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	applicationRepo := repositories.NewApplicationRepository()
 	jobRepo := repositories.NewJobRepository()
 	planRepo := repositories.NewPlanRepository(db)
+	systemValueRepo := repositories.NewSystemValueRepository(db)
 
 	// Create services (injecting repositories)
 	authService := services.NewAuthService(userRepo, planRepo, jwtService, db)
@@ -52,6 +53,7 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	applicationService := services.NewApplicationService(applicationRepo)
 	jobService := services.NewJobService(jobRepo)
 	planService := services.NewPlanService(planRepo, companyRepo, db)
+	systemValueService := services.NewSystemValueService(systemValueRepo)
 
 	// Create admin services
 	superAdminCompaniesService := adminServices.NewSuperAdminCompaniesService(db, companyRepo, userRepo, membershipRepo, planRepo)
@@ -66,6 +68,7 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	applicationHandler := handlers.NewApplicationHandler(applicationService)
 	jobHandler := handlers.NewJobHandler(jobService)
 	planHandler := handlers.NewPlanHandler(planService)
+	systemValueHandler := handlers.NewSystemValueHandler(systemValueService)
 
 	// Create admin handlers
 	superAdminHandler := adminHandlers.NewSuperAdminCompaniesHandler(superAdminCompaniesService)
@@ -77,7 +80,7 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	router.Use(corsMiddleware(cfg.CorsAllowedOrigins))
 
 	// Register routes
-	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, planHandler, superAdminHandler, jwtService)
+	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, planHandler, systemValueHandler, superAdminHandler, jwtService)
 
 	// Configure HTTP server
 	httpServer := &http.Server{
@@ -123,7 +126,7 @@ func corsMiddleware(allowedOrigins []string) gin.HandlerFunc {
 		if allowed {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
 			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, X-Company-ID")
 			c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")
 		}
 

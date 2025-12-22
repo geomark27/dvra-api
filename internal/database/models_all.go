@@ -13,4 +13,5 @@ var AllModels = []interface{}{
 	&models.Candidate{},
 	&models.Application{},
 	&models.Plan{},
+	&models.SystemValue{},
 }

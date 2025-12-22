@@ -22,6 +22,7 @@ func registerRoutes(
 	applicationHandler *handlers.ApplicationHandler,
 	jobHandler *handlers.JobHandler,
 	planHandler *handlers.PlanHandler,
+	systemValueHandler *handlers.SystemValueHandler,
 	superAdminHandler *adminHandlers.SuperAdminCompaniesHandler,
 	jwtService services.JWTService,
 ) {
@@ -105,8 +106,8 @@ func registerRoutes(
 			// Membership routes (READ-ONLY for clients)
 			memberships := protected.Group("/memberships")
 			{
-				memberships.GET("", membershipHandler.GetMemberships)    // Ver memberships de mi empresa
-				memberships.GET("/:id", membershipHandler.GetMembership) // Ver detalle
+				memberships.GET("", membershipHandler.GetMemberships)          // Ver memberships de mi empresa
+				memberships.GET("/:id", membershipHandler.GetMembership)       // Ver detalle
 				memberships.PUT("/:id", membershipHandler.UpdateMembership)    // Actualizar roles
 				memberships.DELETE("/:id", membershipHandler.DeleteMembership) // Remover de empresa
 			}
@@ -139,6 +140,12 @@ func registerRoutes(
 				applications.GET("/:id", applicationHandler.GetApplication)
 				applications.PUT("/:id", applicationHandler.UpdateApplication)
 				applications.DELETE("/:id", applicationHandler.DeleteApplication)
+			}
+
+			// System Values routes (public - read only)
+			systemValues := api.Group("/system-values")
+			{
+				systemValues.GET("/:category", systemValueHandler.GetByCategory) // Get values by category
 			}
 		}
 
@@ -177,6 +184,15 @@ func registerRoutes(
 			adminMemberships := admin.Group("/memberships")
 			{
 				adminMemberships.POST("", membershipHandler.CreateMembership) // Asignar usuario a empresa
+			}
+
+			// System Values management (CRUD for SuperAdmin)
+			adminSystemValues := admin.Group("/system-values")
+			{
+				adminSystemValues.GET("", systemValueHandler.GetAll)
+				adminSystemValues.POST("", systemValueHandler.Create)
+				adminSystemValues.PUT("/:id", systemValueHandler.Update)
+				adminSystemValues.DELETE("/:id", systemValueHandler.Delete)
 			}
 
 			// Analytics and reports

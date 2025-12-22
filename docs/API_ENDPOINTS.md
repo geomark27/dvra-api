@@ -1,8 +1,8 @@
 # API Endpoints - Dvra ATS
 
-> **Versión:** v1.2.0  
+> **Versión:** v1.3.0  
 > **Base URL:** `http://localhost:8001/api/v1`  
-> **Última Actualización:** 8 de Diciembre, 2025
+> **Última Actualización:** 21 de Diciembre, 2025
 
 ---
 
@@ -16,6 +16,7 @@
 - [Jobs (Ofertas de Trabajo)](#jobs-ofertas-de-trabajo)
 - [Candidatos](#candidatos)
 - [Aplicaciones](#aplicaciones)
+- [System Values (Catálogos)](#system-values-catálogos)
 - [SuperAdmin](#superadmin)
 
 ---
@@ -1175,6 +1176,160 @@ DELETE /api/v1/applications/:id
 
 ---
 
+## 🗂️ System Values (Catálogos)
+
+Los **System Values** son valores del sistema configurables que alimentan los selects y dropdowns del frontend. Reemplazan valores hardcodeados permitiendo flexibilidad y personalización por empresa.
+
+### Categorías Disponibles
+
+Después del seed inicial, se incluyen las siguientes categorías:
+
+| Categoría | Descripción | Valores |
+|-----------|-------------|---------|
+| `job_status` | Estados de trabajos | draft, published, closed |
+| `application_status` | Estados de aplicaciones | applied, screening, technical, interview, offer, hired, rejected |
+| `contract_type` | Tipos de contrato | full_time, part_time, contractor, internship, temporary |
+| `work_mode` | Modalidad de trabajo | remote, onsite, hybrid |
+| `experience_level` | Nivel de experiencia | entry, mid, senior, lead |
+| `priority` | Prioridades | low, medium, high, urgent |
+| `candidate_source` | Fuente de candidatos | linkedin, website, referral, job_board, direct, other |
+
+### Obtener Valores por Categoría
+
+```http
+GET /api/v1/system-values/:category
+```
+
+**Acceso:** Público  
+**Headers:** `X-Company-ID` (opcional) - Si se envía, incluye valores globales + específicos de esa empresa
+
+**Descripción:** Retorna todos los valores activos para una categoría específica. Los valores globales (`company_id = null`) están disponibles para todos. Si se envía `X-Company-ID`, también incluye valores personalizados de esa empresa.
+
+**Ejemplo:**
+```bash
+GET /api/v1/system-values/job_status
+```
+
+**Response (200):**
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "id": 1,
+      "category": "job_status",
+      "value": "draft",
+      "label": "Borrador (no visible para candidatos)",
+      "description": null,
+      "display_order": 1,
+      "is_active": true,
+      "company_id": null
+    },
+    {
+      "id": 2,
+      "category": "job_status",
+      "value": "published",
+      "label": "Publicada (visible para candidatos)",
+      "description": null,
+      "display_order": 2,
+      "is_active": true,
+      "company_id": null
+    },
+    {
+      "id": 3,
+      "category": "job_status",
+      "value": "closed",
+      "label": "Cerrada",
+      "description": null,
+      "display_order": 3,
+      "is_active": true,
+      "company_id": null
+    }
+  ]
+}
+```
+
+**Uso en Frontend:**
+```typescript
+// lib/hooks/useSystemValues.ts
+export const useSystemValues = (category: string) => {
+  return useQuery({
+    queryKey: ['system-values', category],
+    queryFn: () => api.get(`/system-values/${category}`),
+  });
+};
+
+// En componente:
+const { data: jobStatuses } = useSystemValues('job_status');
+
+<Select>
+  {jobStatuses?.data.map(status => (
+    <SelectItem key={status.value} value={status.value}>
+      {status.label}
+    </SelectItem>
+  ))}
+</Select>
+```
+
+---
+
+### Ejemplos de Categorías
+
+#### Estados de Trabajo (job_status)
+```bash
+GET /api/v1/system-values/job_status
+```
+
+#### Estados de Aplicación (application_status)
+```bash
+GET /api/v1/system-values/application_status
+```
+
+#### Tipos de Contrato (contract_type)
+```bash
+GET /api/v1/system-values/contract_type
+```
+
+#### Modalidad de Trabajo (work_mode)
+```bash
+GET /api/v1/system-values/work_mode
+```
+
+#### Nivel de Experiencia (experience_level)
+```bash
+GET /api/v1/system-values/experience_level
+```
+
+#### Prioridades (priority)
+```bash
+GET /api/v1/system-values/priority
+```
+
+#### Fuente de Candidatos (candidate_source)
+```bash
+GET /api/v1/system-values/candidate_source
+```
+
+---
+
+### Eliminar Aplicación
+
+```http
+DELETE /api/v1/applications/:id
+```
+
+**Acceso:** Protegido (Company-scoped)  
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200):**
+```json
+{
+  "message": "Application deleted successfully"
+}
+```
+
+---
+
 ## 🔒 SuperAdmin
 
 > **IMPORTANTE:** Estos endpoints solo están disponibles para usuarios con role `superadmin` y **sin company_id** (acceso global).
@@ -1396,6 +1551,168 @@ POST /api/v1/admin/memberships
 
 ---
 
+### Gestión de System Values (SuperAdmin)
+
+> **IMPORTANTE:** Solo SuperAdmin puede crear, editar o eliminar System Values. Los usuarios normales solo pueden consultarlos.
+
+#### Listar Todos los System Values
+
+```http
+GET /api/v1/admin/system-values
+```
+
+**Acceso:** SuperAdmin  
+**Headers:** `Authorization: Bearer <superadmin_token>`
+
+**Descripción:** Retorna todos los system values del sistema (globales y específicos de empresas).
+
+**Response (200):**
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "id": 1,
+      "category": "job_status",
+      "value": "draft",
+      "label": "Borrador (no visible para candidatos)",
+      "description": null,
+      "display_order": 1,
+      "is_active": true,
+      "company_id": null,
+      "created_at": "2025-12-21T10:00:00Z",
+      "updated_at": "2025-12-21T10:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+#### Crear System Value
+
+```http
+POST /api/v1/admin/system-values
+```
+
+**Acceso:** SuperAdmin  
+**Headers:** `Authorization: Bearer <superadmin_token>`
+
+**Descripción:** Crea un nuevo valor del sistema. Puede ser global (`company_id: null`) o específico de una empresa.
+
+**Request Body:**
+```json
+{
+  "category": "priority",
+  "value": "critical",
+  "label": "Crítico",
+  "description": "Para casos extremadamente urgentes",
+  "display_order": 5,
+  "company_id": null
+}
+```
+
+**Campos:**
+- `category` (string, required) - Categoría del valor (job_status, priority, etc.)
+- `value` (string, required) - Valor técnico (usado en código)
+- `label` (string, required) - Etiqueta mostrada al usuario
+- `description` (string, optional) - Descripción adicional
+- `display_order` (int, optional) - Orden de visualización (default: 0)
+- `company_id` (int, optional) - NULL para global, ID para específico de empresa
+
+**Response (201):**
+```json
+{
+  "status": "success",
+  "message": "System value created successfully",
+  "data": {
+    "id": 35,
+    "category": "priority",
+    "value": "critical",
+    "label": "Crítico",
+    "description": "Para casos extremadamente urgentes",
+    "display_order": 5,
+    "is_active": true,
+    "company_id": null
+  }
+}
+```
+
+**Errores:**
+- `400` - Datos inválidos
+- `409` - System value already exists for this category and company
+
+---
+
+#### Actualizar System Value
+
+```http
+PUT /api/v1/admin/system-values/:id
+```
+
+**Acceso:** SuperAdmin  
+**Headers:** `Authorization: Bearer <superadmin_token>`
+
+**Descripción:** Actualiza un valor del sistema existente. No se puede cambiar `category` ni `value`.
+
+**Request Body:**
+```json
+{
+  "label": "Crítico - Máxima Prioridad",
+  "description": "Urgencia máxima, atender inmediatamente",
+  "display_order": 10,
+  "is_active": true
+}
+```
+
+**Response (200):**
+```json
+{
+  "status": "success",
+  "message": "System value updated successfully",
+  "data": {
+    "id": 35,
+    "category": "priority",
+    "value": "critical",
+    "label": "Crítico - Máxima Prioridad",
+    "description": "Urgencia máxima, atender inmediatamente",
+    "display_order": 10,
+    "is_active": true
+  }
+}
+```
+
+**Errores:**
+- `404` - System value not found
+
+---
+
+#### Eliminar System Value
+
+```http
+DELETE /api/v1/admin/system-values/:id
+```
+
+**Acceso:** SuperAdmin  
+**Headers:** `Authorization: Bearer <superadmin_token>`
+
+**Descripción:** Elimina (soft delete) un valor del sistema. Recomendado desactivar (`is_active: false`) en lugar de eliminar.
+
+**Response (200):**
+```json
+{
+  "status": "success",
+  "message": "System value deleted successfully"
+}
+```
+
+**Errores:**
+- `404` - System value not found
+
+**Nota:** Usar soft delete permite mantener historial. Considera desactivar en lugar de eliminar.
+
+---
+
 ### Analytics Globales
 
 ```http
@@ -1496,6 +1813,28 @@ curl -X POST http://localhost:8001/api/v1/candidates \
   }'
 ```
 
+### Obtener System Values por Categoría
+```bash
+curl http://localhost:8001/api/v1/system-values/job_status
+
+# Con company_id para incluir valores personalizados
+curl http://localhost:8001/api/v1/system-values/job_status \
+  -H "X-Company-ID: 1"
+```
+
+### Crear System Value (SuperAdmin)
+```bash
+curl -X POST http://localhost:8001/api/v1/admin/system-values \
+  -H "Authorization: Bearer <superadmin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "category": "priority",
+    "value": "critical",
+    "label": "Crítico",
+    "display_order": 5
+  }'
+```
+
 ---
 
 ## 📚 Recursos Adicionales
@@ -1506,5 +1845,5 @@ curl -X POST http://localhost:8001/api/v1/candidates \
 
 ---
 
-**Última actualización:** 8 de Diciembre, 2025  
-**Versión API:** v1.2.0
+**Última actualización:** 21 de Diciembre, 2025  
+**Versión API:** v1.3.0

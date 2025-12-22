@@ -9,9 +9,10 @@ type Seeder interface {
 }
 
 var AllSeeders = []Seeder{
-	&RoleSeeder{},       // 1. Primero roles del sistema
-	&PlanSeeder{},       // 2. Planes de suscripción
-	&UserSeeder{},       // 3. Luego usuarios (SuperAdmin y Admin de empresa)
-	&SuperAdminSeeder{}, // 4. Asignar rol SuperAdmin al usuario modo dios (ANTES de companies)
-	&CompanySeeder{},    // 5. Luego empresas y membership del admin
+	&RoleSeeder{},        // 1. Primero roles del sistema
+	&PlanSeeder{},        // 2. Planes de suscripción
+	&SystemValueSeeder{}, // 3. Valores del sistema (catálogos)
+	&UserSeeder{},        // 4. Luego usuarios (SuperAdmin y Admin de empresa)
+	&SuperAdminSeeder{},  // 5. Asignar rol SuperAdmin al usuario modo dios (ANTES de companies)
+	&CompanySeeder{},     // 6. Luego empresas y membership del admin
 }

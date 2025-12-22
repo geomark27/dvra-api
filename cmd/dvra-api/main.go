@@ -27,15 +27,7 @@ func main() {
 			log.Printf("Error cerrando la base de datos: %v", err)
 		}
 	}()
-
-	// NOTA: Las migraciones se ejecutan manualmente con:
-	// go run cmd/console/main.go migrate
-	// O con: loom db:migrate
-	//
-	// Si err := database.AutoMigrate(db); err != nil {
-	// 	log.Fatal("Error ejecutando migraciones:", err)
-	// }
-
+	
 	// Crear servidor
 	srv := server.New(cfg, db)
 
