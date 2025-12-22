@@ -23,6 +23,17 @@ func NewMembershipHandler(membershipService services.MembershipService) *Members
 	}
 }
 
+// GetMemberships godoc
+// @Summary      Listar membresías
+// @Description  Obtiene membresías (todas si es SuperAdmin, de la empresa si es usuario normal)
+// @Tags         Memberships
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /memberships [get]
 func (h *MembershipHandler) GetMemberships(c *gin.Context) {
 	role, _ := c.Get("role")
 
@@ -86,6 +97,19 @@ func (h *MembershipHandler) GetMembership(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": membership})
 }
 
+// CreateMembership godoc
+// @Summary      Crear membresía
+// @Description  Asigna un usuario a una empresa (solo SuperAdmin)
+// @Tags         Memberships
+// @Accept       json
+// @Produce      json
+// @Param        membership  body      dtos.CreateMembershipDTO  true  "Datos de la membresía"
+// @Success      201         {object}  map[string]interface{}
+// @Failure      400         {object}  map[string]interface{}
+// @Failure      403         {object}  map[string]interface{}
+// @Failure      500         {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/memberships [post]
 func (h *MembershipHandler) CreateMembership(c *gin.Context) {
 	// SOLO SuperAdmin puede crear memberships (MVP)
 	// Los clientes crean usuarios que automáticamente se agregan a su empresa

@@ -25,7 +25,17 @@ func NewUserHandler(userService services.UserService) *UserHandler {
 	}
 }
 
-// GetUsers retrieves all users
+// GetUsers godoc
+// @Summary      Listar usuarios
+// @Description  Obtiene usuarios (todos si es SuperAdmin, de la empresa si es usuario normal)
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /users [get]
 func (h *UserHandler) GetUsers(c *gin.Context) {
 	role, _ := c.Get("role")
 
@@ -77,7 +87,19 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 	})
 }
 
-// GetUser retrieves a user by ID
+// GetUser godoc
+// @Summary      Obtener usuario por ID
+// @Description  Retorna la información de un usuario específico
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "ID del usuario"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /users/{id} [get]
 func (h *UserHandler) GetUser(c *gin.Context) {
 	idParam, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -136,7 +158,18 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	})
 }
 
-// CreateUser creates a new user
+// CreateUser godoc
+// @Summary      Crear usuario
+// @Description  Crea un nuevo usuario en la empresa actual
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Param        user  body      dtos.CreateUserDTO  true  "Datos del usuario"
+// @Success      201   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]interface{}
+// @Failure      500   {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /users [post]
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var dto dtos.CreateUserDTO
 
@@ -173,7 +206,20 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	})
 }
 
-// UpdateUser updates an existing user
+// UpdateUser godoc
+// @Summary      Actualizar usuario
+// @Description  Actualiza los datos de un usuario existente
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Param        id    path  int                  true  "ID del usuario"
+// @Param        user  body  dtos.UpdateUserDTO   true  "Datos a actualizar"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]interface{}
+// @Failure      404   {object}  map[string]interface{}
+// @Failure      500   {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /users/{id} [put]
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	idParam, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -224,7 +270,19 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	})
 }
 
-// DeleteUser deletes a user
+// DeleteUser godoc
+// @Summary      Eliminar usuario
+// @Description  Elimina un usuario (soft delete)
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Param        id   path  int  true  "ID del usuario"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /users/{id} [delete]
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	idParam, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {

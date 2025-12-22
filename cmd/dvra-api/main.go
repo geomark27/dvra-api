@@ -10,6 +10,26 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// @title           DVRA API
+// @version         1.2.0
+// @description     API para sistema de reclutamiento y gestión de candidatos
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.email  support@dvra.com
+
+// @license.name  MIT
+// @license.url   https://opensource.org/licenses/MIT
+
+// @host      localhost:8001
+// @BasePath  /api/v1
+// @schemes   http https
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+
 func main() {
 	// Cargar variables de entorno desde .env
 	_ = godotenv.Load()
@@ -27,7 +47,7 @@ func main() {
 			log.Printf("Error cerrando la base de datos: %v", err)
 		}
 	}()
-	
+
 	// Crear servidor
 	srv := server.New(cfg, db)
 

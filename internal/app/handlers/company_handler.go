@@ -25,7 +25,17 @@ func NewCompanyHandler(companyService services.CompanyService) *CompanyHandler {
 	}
 }
 
-// GetCompanies retrieves all companies
+// GetCompanies godoc
+// @Summary      Listar empresas
+// @Description  Obtiene empresas (todas si es SuperAdmin, solo la actual si es usuario normal)
+// @Tags         Companies
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /companies [get]
 func (h *CompanyHandler) GetCompanies(c *gin.Context) {
 	role, _ := c.Get("role")
 
@@ -73,7 +83,19 @@ func (h *CompanyHandler) GetCompanies(c *gin.Context) {
 	})
 }
 
-// GetCompany retrieves a company by ID
+// GetCompany godoc
+// @Summary      Obtener empresa por ID
+// @Description  Retorna información de una empresa específica
+// @Tags         Companies
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "ID de la empresa"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /companies/{id} [get]
 func (h *CompanyHandler) GetCompany(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -115,7 +137,18 @@ func (h *CompanyHandler) GetCompany(c *gin.Context) {
 	})
 }
 
-// CreateCompany creates a new company
+// CreateCompany godoc
+// @Summary      Crear empresa
+// @Description  Crea una nueva empresa
+// @Tags         Companies
+// @Accept       json
+// @Produce      json
+// @Param        company  body      dtos.CreateCompanyDTO  true  "Datos de la empresa"
+// @Success      201      {object}  map[string]interface{}
+// @Failure      400      {object}  map[string]interface{}
+// @Failure      500      {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /companies [post]
 func (h *CompanyHandler) CreateCompany(c *gin.Context) {
 	var dto dtos.CreateCompanyDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {

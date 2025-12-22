@@ -19,6 +19,17 @@ func NewAuthHandler(service *services.AuthService) *AuthHandler {
 	}
 }
 
+// Register godoc
+// @Summary      Registrar nuevo usuario (deprecated)
+// @Description  Registra un nuevo usuario. Usar RegisterCompany en su lugar
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        user  body      dtos.RegisterDTO  true  "Datos del usuario"
+// @Success      201   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]interface{}
+// @Failure      409   {object}  map[string]interface{}
+// @Router       /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var dto dtos.RegisterDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
@@ -39,6 +50,17 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
+// Login godoc
+// @Summary      Iniciar sesión
+// @Description  Autentica un usuario y retorna tokens JWT
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        credentials  body      dtos.LoginDTO  true  "Credenciales de acceso"
+// @Success      200          {object}  map[string]interface{}
+// @Failure      400          {object}  map[string]interface{}
+// @Failure      401          {object}  map[string]interface{}
+// @Router       /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var dto dtos.LoginDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
@@ -59,6 +81,17 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// RefreshToken godoc
+// @Summary      Refrescar token de acceso
+// @Description  Genera un nuevo access token usando el refresh token
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        token  body      dtos.RefreshTokenDTO  true  "Refresh token"
+// @Success      200    {object}  map[string]interface{}
+// @Failure      400    {object}  map[string]interface{}
+// @Failure      401    {object}  map[string]interface{}
+// @Router       /auth/refresh [post]
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	var dto dtos.RefreshTokenDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
@@ -75,6 +108,16 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GetMe godoc
+// @Summary      Obtener usuario actual
+// @Description  Retorna la información del usuario autenticado
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      401  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /auth/me [get]
 func (h *AuthHandler) GetMe(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -148,6 +191,17 @@ func (h *AuthHandler) SuperAdminLogin(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// RegisterCompany godoc
+// @Summary      Registrar empresa con admin
+// @Description  Crea una nueva empresa y su usuario administrador
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        company  body      dtos.RegisterCompanyDTO  true  "Datos de empresa y admin"
+// @Success      201      {object}  map[string]interface{}
+// @Failure      400      {object}  map[string]interface{}
+// @Failure      409      {object}  map[string]interface{}
+// @Router       /auth/register-company [post]
 func (h *AuthHandler) RegisterCompany(c *gin.Context) {
 	var dto dtos.RegisterCompanyDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {

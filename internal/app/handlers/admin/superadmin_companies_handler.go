@@ -21,6 +21,20 @@ func NewSuperAdminCompaniesHandler(service *admin.SuperAdminCompaniesService) *S
 	}
 }
 
+// GetAllCompanies godoc
+// @Summary      Listar todas las empresas (SuperAdmin)
+// @Description  Obtiene todas las empresas con paginación y filtros
+// @Tags         SuperAdmin
+// @Accept       json
+// @Produce      json
+// @Param        page       query  int     false  "Página"       default(1)
+// @Param        limit      query  int     false  "Límite"      default(20)
+// @Param        search     query  string  false  "Búsqueda"
+// @Param        plan_tier  query  string  false  "Filtrar por plan"
+// @Success      200        {object}  map[string]interface{}
+// @Failure      500        {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/companies [get]
 func (h *SuperAdminCompaniesHandler) GetAllCompanies(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
@@ -43,6 +57,19 @@ func (h *SuperAdminCompaniesHandler) GetAllCompanies(c *gin.Context) {
 	})
 }
 
+// CreateCompany godoc
+// @Summary      Crear empresa con admin (SuperAdmin)
+// @Description  Crea una nueva empresa y su usuario administrador
+// @Tags         SuperAdmin
+// @Accept       json
+// @Produce      json
+// @Param        company  body      dtos.CreateCompanyWithAdminDTO  true  "Datos de empresa y admin"
+// @Success      201      {object}  map[string]interface{}
+// @Failure      400      {object}  map[string]interface{}
+// @Failure      409      {object}  map[string]interface{}
+// @Failure      500      {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/companies [post]
 func (h *SuperAdminCompaniesHandler) CreateCompany(c *gin.Context) {
 	var dto dtos.CreateCompanyWithAdminDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
@@ -137,6 +164,16 @@ func (h *SuperAdminCompaniesHandler) GetCompanyUsers(c *gin.Context) {
 	})
 }
 
+// GetGlobalAnalytics godoc
+// @Summary      Analíticas globales (SuperAdmin)
+// @Description  Obtiene estadísticas globales de la plataforma
+// @Tags         SuperAdmin
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/analytics [get]
 func (h *SuperAdminCompaniesHandler) GetGlobalAnalytics(c *gin.Context) {
 	analytics, err := h.service.GetGlobalAnalytics()
 	if err != nil {

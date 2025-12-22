@@ -22,7 +22,16 @@ func NewSystemValueHandler(service services.SystemValueService) *SystemValueHand
 	}
 }
 
-// GetByCategory retrieves all system values for a category
+// GetByCategory godoc
+// @Summary      Obtener valores por categoría
+// @Description  Retorna todos los valores de sistema de una categoría específica
+// @Tags         System Values
+// @Accept       json
+// @Produce      json
+// @Param        category  path  string  true  "Categoría (ej: employment_type, contract_type)"
+// @Success      200       {object}  map[string]interface{}
+// @Failure      500       {object}  map[string]interface{}
+// @Router       /system-values/{category} [get]
 func (h *SystemValueHandler) GetByCategory(c *gin.Context) {
 	category := c.Param("category")
 
@@ -47,7 +56,16 @@ func (h *SystemValueHandler) GetByCategory(c *gin.Context) {
 	})
 }
 
-// GetAll retrieves all system values (admin only)
+// GetAll godoc
+// @Summary      Listar todos los valores de sistema
+// @Description  Obtiene todos los valores de sistema (solo SuperAdmin)
+// @Tags         System Values
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/system-values [get]
 func (h *SystemValueHandler) GetAll(c *gin.Context) {
 	values, err := h.service.GetAll()
 	if err != nil {
@@ -61,7 +79,18 @@ func (h *SystemValueHandler) GetAll(c *gin.Context) {
 	})
 }
 
-// Create creates a new system value (admin only)
+// Create godoc
+// @Summary      Crear valor de sistema
+// @Description  Crea un nuevo valor de sistema (solo SuperAdmin)
+// @Tags         System Values
+// @Accept       json
+// @Produce      json
+// @Param        value  body      dtos.CreateSystemValueDTO  true  "Datos del valor"
+// @Success      201    {object}  map[string]interface{}
+// @Failure      400    {object}  map[string]interface{}
+// @Failure      500    {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/system-values [post]
 func (h *SystemValueHandler) Create(c *gin.Context) {
 	var dto dtos.CreateSystemValueDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {

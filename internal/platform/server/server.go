@@ -12,6 +12,8 @@ import (
 	adminServices "dvra-api/internal/app/services/admin"
 	"dvra-api/internal/platform/config"
 
+	_ "dvra-api/docs" // Importar documentación generada por Swagger
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -43,6 +45,7 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	jobRepo := repositories.NewJobRepository()
 	planRepo := repositories.NewPlanRepository(db)
 	systemValueRepo := repositories.NewSystemValueRepository(db)
+	locationRepo := repositories.NewLocationRepository()
 
 	// Create services (injecting repositories)
 	authService := services.NewAuthService(userRepo, planRepo, jwtService, db)
@@ -54,6 +57,7 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	jobService := services.NewJobService(jobRepo)
 	planService := services.NewPlanService(planRepo, companyRepo, db)
 	systemValueService := services.NewSystemValueService(systemValueRepo)
+	locationService := services.NewLocationService(locationRepo)
 
 	// Create admin services
 	superAdminCompaniesService := adminServices.NewSuperAdminCompaniesService(db, companyRepo, userRepo, membershipRepo, planRepo)
@@ -69,6 +73,7 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	jobHandler := handlers.NewJobHandler(jobService)
 	planHandler := handlers.NewPlanHandler(planService)
 	systemValueHandler := handlers.NewSystemValueHandler(systemValueService)
+	locationHandler := handlers.NewLocationHandler(locationService)
 
 	// Create admin handlers
 	superAdminHandler := adminHandlers.NewSuperAdminCompaniesHandler(superAdminCompaniesService)
@@ -79,8 +84,8 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	// Configure CORS middleware
 	router.Use(corsMiddleware(cfg.CorsAllowedOrigins))
 
-	// Register routes
-	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, planHandler, systemValueHandler, superAdminHandler, jwtService)
+	// Register routes (passing config for dynamic Swagger host)
+	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, planHandler, systemValueHandler, locationHandler, superAdminHandler, jwtService, cfg)
 
 	// Configure HTTP server
 	httpServer := &http.Server{

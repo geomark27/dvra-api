@@ -4,10 +4,14 @@ import (
 	"dvra-api/internal/app/handlers"
 	adminHandlers "dvra-api/internal/app/handlers/admin"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/platform/config"
 	"dvra-api/internal/shared/middleware"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // registerRoutes registers all application routes
@@ -23,8 +27,10 @@ func registerRoutes(
 	jobHandler *handlers.JobHandler,
 	planHandler *handlers.PlanHandler,
 	systemValueHandler *handlers.SystemValueHandler,
+	locationHandler *handlers.LocationHandler,
 	superAdminHandler *adminHandlers.SuperAdminCompaniesHandler,
 	jwtService services.JWTService,
+	cfg *config.Config,
 ) {
 	// Root route
 	router.GET("/", func(c *gin.Context) {
@@ -43,10 +49,16 @@ func registerRoutes(
 				"candidates":   "/api/v1/candidates",
 				"applications": "/api/v1/applications",
 				"plans":        "/api/v1/plans (public)",
+				"locations":    "/api/v1/locations (public)",
 				"admin":        "/api/v1/admin (SuperAdmin only)",
+				"swagger":      "/swagger/index.html",
 			},
 		})
 	})
+
+	// Swagger documentation with dynamic host
+	swaggerURL := ginSwagger.URL(fmt.Sprintf("http://localhost:%s/swagger/doc.json", cfg.Port))
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, swaggerURL))
 
 	// API v1 group
 	api := router.Group("/api/v1")
@@ -156,6 +168,35 @@ func registerRoutes(
 			plans.GET("/:slug", planHandler.GetPlanBySlug) // Get plan details by slug
 		}
 
+		// Public Location routes (no auth required - READ ONLY)
+		locations := api.Group("/locations")
+		{
+			// Regions
+			locations.GET("/regions", locationHandler.GetAllRegions)
+			locations.GET("/regions/:id", locationHandler.GetRegionByID)
+
+			// Subregions
+			locations.GET("/subregions", locationHandler.GetAllSubregions)
+			locations.GET("/subregions/:id", locationHandler.GetSubregionByID)
+
+			// Countries
+			locations.GET("/countries", locationHandler.GetAllCountries)
+			locations.GET("/countries/:id", locationHandler.GetCountryByID)
+			locations.GET("/countries/iso/:iso", locationHandler.GetCountryByISO)
+
+			// States
+			locations.GET("/states", locationHandler.GetAllStates)
+			locations.GET("/states/:id", locationHandler.GetStateByID)
+
+			// Cities
+			locations.GET("/cities", locationHandler.GetAllCities)
+			locations.GET("/cities/:id", locationHandler.GetCityByID)
+
+			// Helpers
+			locations.GET("/hierarchy/:id", locationHandler.GetLocationHierarchy)
+			locations.GET("/search", locationHandler.SearchLocations)
+		}
+
 		// SuperAdmin routes (Global - No company scope required)
 		admin := api.Group("/admin")
 		admin.Use(middleware.AuthMiddleware(jwtService))
@@ -193,6 +234,35 @@ func registerRoutes(
 				adminSystemValues.POST("", systemValueHandler.Create)
 				adminSystemValues.PUT("/:id", systemValueHandler.Update)
 				adminSystemValues.DELETE("/:id", systemValueHandler.Delete)
+			}
+
+			// Location management (CRUD for SuperAdmin)
+			adminLocations := admin.Group("/locations")
+			{
+				// Regions
+				adminLocations.POST("/regions", locationHandler.CreateRegion)
+				adminLocations.PUT("/regions/:id", locationHandler.UpdateRegion)
+				adminLocations.DELETE("/regions/:id", locationHandler.DeleteRegion)
+
+				// Subregions
+				adminLocations.POST("/subregions", locationHandler.CreateSubregion)
+				adminLocations.PUT("/subregions/:id", locationHandler.UpdateSubregion)
+				adminLocations.DELETE("/subregions/:id", locationHandler.DeleteSubregion)
+
+				// Countries
+				adminLocations.POST("/countries", locationHandler.CreateCountry)
+				adminLocations.PUT("/countries/:id", locationHandler.UpdateCountry)
+				adminLocations.DELETE("/countries/:id", locationHandler.DeleteCountry)
+
+				// States
+				adminLocations.POST("/states", locationHandler.CreateState)
+				adminLocations.PUT("/states/:id", locationHandler.UpdateState)
+				adminLocations.DELETE("/states/:id", locationHandler.DeleteState)
+
+				// Cities
+				adminLocations.POST("/cities", locationHandler.CreateCity)
+				adminLocations.PUT("/cities/:id", locationHandler.UpdateCity)
+				adminLocations.DELETE("/cities/:id", locationHandler.DeleteCity)
 			}
 
 			// Analytics and reports

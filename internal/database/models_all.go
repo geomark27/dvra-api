@@ -14,4 +14,9 @@ var AllModels = []interface{}{
 	&models.Application{},
 	&models.Plan{},
 	&models.SystemValue{},
+	&models.Region{},
+	&models.Subregion{},
+	&models.Country{},
+	&models.State{},
+	&models.City{},
 }

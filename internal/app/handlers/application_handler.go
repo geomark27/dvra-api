@@ -20,6 +20,17 @@ func NewApplicationHandler(applicationService services.ApplicationService) *Appl
 	return &ApplicationHandler{applicationService: applicationService, logger: helpers.NewLogger()}
 }
 
+// GetApplications godoc
+// @Summary      Listar postulaciones
+// @Description  Obtiene postulaciones (todas si es SuperAdmin, de la empresa si es usuario normal)
+// @Tags         Applications
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /applications [get]
 func (h *ApplicationHandler) GetApplications(c *gin.Context) {
 	role, _ := c.Get("role")
 
@@ -76,6 +87,19 @@ func (h *ApplicationHandler) GetApplication(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": application})
 }
 
+// CreateApplication godoc
+// @Summary      Crear postulación
+// @Description  Crea una nueva postulación a un empleo
+// @Tags         Applications
+// @Accept       json
+// @Produce      json
+// @Param        application  body      dtos.CreateApplicationDTO  true  "Datos de la postulación"
+// @Success      201          {object}  map[string]interface{}
+// @Failure      400          {object}  map[string]interface{}
+// @Failure      403          {object}  map[string]interface{}
+// @Failure      500          {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /applications [post]
 func (h *ApplicationHandler) CreateApplication(c *gin.Context) {
 	var dto dtos.CreateApplicationDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {

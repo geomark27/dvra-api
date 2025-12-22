@@ -20,7 +20,17 @@ func NewJobHandler(jobService services.JobService) *JobHandler {
 	return &JobHandler{jobService: jobService, logger: helpers.NewLogger()}
 }
 
-// GetJobs retrieves all jobs
+// GetJobs godoc
+// @Summary      Listar empleos
+// @Description  Obtiene empleos (todos si es SuperAdmin, de la empresa si es usuario normal)
+// @Tags         Jobs
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /jobs [get]
 func (h *JobHandler) GetJobs(c *gin.Context) {
 	role, _ := c.Get("role")
 
@@ -77,7 +87,19 @@ func (h *JobHandler) GetJob(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": job})
 }
 
-// CreateJob creates a new job
+// CreateJob godoc
+// @Summary      Crear empleo
+// @Description  Crea un nuevo empleo en la empresa actual
+// @Tags         Jobs
+// @Accept       json
+// @Produce      json
+// @Param        job  body      dtos.CreateJobDTO  true  "Datos del empleo"
+// @Success      201  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /jobs [post]
 func (h *JobHandler) CreateJob(c *gin.Context) {
 	var dto dtos.CreateJobDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {

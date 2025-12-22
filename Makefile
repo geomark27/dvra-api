@@ -48,6 +48,7 @@ help: ## Muestra esta ayuda
 	@echo "    make clean        - Limpia archivos generados"
 	@echo "    make deps         - Descarga las dependencias"
 	@echo "    make install-tools - Instala herramientas de desarrollo"
+	@echo "    make swagger      - Genera documentación Swagger"
 	@echo ""
 
 build: ## Compila la aplicación
@@ -201,4 +202,11 @@ sync:
 	@git commit -m "$(m)"
 	@echo "🚀 Pusheando a origin/$(BRANCH)..."
 	@git push origin $(BRANCH)
+
+# Generar documentación Swagger
+swagger: ## Genera documentación Swagger/OpenAPI
+	@echo "📖 Generando documentación Swagger..."
+	@~/go/bin/swag init -g cmd/dvra-api/main.go -o docs
+	@echo "✅ Documentación generada en docs/"
+	@echo "📝 Accede a http://localhost:8000/swagger/index.html"
 	@echo "✅ Sincronización completada!"

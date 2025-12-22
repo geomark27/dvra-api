@@ -1,0 +1,2339 @@
+basePath: /api/v1
+definitions:
+  dtos.AssignPlanToCompanyDTO:
+    properties:
+      company_id:
+        type: integer
+      plan_id:
+        type: integer
+    required:
+    - company_id
+    - plan_id
+    type: object
+  dtos.CityDTO:
+    properties:
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      name:
+        type: string
+      state:
+        $ref: '#/definitions/dtos.StateDTO'
+      state_id:
+        type: integer
+    type: object
+  dtos.CountryDTO:
+    properties:
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      iso2:
+        type: string
+      iso3:
+        type: string
+      name:
+        type: string
+      numeric_code:
+        type: string
+      phone_code:
+        type: string
+      states:
+        items:
+          $ref: '#/definitions/dtos.StateDTO'
+        type: array
+      subregion:
+        $ref: '#/definitions/dtos.SubregionDTO'
+      subregion_id:
+        type: integer
+      timezones:
+        type: string
+    type: object
+  dtos.CreateApplicationDTO:
+    properties:
+      candidate_id:
+        minimum: 1
+        type: integer
+      company_id:
+        minimum: 1
+        type: integer
+      job_id:
+        minimum: 1
+        type: integer
+      rating:
+        maximum: 5
+        minimum: 1
+        type: integer
+      stage:
+        enum:
+        - applied
+        - screening
+        - technical
+        - offer
+        - hired
+        - rejected
+        type: string
+    required:
+    - candidate_id
+    - company_id
+    - job_id
+    - stage
+    type: object
+  dtos.CreateCityDTO:
+    properties:
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      state_id:
+        type: integer
+    required:
+    - name
+    - state_id
+    type: object
+  dtos.CreateCompanyDTO:
+    properties:
+      logo_url:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      plan_tier:
+        enum:
+        - free
+        - premium
+        - enterprise
+        type: string
+      slug:
+        maxLength: 100
+        minLength: 2
+        type: string
+      timezone:
+        type: string
+      trial_ends_at:
+        type: string
+    required:
+    - name
+    - plan_tier
+    - slug
+    - timezone
+    type: object
+  dtos.CreateCompanyWithAdminDTO:
+    properties:
+      admin_email:
+        type: string
+      admin_first_name:
+        type: string
+      admin_last_name:
+        type: string
+      admin_password:
+        minLength: 8
+        type: string
+      company_name:
+        type: string
+      company_slug:
+        type: string
+      plan_slug:
+        description: Opcional, default "free"
+        type: string
+    required:
+    - admin_email
+    - admin_first_name
+    - admin_last_name
+    - admin_password
+    - company_name
+    - company_slug
+    type: object
+  dtos.CreateCountryDTO:
+    properties:
+      iso2:
+        type: string
+      iso3:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      numeric_code:
+        type: string
+      phone_code:
+        type: string
+      subregion_id:
+        type: integer
+      timezones:
+        type: string
+    required:
+    - iso2
+    - iso3
+    - name
+    - numeric_code
+    - phone_code
+    type: object
+  dtos.CreateJobDTO:
+    properties:
+      assigned_recruiter:
+        type: integer
+      company_id:
+        minimum: 1
+        type: integer
+      description:
+        type: string
+      hiring_manager:
+        type: integer
+      location:
+        maxLength: 255
+        type: string
+      status:
+        enum:
+        - draft
+        - active
+        - on_hold
+        - closed
+        type: string
+      title:
+        maxLength: 255
+        minLength: 3
+        type: string
+    required:
+    - company_id
+    - description
+    - title
+    type: object
+  dtos.CreateMembershipDTO:
+    properties:
+      company_id:
+        description: Nullable para SuperAdmin
+        type: integer
+      invited_by:
+        type: integer
+      is_default:
+        type: boolean
+      role:
+        enum:
+        - superadmin
+        - admin
+        - recruiter
+        - user
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        - pending
+        type: string
+      user_id:
+        minimum: 1
+        type: integer
+    required:
+    - role
+    - user_id
+    type: object
+  dtos.CreateRegionDTO:
+    properties:
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+    required:
+    - name
+    type: object
+  dtos.CreateStateDTO:
+    properties:
+      country_code:
+        type: string
+      country_id:
+        type: integer
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+    required:
+    - country_code
+    - country_id
+    - name
+    type: object
+  dtos.CreateSubregionDTO:
+    properties:
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      region_id:
+        type: integer
+    required:
+    - name
+    - region_id
+    type: object
+  dtos.CreateSystemValueDTO:
+    properties:
+      category:
+        type: string
+      company_id:
+        type: integer
+      description:
+        type: string
+      display_order:
+        type: integer
+      label:
+        type: string
+      value:
+        type: string
+    required:
+    - category
+    - label
+    - value
+    type: object
+  dtos.CreateUserDTO:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+    required:
+    - email
+    - first_name
+    - last_name
+    type: object
+  dtos.LocationSearchDTO:
+    properties:
+      cities:
+        items:
+          $ref: '#/definitions/dtos.CityDTO'
+        type: array
+      countries:
+        items:
+          $ref: '#/definitions/dtos.CountryDTO'
+        type: array
+      states:
+        items:
+          $ref: '#/definitions/dtos.StateDTO'
+        type: array
+    type: object
+  dtos.LoginDTO:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  dtos.PlanDTO:
+    properties:
+      billing_cycle:
+        enum:
+        - monthly
+        - yearly
+        type: string
+      can_export_data:
+        type: boolean
+      can_use_api:
+        type: boolean
+      can_use_custom_brand:
+        type: boolean
+      can_use_integrations:
+        type: boolean
+      currency:
+        type: string
+      description:
+        type: string
+      display_order:
+        type: integer
+      is_active:
+        type: boolean
+      is_public:
+        type: boolean
+      max_applications:
+        type: integer
+      max_candidates:
+        type: integer
+      max_jobs:
+        type: integer
+      max_storage_gb:
+        type: integer
+      max_users:
+        type: integer
+      name:
+        type: string
+      price:
+        minimum: 0
+        type: number
+      slug:
+        type: string
+      support_level:
+        enum:
+        - email
+        - priority
+        - dedicated
+        type: string
+      trial_days:
+        minimum: 0
+        type: integer
+    required:
+    - billing_cycle
+    - currency
+    - name
+    - price
+    - slug
+    - support_level
+    type: object
+  dtos.PlanResponse:
+    properties:
+      billing_cycle:
+        type: string
+      can_export_data:
+        type: boolean
+      can_use_api:
+        type: boolean
+      can_use_custom_brand:
+        type: boolean
+      can_use_integrations:
+        type: boolean
+      created_at:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      display_order:
+        type: integer
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      is_public:
+        type: boolean
+      max_applications:
+        type: integer
+      max_candidates:
+        type: integer
+      max_jobs:
+        type: integer
+      max_storage_gb:
+        type: integer
+      max_users:
+        type: integer
+      name:
+        type: string
+      price:
+        type: number
+      slug:
+        type: string
+      support_level:
+        type: string
+      trial_days:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  dtos.RefreshTokenDTO:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  dtos.RegionDTO:
+    properties:
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      name:
+        type: string
+      subregions:
+        items:
+          $ref: '#/definitions/dtos.SubregionDTO'
+        type: array
+    type: object
+  dtos.RegisterCompanyDTO:
+    properties:
+      admin_email:
+        type: string
+      admin_first_name:
+        type: string
+      admin_last_name:
+        type: string
+      admin_password:
+        minLength: 8
+        type: string
+      company_name:
+        type: string
+      company_slug:
+        type: string
+      timezone:
+        type: string
+    required:
+    - admin_email
+    - admin_first_name
+    - admin_last_name
+    - admin_password
+    - company_name
+    - company_slug
+    type: object
+  dtos.RegisterDTO:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - first_name
+    - last_name
+    - password
+    type: object
+  dtos.StateDTO:
+    properties:
+      cities:
+        items:
+          $ref: '#/definitions/dtos.CityDTO'
+        type: array
+      country:
+        $ref: '#/definitions/dtos.CountryDTO'
+      country_code:
+        type: string
+      country_id:
+        type: integer
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      name:
+        type: string
+    type: object
+  dtos.SubregionDTO:
+    properties:
+      countries:
+        items:
+          $ref: '#/definitions/dtos.CountryDTO'
+        type: array
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      name:
+        type: string
+      region:
+        $ref: '#/definitions/dtos.RegionDTO'
+      region_id:
+        type: integer
+    type: object
+  dtos.TogglePlanStatusDTO:
+    properties:
+      is_active:
+        type: boolean
+    type: object
+  dtos.UpdateCityDTO:
+    properties:
+      is_active:
+        type: boolean
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      state_id:
+        type: integer
+    type: object
+  dtos.UpdateCountryDTO:
+    properties:
+      is_active:
+        type: boolean
+      iso2:
+        type: string
+      iso3:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      numeric_code:
+        type: string
+      phone_code:
+        type: string
+      subregion_id:
+        type: integer
+      timezones:
+        type: string
+    type: object
+  dtos.UpdatePlanDTO:
+    properties:
+      billing_cycle:
+        enum:
+        - monthly
+        - yearly
+        type: string
+      can_export_data:
+        type: boolean
+      can_use_api:
+        type: boolean
+      can_use_custom_brand:
+        type: boolean
+      can_use_integrations:
+        type: boolean
+      currency:
+        type: string
+      description:
+        type: string
+      display_order:
+        type: integer
+      is_active:
+        type: boolean
+      is_public:
+        type: boolean
+      max_applications:
+        type: integer
+      max_candidates:
+        type: integer
+      max_jobs:
+        type: integer
+      max_storage_gb:
+        type: integer
+      max_users:
+        type: integer
+      name:
+        type: string
+      price:
+        minimum: 0
+        type: number
+      support_level:
+        enum:
+        - email
+        - priority
+        - dedicated
+        type: string
+      trial_days:
+        minimum: 0
+        type: integer
+    type: object
+  dtos.UpdateRegionDTO:
+    properties:
+      is_active:
+        type: boolean
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+    type: object
+  dtos.UpdateStateDTO:
+    properties:
+      country_code:
+        type: string
+      country_id:
+        type: integer
+      is_active:
+        type: boolean
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+    type: object
+  dtos.UpdateSubregionDTO:
+    properties:
+      is_active:
+        type: boolean
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      region_id:
+        type: integer
+    type: object
+  dtos.UpdateUserDTO:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+    type: object
+host: localhost:8001
+info:
+  contact:
+    email: support@dvra.com
+    name: API Support
+  description: API para sistema de reclutamiento y gestión de candidatos
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: DVRA API
+  version: 1.2.0
+paths:
+  /admin/analytics:
+    get:
+      consumes:
+      - application/json
+      description: Obtiene estadísticas globales de la plataforma
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Analíticas globales (SuperAdmin)
+      tags:
+      - SuperAdmin
+  /admin/companies:
+    get:
+      consumes:
+      - application/json
+      description: Obtiene todas las empresas con paginación y filtros
+      parameters:
+      - default: 1
+        description: Página
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Límite
+        in: query
+        name: limit
+        type: integer
+      - description: Búsqueda
+        in: query
+        name: search
+        type: string
+      - description: Filtrar por plan
+        in: query
+        name: plan_tier
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar todas las empresas (SuperAdmin)
+      tags:
+      - SuperAdmin
+    post:
+      consumes:
+      - application/json
+      description: Crea una nueva empresa y su usuario administrador
+      parameters:
+      - description: Datos de empresa y admin
+        in: body
+        name: company
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateCompanyWithAdminDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Crear empresa con admin (SuperAdmin)
+      tags:
+      - SuperAdmin
+  /admin/memberships:
+    post:
+      consumes:
+      - application/json
+      description: Asigna un usuario a una empresa (solo SuperAdmin)
+      parameters:
+      - description: Datos de la membresía
+        in: body
+        name: membership
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateMembershipDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Crear membresía
+      tags:
+      - Memberships
+  /admin/plans:
+    get:
+      description: Get all plans (SuperAdmin sees all, others see only public active
+        plans)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all plans
+      tags:
+      - plans
+    post:
+      consumes:
+      - application/json
+      description: Create a new subscription plan (SuperAdmin only)
+      parameters:
+      - description: Plan data
+        in: body
+        name: plan
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.PlanDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dtos.PlanResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create plan
+      tags:
+      - plans
+  /admin/plans/{id}:
+    delete:
+      description: Soft delete a plan (SuperAdmin only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete plan
+      tags:
+      - plans
+    get:
+      description: Get a specific plan by ID
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.PlanResponse'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get plan by ID
+      tags:
+      - plans
+    put:
+      consumes:
+      - application/json
+      description: Update an existing plan (SuperAdmin only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Plan data
+        in: body
+        name: plan
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdatePlanDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.PlanResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update plan
+      tags:
+      - plans
+  /admin/plans/{id}/toggle:
+    patch:
+      consumes:
+      - application/json
+      description: Enable or disable a plan (SuperAdmin only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Plan status
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.TogglePlanStatusDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.PlanResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Toggle plan status
+      tags:
+      - plans
+  /admin/plans/assign:
+    post:
+      consumes:
+      - application/json
+      description: Assign a subscription plan to a company (SuperAdmin only)
+      parameters:
+      - description: Plan assignment
+        in: body
+        name: assignment
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.AssignPlanToCompanyDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Assign plan to company
+      tags:
+      - plans
+  /admin/system-values:
+    get:
+      consumes:
+      - application/json
+      description: Obtiene todos los valores de sistema (solo SuperAdmin)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar todos los valores de sistema
+      tags:
+      - System Values
+    post:
+      consumes:
+      - application/json
+      description: Crea un nuevo valor de sistema (solo SuperAdmin)
+      parameters:
+      - description: Datos del valor
+        in: body
+        name: value
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateSystemValueDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Crear valor de sistema
+      tags:
+      - System Values
+  /applications:
+    get:
+      consumes:
+      - application/json
+      description: Obtiene postulaciones (todas si es SuperAdmin, de la empresa si
+        es usuario normal)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar postulaciones
+      tags:
+      - Applications
+    post:
+      consumes:
+      - application/json
+      description: Crea una nueva postulación a un empleo
+      parameters:
+      - description: Datos de la postulación
+        in: body
+        name: application
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateApplicationDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Crear postulación
+      tags:
+      - Applications
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Autentica un usuario y retorna tokens JWT
+      parameters:
+      - description: Credenciales de acceso
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.LoginDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Iniciar sesión
+      tags:
+      - Authentication
+  /auth/me:
+    get:
+      consumes:
+      - application/json
+      description: Retorna la información del usuario autenticado
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Obtener usuario actual
+      tags:
+      - Authentication
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Genera un nuevo access token usando el refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: token
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.RefreshTokenDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Refrescar token de acceso
+      tags:
+      - Authentication
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Registra un nuevo usuario. Usar RegisterCompany en su lugar
+      parameters:
+      - description: Datos del usuario
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.RegisterDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Registrar nuevo usuario (deprecated)
+      tags:
+      - Authentication
+  /auth/register-company:
+    post:
+      consumes:
+      - application/json
+      description: Crea una nueva empresa y su usuario administrador
+      parameters:
+      - description: Datos de empresa y admin
+        in: body
+        name: company
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.RegisterCompanyDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Registrar empresa con admin
+      tags:
+      - Authentication
+  /companies:
+    get:
+      consumes:
+      - application/json
+      description: Obtiene empresas (todas si es SuperAdmin, solo la actual si es
+        usuario normal)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar empresas
+      tags:
+      - Companies
+    post:
+      consumes:
+      - application/json
+      description: Crea una nueva empresa
+      parameters:
+      - description: Datos de la empresa
+        in: body
+        name: company
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateCompanyDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Crear empresa
+      tags:
+      - Companies
+  /companies/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retorna información de una empresa específica
+      parameters:
+      - description: ID de la empresa
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Obtener empresa por ID
+      tags:
+      - Companies
+  /jobs:
+    get:
+      consumes:
+      - application/json
+      description: Obtiene empleos (todos si es SuperAdmin, de la empresa si es usuario
+        normal)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar empleos
+      tags:
+      - Jobs
+    post:
+      consumes:
+      - application/json
+      description: Crea un nuevo empleo en la empresa actual
+      parameters:
+      - description: Datos del empleo
+        in: body
+        name: job
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateJobDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Crear empleo
+      tags:
+      - Jobs
+  /locations/cities:
+    get:
+      parameters:
+      - description: Filter by state ID
+        in: query
+        name: state_id
+        type: integer
+      - description: Search by name
+        in: query
+        name: search
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dtos.CityDTO'
+            type: array
+      summary: Get all cities
+      tags:
+      - Locations
+    post:
+      parameters:
+      - description: City data
+        in: body
+        name: city
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateCityDTO'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dtos.CityDTO'
+      summary: Create city
+      tags:
+      - Locations
+  /locations/cities/{id}:
+    delete:
+      parameters:
+      - description: City ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      summary: Delete city
+      tags:
+      - Locations
+    get:
+      parameters:
+      - description: City ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.CityDTO'
+      summary: Get city by ID
+      tags:
+      - Locations
+    put:
+      parameters:
+      - description: City ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: City data
+        in: body
+        name: city
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdateCityDTO'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.CityDTO'
+      summary: Update city
+      tags:
+      - Locations
+  /locations/countries:
+    get:
+      parameters:
+      - description: Filter by subregion ID
+        in: query
+        name: subregion_id
+        type: integer
+      - description: Search by name or ISO code
+        in: query
+        name: search
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dtos.CountryDTO'
+            type: array
+      summary: Get all countries
+      tags:
+      - Locations
+    post:
+      parameters:
+      - description: Country data
+        in: body
+        name: country
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateCountryDTO'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dtos.CountryDTO'
+      summary: Create country
+      tags:
+      - Locations
+  /locations/countries/{id}:
+    delete:
+      parameters:
+      - description: Country ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      summary: Delete country
+      tags:
+      - Locations
+    get:
+      parameters:
+      - description: Country ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Include states
+        in: query
+        name: include_states
+        type: boolean
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.CountryDTO'
+      summary: Get country by ID
+      tags:
+      - Locations
+    put:
+      parameters:
+      - description: Country ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Country data
+        in: body
+        name: country
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdateCountryDTO'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.CountryDTO'
+      summary: Update country
+      tags:
+      - Locations
+  /locations/countries/iso/{iso}:
+    get:
+      parameters:
+      - description: ISO2 or ISO3 code
+        in: path
+        name: iso
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.CountryDTO'
+      summary: Get country by ISO code
+      tags:
+      - Locations
+  /locations/hierarchy/{id}:
+    get:
+      parameters:
+      - description: Country ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.CountryDTO'
+      summary: Get complete location hierarchy for a country
+      tags:
+      - Locations
+  /locations/regions:
+    get:
+      parameters:
+      - description: Include subregions
+        in: query
+        name: include_subregions
+        type: boolean
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dtos.RegionDTO'
+            type: array
+      summary: Get all regions
+      tags:
+      - Locations
+    post:
+      parameters:
+      - description: Region data
+        in: body
+        name: region
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateRegionDTO'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dtos.RegionDTO'
+      summary: Create region
+      tags:
+      - Locations
+  /locations/regions/{id}:
+    delete:
+      parameters:
+      - description: Region ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      summary: Delete region
+      tags:
+      - Locations
+    get:
+      parameters:
+      - description: Region ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Include subregions
+        in: query
+        name: include_subregions
+        type: boolean
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.RegionDTO'
+      summary: Get region by ID
+      tags:
+      - Locations
+    put:
+      parameters:
+      - description: Region ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Region data
+        in: body
+        name: region
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdateRegionDTO'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.RegionDTO'
+      summary: Update region
+      tags:
+      - Locations
+  /locations/search:
+    get:
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.LocationSearchDTO'
+      summary: Search across all location types
+      tags:
+      - Locations
+  /locations/states:
+    get:
+      parameters:
+      - description: Filter by country ID
+        in: query
+        name: country_id
+        type: integer
+      - description: Search by name
+        in: query
+        name: search
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dtos.StateDTO'
+            type: array
+      summary: Get all states
+      tags:
+      - Locations
+    post:
+      parameters:
+      - description: State data
+        in: body
+        name: state
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateStateDTO'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dtos.StateDTO'
+      summary: Create state
+      tags:
+      - Locations
+  /locations/states/{id}:
+    delete:
+      parameters:
+      - description: State ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      summary: Delete state
+      tags:
+      - Locations
+    get:
+      parameters:
+      - description: State ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Include cities
+        in: query
+        name: include_cities
+        type: boolean
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.StateDTO'
+      summary: Get state by ID
+      tags:
+      - Locations
+    put:
+      parameters:
+      - description: State ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: State data
+        in: body
+        name: state
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdateStateDTO'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.StateDTO'
+      summary: Update state
+      tags:
+      - Locations
+  /locations/subregions:
+    get:
+      parameters:
+      - description: Filter by region ID
+        in: query
+        name: region_id
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dtos.SubregionDTO'
+            type: array
+      summary: Get all subregions
+      tags:
+      - Locations
+    post:
+      parameters:
+      - description: Subregion data
+        in: body
+        name: subregion
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateSubregionDTO'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dtos.SubregionDTO'
+      summary: Create subregion
+      tags:
+      - Locations
+  /locations/subregions/{id}:
+    delete:
+      parameters:
+      - description: Subregion ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      summary: Delete subregion
+      tags:
+      - Locations
+    get:
+      parameters:
+      - description: Subregion ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Include countries
+        in: query
+        name: include_countries
+        type: boolean
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.SubregionDTO'
+      summary: Get subregion by ID
+      tags:
+      - Locations
+    put:
+      parameters:
+      - description: Subregion ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Subregion data
+        in: body
+        name: subregion
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdateSubregionDTO'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.SubregionDTO'
+      summary: Update subregion
+      tags:
+      - Locations
+  /memberships:
+    get:
+      consumes:
+      - application/json
+      description: Obtiene membresías (todas si es SuperAdmin, de la empresa si es
+        usuario normal)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar membresías
+      tags:
+      - Memberships
+  /plans:
+    get:
+      description: Get all public active plans for pricing page
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get public plans
+      tags:
+      - plans
+  /plans/{slug}:
+    get:
+      description: Get a specific plan by slug
+      parameters:
+      - description: Plan slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.PlanResponse'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get plan by slug
+      tags:
+      - plans
+  /system-values/{category}:
+    get:
+      consumes:
+      - application/json
+      description: Retorna todos los valores de sistema de una categoría específica
+      parameters:
+      - description: 'Categoría (ej: employment_type, contract_type)'
+        in: path
+        name: category
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Obtener valores por categoría
+      tags:
+      - System Values
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Obtiene usuarios (todos si es SuperAdmin, de la empresa si es usuario
+        normal)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar usuarios
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: Crea un nuevo usuario en la empresa actual
+      parameters:
+      - description: Datos del usuario
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateUserDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Crear usuario
+      tags:
+      - Users
+  /users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Elimina un usuario (soft delete)
+      parameters:
+      - description: ID del usuario
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Eliminar usuario
+      tags:
+      - Users
+    get:
+      consumes:
+      - application/json
+      description: Retorna la información de un usuario específico
+      parameters:
+      - description: ID del usuario
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Obtener usuario por ID
+      tags:
+      - Users
+    put:
+      consumes:
+      - application/json
+      description: Actualiza los datos de un usuario existente
+      parameters:
+      - description: ID del usuario
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Datos a actualizar
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdateUserDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Actualizar usuario
+      tags:
+      - Users
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
