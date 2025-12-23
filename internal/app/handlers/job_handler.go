@@ -58,7 +58,14 @@ func (h *JobHandler) GetJobs(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve jobs"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "success", "data": gin.H{"jobs": jobs, "count": len(jobs)}})
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"message": "Jobs retrieved successfully",
+		"data": gin.H{
+			"jobs": jobs, 
+			"count": len(jobs),
+		},
+	})
 }
 
 func (h *JobHandler) GetJob(c *gin.Context) {

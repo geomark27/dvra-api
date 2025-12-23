@@ -57,13 +57,18 @@ func (s *jobService) CreateJob(dto dtos.CreateJobDTO) (*models.Job, error) {
 	}
 
 	job := &models.Job{
-		CompanyID:         dto.CompanyID,
-		Title:             dto.Title,
-		Description:       dto.Description,
-		Location:          dto.Location,
-		Status:            status,
-		AssignedRecruiter: dto.AssignedRecruiter,
-		HiringManager:     dto.HiringManager,
+		CompanyID:         	dto.CompanyID,
+		Title:             	dto.Title,
+		Description:       	dto.Description,
+		LocationType:		dto.LocationType,
+		CityID:				dto.CityID,
+		SalaryMin: 			dto.SalaryMin,
+		SalaryMax: 			dto.SalaryMax,
+		Requirements:    	dto.Requirements,
+		Benefits:         	dto.Benefits,
+		Status:            	status,
+		AssignedRecruiter:	dto.AssignedRecruiter,
+		HiringManager:     	dto.HiringManager,
 	}
 
 	return s.jobRepo.Create(job)
@@ -84,8 +89,23 @@ func (s *jobService) UpdateJob(id uint, dto dtos.UpdateJobDTO) (*models.Job, err
 	if dto.Description != nil {
 		job.Description = *dto.Description
 	}
-	if dto.Location != nil {
-		job.Location = *dto.Location
+	if dto.LocationType != nil {
+		job.LocationType = *dto.LocationType
+	}
+	if dto.CityID != nil {
+		job.CityID = dto.CityID
+	}
+	if dto.SalaryMin != nil {
+		job.SalaryMin = dto.SalaryMin
+	}
+	if dto.SalaryMax != nil {
+		job.SalaryMax = dto.SalaryMax
+	}
+	if dto.Requirements != nil {
+		job.Requirements = *dto.Requirements
+	}
+	if dto.Benefits != nil {
+		job.Benefits = *dto.Benefits
 	}
 	if dto.Status != nil {
 		job.Status = *dto.Status

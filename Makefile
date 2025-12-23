@@ -108,13 +108,17 @@ dev-full: ## Setup completo desarrollo (DB + migrate + seed + run)
 	@echo "✅ Ready! Starting API..."
 	@go run $(CMD_DIR)/main.go
 
-fresh: ## Reset completo (clean DB + migrate + seed)
+fresh: ## Reset completo (clean DB + migrate + seed) - Usa loc=1 para incluir ubicaciones
 	@echo "🔄 Fresh install..."
 	@$(MAKE) db-clean
 	@$(MAKE) db-up
 	@echo "⏳ Waiting for PostgreSQL..."
 	@sleep 3
 	@loom db:fresh --seed
+	@if [ "$(location)" = "1" ]; then \
+		echo "🌍 Poblando ubicaciones..."; \
+		$(MAKE) db-location; \
+	fi
 	@echo "✅ Database fresh and seeded!"
 
 install-tools: ## Instala herramientas de desarrollo
@@ -155,6 +159,11 @@ db-migrate: ## Ejecuta migraciones con LOOM
 db-seed: ## Ejecuta seeders con LOOM
 	@echo "🌱 Running seeders..."
 	@loom db:seed
+
+db-location: ## Pobla datos de ubicaciones (countries, cities, etc)
+	@echo "🌍 Poblando datos de ubicaciones..."
+	@docker exec -i dvra-postgres psql -U ramosmg -d dvra_db < scripts/location.sql
+	@echo "✅ Datos de ubicaciones poblados exitosamente"
 
 # ============================================
 # COMANDOS GIT
