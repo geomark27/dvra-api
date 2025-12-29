@@ -11,11 +11,15 @@ import (
 // JobService define el contrato del servicio de jobs
 type JobService interface {
 	GetAllJobs() ([]models.Job, error)
+	GetAllJobsWithFilters(filters dtos.JobFilters) ([]models.Job, error)
 	GetJobByID(id uint) (*models.Job, error)
 	GetJobsByCompanyID(companyID uint) ([]models.Job, error)
+	GetJobsByCompanyIDWithFilters(companyID uint, filters dtos.JobFilters) ([]models.Job, error)
 	GetJobsByStatus(status string, companyID uint) ([]models.Job, error)
 	CreateJob(dto dtos.CreateJobDTO) (*models.Job, error)
 	UpdateJob(id uint, dto dtos.UpdateJobDTO) (*models.Job, error)
+	PublishJob(id uint) (*models.Job, error)
+	CloseJob(id uint) (*models.Job, error)
 	DeleteJob(id uint) error
 }
 
@@ -29,6 +33,10 @@ func NewJobService(jobRepo repositories.JobRepository) JobService {
 
 func (s *jobService) GetAllJobs() ([]models.Job, error) {
 	return s.jobRepo.GetAll()
+}
+
+func (s *jobService) GetAllJobsWithFilters(filters dtos.JobFilters) ([]models.Job, error) {
+	return s.jobRepo.GetAllWithFilters(filters)
 }
 
 func (s *jobService) GetJobByID(id uint) (*models.Job, error) {
@@ -46,6 +54,10 @@ func (s *jobService) GetJobsByCompanyID(companyID uint) ([]models.Job, error) {
 	return s.jobRepo.GetByCompanyID(companyID)
 }
 
+func (s *jobService) GetJobsByCompanyIDWithFilters(companyID uint, filters dtos.JobFilters) ([]models.Job, error) {
+	return s.jobRepo.GetByCompanyIDWithFilters(companyID, filters)
+}
+
 func (s *jobService) GetJobsByStatus(status string, companyID uint) ([]models.Job, error) {
 	return s.jobRepo.GetByStatus(status, companyID)
 }
@@ -57,18 +69,18 @@ func (s *jobService) CreateJob(dto dtos.CreateJobDTO) (*models.Job, error) {
 	}
 
 	job := &models.Job{
-		CompanyID:         	dto.CompanyID,
-		Title:             	dto.Title,
-		Description:       	dto.Description,
-		LocationType:		dto.LocationType,
-		CityID:				dto.CityID,
-		SalaryMin: 			dto.SalaryMin,
-		SalaryMax: 			dto.SalaryMax,
-		Requirements:    	dto.Requirements,
-		Benefits:         	dto.Benefits,
-		Status:            	status,
-		AssignedRecruiter:	dto.AssignedRecruiter,
-		HiringManager:     	dto.HiringManager,
+		CompanyID:         dto.CompanyID,
+		Title:             dto.Title,
+		Description:       dto.Description,
+		LocationType:      dto.LocationType,
+		CityID:            dto.CityID,
+		SalaryMin:         dto.SalaryMin,
+		SalaryMax:         dto.SalaryMax,
+		Requirements:      dto.Requirements,
+		Benefits:          dto.Benefits,
+		Status:            status,
+		AssignedRecruiter: dto.AssignedRecruiter,
+		HiringManager:     dto.HiringManager,
 	}
 
 	return s.jobRepo.Create(job)
@@ -117,6 +129,37 @@ func (s *jobService) UpdateJob(id uint, dto dtos.UpdateJobDTO) (*models.Job, err
 		job.HiringManager = dto.HiringManager
 	}
 
+	return s.jobRepo.Update(job)
+}
+
+func (s *jobService) PublishJob(id uint) (*models.Job, error) {
+	job, err := s.jobRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if job == nil {
+		return nil, fmt.Errorf("job not found")
+	}
+
+	// Validar que el job tenga los campos mínimos requeridos
+	if job.Title == "" || job.Description == "" {
+		return nil, fmt.Errorf("job must have title and description to be published")
+	}
+
+	job.Status = "active"
+	return s.jobRepo.Update(job)
+}
+
+func (s *jobService) CloseJob(id uint) (*models.Job, error) {
+	job, err := s.jobRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if job == nil {
+		return nil, fmt.Errorf("job not found")
+	}
+
+	job.Status = "closed"
 	return s.jobRepo.Update(job)
 }
 

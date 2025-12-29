@@ -132,16 +132,8 @@ func registerRoutes(
 				jobs.GET("/:id", jobHandler.GetJob)
 				jobs.PUT("/:id", jobHandler.UpdateJob)
 				jobs.DELETE("/:id", jobHandler.DeleteJob)
-			}
-
-			// Candidate routes
-			candidates := protected.Group("/candidates")
-			{
-				candidates.GET("", candidateHandler.GetCandidates)
-				candidates.POST("", candidateHandler.CreateCandidate)
-				candidates.GET("/:id", candidateHandler.GetCandidate)
-				candidates.PUT("/:id", candidateHandler.UpdateCandidate)
-				candidates.DELETE("/:id", candidateHandler.DeleteCandidate)
+				jobs.PATCH("/:id/publish", jobHandler.PublishJob)
+				jobs.PATCH("/:id/close", jobHandler.CloseJob)
 			}
 
 			// Application routes

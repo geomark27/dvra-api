@@ -20,28 +20,27 @@ func NewJobHandler(jobService services.JobService) *JobHandler {
 	return &JobHandler{jobService: jobService, logger: helpers.NewLogger()}
 }
 
-// GetJobs godoc
-// @Summary      Listar empleos
-// @Description  Obtiene empleos (todos si es SuperAdmin, de la empresa si es usuario normal)
-// @Tags         Jobs
-// @Accept       json
-// @Produce      json
-// @Success      200  {object}  map[string]interface{}
-// @Failure      403  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]interface{}
-// @Security     BearerAuth
-// @Router       /jobs [get]
 func (h *JobHandler) GetJobs(c *gin.Context) {
 	role, _ := c.Get("role")
 
+	// Leer filtros de query params
+	var filters dtos.JobFilters
+	if err := c.ShouldBindQuery(&filters); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Debug: log filtros recibidos
+	h.logger.Info("Filters received: Status=%s, LocationType=%s, CityID=%v", filters.Status, filters.LocationType, filters.CityID)
+
 	// SuperAdmin puede ver todos los jobs
 	if role == "superadmin" {
-		jobs, err := h.jobService.GetAllJobs()
+		jobs, err := h.jobService.GetAllJobsWithFilters(filters)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve jobs"})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"status": "success", "data": gin.H{"jobs": jobs, "count": len(jobs)}})
+		c.JSON(http.StatusOK, gin.H{"status": "success", "data": gin.H{"jobs": dtos.ToJobResponseList(jobs), "count": len(jobs)}})
 		return
 	}
 
@@ -53,16 +52,16 @@ func (h *JobHandler) GetJobs(c *gin.Context) {
 	}
 
 	companyID := companyIDVal.(uint)
-	jobs, err := h.jobService.GetJobsByCompanyID(companyID)
+	jobs, err := h.jobService.GetJobsByCompanyIDWithFilters(companyID, filters)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve jobs"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"status": "success",
+		"status":  "success",
 		"message": "Jobs retrieved successfully",
 		"data": gin.H{
-			"jobs": jobs, 
+			"jobs":  dtos.ToJobResponseList(jobs),
 			"count": len(jobs),
 		},
 	})
@@ -91,22 +90,9 @@ func (h *JobHandler) GetJob(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "data": job})
+	c.JSON(http.StatusOK, gin.H{"status": "success", "data": dtos.ToJobResponse(job)})
 }
 
-// CreateJob godoc
-// @Summary      Crear empleo
-// @Description  Crea un nuevo empleo en la empresa actual
-// @Tags         Jobs
-// @Accept       json
-// @Produce      json
-// @Param        job  body      dtos.CreateJobDTO  true  "Datos del empleo"
-// @Success      201  {object}  map[string]interface{}
-// @Failure      400  {object}  map[string]interface{}
-// @Failure      403  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]interface{}
-// @Security     BearerAuth
-// @Router       /jobs [post]
 func (h *JobHandler) CreateJob(c *gin.Context) {
 	var dto dtos.CreateJobDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
@@ -131,7 +117,7 @@ func (h *JobHandler) CreateJob(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": job})
+	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": dtos.ToJobResponse(job)})
 }
 
 func (h *JobHandler) UpdateJob(c *gin.Context) {
@@ -162,12 +148,12 @@ func (h *JobHandler) UpdateJob(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	job, err := h.jobService.UpdateJob(uint(id), dto)
+	updatedJob, err := h.jobService.UpdateJob(uint(id), dto)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "success", "data": job})
+	c.JSON(http.StatusOK, gin.H{"status": "success", "data": dtos.ToJobResponse(updatedJob)})
 }
 
 func (h *JobHandler) DeleteJob(c *gin.Context) {
@@ -198,4 +184,92 @@ func (h *JobHandler) DeleteJob(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Job deleted"})
+}
+
+// PublishJob godoc
+// @Summary      Publicar empleo
+// @Description  Cambia el estado del job a 'active'
+// @Tags         Jobs
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Job ID"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /jobs/{id}/publish [patch]
+func (h *JobHandler) PublishJob(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+
+	// Validar que el job pertenece a la empresa del usuario
+	role, _ := c.Get("role")
+	if role != "superadmin" {
+		job, err := h.jobService.GetJobByID(uint(id))
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
+			return
+		}
+		companyIDVal, exists := c.Get("company_id")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+			return
+		}
+		companyID := companyIDVal.(uint)
+		if job.CompanyID != companyID {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+			return
+		}
+	}
+
+	job, err := h.jobService.PublishJob(uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Job published", "data": dtos.ToJobResponse(job)})
+}
+
+// CloseJob godoc
+// @Summary      Cerrar empleo
+// @Description  Cambia el estado del job a 'closed'
+// @Tags         Jobs
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Job ID"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /jobs/{id}/close [patch]
+func (h *JobHandler) CloseJob(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+
+	// Validar que el job pertenece a la empresa del usuario
+	role, _ := c.Get("role")
+	if role != "superadmin" {
+		job, err := h.jobService.GetJobByID(uint(id))
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
+			return
+		}
+		companyIDVal, exists := c.Get("company_id")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+			return
+		}
+		companyID := companyIDVal.(uint)
+		if job.CompanyID != companyID {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+			return
+		}
+	}
+
+	job, err := h.jobService.CloseJob(uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Job closed", "data": dtos.ToJobResponse(job)})
 }
