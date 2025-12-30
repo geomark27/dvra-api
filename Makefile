@@ -187,6 +187,7 @@ push:
 # Pull desde origin
 pull:
 	@echo "⬇️  Pulling desde origin/$(BRANCH)..."
+	@git fetch origin
 	@git pull origin $(BRANCH)
 	@echo "✅ Pull completado!"
 
