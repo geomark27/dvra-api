@@ -1,4 +1,27 @@
+name: dvra-ats
+
 services:
+  # API Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dvra-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+    ports:
+      - "${PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - dvra-network
+
+  # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
     container_name: dvra-postgres
@@ -12,7 +35,7 @@ services:
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
       POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
     ports:
-      - "5433:5432"
+      - "${DB_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
@@ -21,6 +44,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - dvra-network
+
+networks:
+  dvra-network:
+    driver: bridge
 
 volumes:
   postgres_data:

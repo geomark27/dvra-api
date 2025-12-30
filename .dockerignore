@@ -9,9 +9,8 @@
 .gitignore
 .gitattributes
 
-# Documentación
+# Documentación markdown (no el código de docs/)
 *.md
-docs/
 
 # Tests y coverage
 *_test.go

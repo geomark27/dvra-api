@@ -24,15 +24,16 @@ help: ## Muestra esta ayuda
 	@echo "    make dev          - Modo desarrollo con hot reload (requiere air)"
 	@echo "    make dev-full     - Setup completo desarrollo (DB + migrate + seed + run)"
 	@echo ""
-	@echo "  🧪 Testing y Calidad:"
-	@echo "    make test         - Ejecuta los tests"
-	@echo "    make test-coverage - Ejecuta tests con cobertura"
-	@echo "    make fmt          - Formatea el código"
-	@echo "    make vet          - Ejecuta go vet"
-	@echo "    make lint         - Ejecuta golangci-lint"
+	@echo "  🐳 Docker (API + DB):"
+	@echo "    make up           - Levanta toda la aplicación (API + DB)"
+	@echo "    make down         - Detiene toda la aplicación"
+	@echo "    make restart      - Reinicia toda la aplicación"
+	@echo "    make logs         - Muestra logs de todos los servicios"
+	@echo "    make logs-api     - Muestra logs solo de la API"
+	@echo "    make rebuild      - Reconstruye y levanta la API"
 	@echo ""
-	@echo "  🐳 Docker/PostgreSQL:"
-	@echo "    make db-up        - Inicia PostgreSQL en Docker"
+	@echo "  🐳 Docker/PostgreSQL (solo DB):"
+	@echo "    make db-up        - Inicia solo PostgreSQL en Docker"
 	@echo "    make db-down      - Detiene PostgreSQL"
 	@echo "    make db-restart   - Reinicia PostgreSQL"
 	@echo "    make db-logs      - Muestra logs de PostgreSQL"
@@ -43,6 +44,13 @@ help: ## Muestra esta ayuda
 	@echo "    make db-migrate   - Ejecuta migraciones"
 	@echo "    make db-seed      - Ejecuta seeders"
 	@echo "    make fresh        - Reset completo (clean DB + migrate + seed)"
+	@echo ""
+	@echo "  🧪 Testing y Calidad:"
+	@echo "    make test         - Ejecuta los tests"
+	@echo "    make test-coverage - Ejecuta tests con cobertura"
+	@echo "    make fmt          - Formatea el código"
+	@echo "    make vet          - Ejecuta go vet"
+	@echo "    make lint         - Ejecuta golangci-lint"
 	@echo ""
 	@echo "  📦 Git (rama actual: $(BRANCH)):"
 	@echo "    make push m='mensaje' - Add + Commit + Push a $(BRANCH)"
@@ -132,19 +140,49 @@ install-tools: ## Instala herramientas de desarrollo
 	@go install github.com/cosmtrek/air@latest
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
-# Comandos de Docker
-db-up: ## Inicia PostgreSQL en Docker
-	@echo "🐳 Starting PostgreSQL..."
+# ============================================
+# COMANDOS DOCKER (API + DB)
+# ============================================
+
+up: ## Levanta toda la aplicación (API + PostgreSQL)
+	@echo "🚀 Starting DVRA API..."
 	@docker compose up -d
-	@echo "✅ PostgreSQL running on localhost:5433"
+	@echo "✅ API running on http://localhost:$(PORT)"
+	@echo "📖 Swagger: http://localhost:$(PORT)/swagger/index.html"
+
+down: ## Detiene toda la aplicación
+	@echo "🛑 Stopping DVRA..."
+	@docker compose down
+
+restart: ## Reinicia toda la aplicación
+	@echo "🔄 Restarting DVRA..."
+	@docker compose restart
+
+logs: ## Muestra logs de todos los servicios
+	@docker compose logs -f
+
+logs-api: ## Muestra logs solo de la API
+	@docker compose logs -f api
+
+rebuild: ## Reconstruye y levanta la API
+	@echo "🔨 Rebuilding DVRA API..."
+	@docker compose build --no-cache api
+	@docker compose up -d api
+	@echo "✅ API rebuilt and running!"
+
+# Comandos de Docker (solo PostgreSQL)
+db-up: ## Inicia solo PostgreSQL en Docker
+	@echo "🐳 Starting PostgreSQL..."
+	@docker compose up -d postgres
+	@echo "✅ PostgreSQL running on localhost:$(DB_PORT)"
 
 db-down: ## Detiene PostgreSQL
 	@echo "🛑 Stopping PostgreSQL..."
-	@docker compose down
+	@docker compose stop postgres
 
 db-restart: ## Reinicia PostgreSQL
 	@echo "🔄 Restarting PostgreSQL..."
-	@docker compose restart
+	@docker compose restart postgres
 
 db-logs: ## Muestra logs de PostgreSQL
 	@docker compose logs -f postgres
@@ -155,7 +193,7 @@ db-clean: ## Elimina PostgreSQL y volumenes
 	@echo "✅ Database cleaned"
 
 db-shell: ## Accede a psql en el contenedor
-	@docker exec -it dvra-postgres psql -U ramosmg -d dvra_db
+	@docker compose exec postgres psql -U $(DB_USER) -d $(DB_NAME)
 
 # Comandos de base de datos con LOOM
 db-migrate: ## Ejecuta migraciones con LOOM
