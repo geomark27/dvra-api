@@ -8,6 +8,12 @@ BUILD_DIR=build
 CMD_DIR=cmd/$(APP_NAME)
 BRANCH := $(shell git branch --show-current)
 
+# Cargar variables de entorno desde .env
+ifneq (,$(wildcard ./.env))
+    include .env
+    export
+endif
+
 # Comandos principales
 help: ## Muestra esta ayuda
 	@echo "📋 Comandos disponibles:"
@@ -162,7 +168,7 @@ db-seed: ## Ejecuta seeders con LOOM
 
 db-location: ## Pobla datos de ubicaciones (countries, cities, etc)
 	@echo "🌍 Poblando datos de ubicaciones..."
-	@docker exec -i dvra-postgres psql -U ramosmg -d dvra_db < scripts/location.sql
+	@docker compose exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) < scripts/location.sql
 	@echo "✅ Datos de ubicaciones poblados exitosamente"
 
 # ============================================
