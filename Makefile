@@ -1,4 +1,10 @@
-# dvra-api - Makefile generado por Loom
+# dvra-api - Makefile
+
+# Cargar variables de entorno desde .env
+ifneq (,$(wildcard .env))
+	include .env
+	export
+endif
 
 .PHONY: build run test clean fmt vet deps help
 
@@ -8,154 +14,177 @@ BUILD_DIR=build
 CMD_DIR=cmd/$(APP_NAME)
 BRANCH := $(shell git branch --show-current)
 
-# Cargar variables de entorno desde .env
-ifneq (,$(wildcard ./.env))
-    include .env
-    export
-endif
-
 # Comandos principales
 help: ## Muestra esta ayuda
-	@echo "📋 Comandos disponibles:"
+	@echo "================================================================================"
+	@echo "                         DVRA-API - Makefile Help"
+	@echo "================================================================================"
 	@echo ""
-	@echo "  🔨 Compilación y Ejecución:"
-	@echo "    make build        - Compila la aplicación"
-	@echo "    make run          - Ejecuta la aplicación (sin migraciones)"
-	@echo "    make dev          - Modo desarrollo con hot reload (requiere air)"
-	@echo "    make dev-full     - Setup completo desarrollo (DB + migrate + seed + run)"
+	@echo "  Build & Run:"
+	@echo "    build              Compila la aplicacion"
+	@echo "    run                Ejecuta la aplicacion"
+	@echo "    dev                Modo desarrollo con hot reload (requiere air)"
+	@echo "    dev-full           Setup completo (DB + migrate + seed + run)"
 	@echo ""
-	@echo "  🐳 Docker (API + DB):"
-	@echo "    make up           - Levanta toda la aplicación (API + DB)"
-	@echo "    make down         - Detiene toda la aplicación"
-	@echo "    make restart      - Reinicia toda la aplicación"
-	@echo "    make logs         - Muestra logs de todos los servicios"
-	@echo "    make logs-api     - Muestra logs solo de la API"
-	@echo "    make rebuild      - Reconstruye y levanta la API"
+	@echo "  PostgreSQL (Desarrollo - solo DB):"
+	@echo "    db-up              Inicia solo PostgreSQL"
+	@echo "    db-up fresh=1      Inicia PostgreSQL + reset DB + seed"
+	@echo "    db-up fresh=1 location=1"
+	@echo "                       Inicia PostgreSQL + reset DB + seed + ubicaciones"
+	@echo "    db-fresh           Alias: db-up fresh=1"
+	@echo "    db-fresh-full      Alias: db-up fresh=1 location=1"
+	@echo "    db-down            Detiene PostgreSQL"
+	@echo "    db-restart         Reinicia PostgreSQL"
+	@echo "    db-logs            Muestra logs de PostgreSQL"
+	@echo "    db-clean           Elimina PostgreSQL y volumenes"
+	@echo "    db-shell           Accede a psql en el contenedor"
 	@echo ""
-	@echo "  🐳 Docker/PostgreSQL (solo DB):"
-	@echo "    make db-up        - Inicia solo PostgreSQL en Docker"
-	@echo "    make db-down      - Detiene PostgreSQL"
-	@echo "    make db-restart   - Reinicia PostgreSQL"
-	@echo "    make db-logs      - Muestra logs de PostgreSQL"
-	@echo "    make db-clean     - Elimina PostgreSQL y volúmenes"
-	@echo "    make db-shell     - Accede a psql en el contenedor"
+	@echo "  Docker (Produccion - API + DB):"
+	@echo "    up                 Levanta toda la aplicacion (API + DB)"
+	@echo "    down               Detiene toda la aplicacion"
+	@echo "    restart            Reinicia toda la aplicacion"
+	@echo "    logs               Muestra logs de todos los servicios"
+	@echo "    logs-api           Muestra logs solo de la API"
+	@echo "    rebuild            Reconstruye y levanta la API"
 	@echo ""
-	@echo "  🗃️  Base de Datos (LOOM):"
-	@echo "    make db-migrate   - Ejecuta migraciones"
-	@echo "    make db-seed      - Ejecuta seeders"
-	@echo "    make fresh        - Reset completo (clean DB + migrate + seed)"
+	@echo "  Database (LOOM):"
+	@echo "    db-migrate         Ejecuta migraciones"
+	@echo "    db-seed            Ejecuta seeders"
+	@echo "    db-location        Pobla datos de ubicaciones (countries, cities, etc)"
+	@echo "    fresh              Reset completo (clean + up + migrate + seed)"
+	@echo "    fresh location=1   Reset completo + datos de ubicaciones"
 	@echo ""
-	@echo "  🧪 Testing y Calidad:"
-	@echo "    make test         - Ejecuta los tests"
-	@echo "    make test-coverage - Ejecuta tests con cobertura"
-	@echo "    make fmt          - Formatea el código"
-	@echo "    make vet          - Ejecuta go vet"
-	@echo "    make lint         - Ejecuta golangci-lint"
+	@echo "  Testing & Calidad:"
+	@echo "    test               Ejecuta los tests"
+	@echo "    test-coverage      Ejecuta tests con cobertura"
+	@echo "    fmt                Formatea el codigo"
+	@echo "    vet                Ejecuta go vet"
+	@echo "    lint               Ejecuta golangci-lint"
 	@echo ""
-	@echo "  📦 Git (rama actual: $(BRANCH)):"
-	@echo "    make push m='mensaje' - Add + Commit + Push a $(BRANCH)"
-	@echo "    make pull             - Pull desde origin/$(BRANCH)"
-	@echo "    make status           - Ver estado de git"
-	@echo "    make sync m='mensaje' - Pull + Push (sincronizar)"
+	@echo "  Git (rama: $(BRANCH)):"
+	@echo "    push m='msg'       Add + Commit + Push a $(BRANCH)"
+	@echo "    pull               Pull desde origin/$(BRANCH)"
+	@echo "    status             Ver estado de git"
+	@echo "    sync m='msg'       Pull + Add + Commit + Push (sincronizar)"
 	@echo ""
-	@echo "  🧹 Utilidades:"
-	@echo "    make clean        - Limpia archivos generados"
-	@echo "    make deps         - Descarga las dependencias"
-	@echo "    make install-tools - Instala herramientas de desarrollo"
-	@echo "    make swagger      - Genera documentación Swagger"
+	@echo "  Utilidades:"
+	@echo "    clean              Limpia archivos generados"
+	@echo "    deps               Descarga las dependencias"
+	@echo "    install-tools      Instala herramientas de desarrollo (air, golangci-lint)"
+	@echo "    swagger            Genera documentacion Swagger"
 	@echo ""
+	@echo "================================================================================"
+	@echo "                              Ejemplos de Uso"
+	@echo "================================================================================"
+	@echo ""
+	@echo "  Desarrollo rapido:"
+	@echo "    make db-up                        Solo inicia PostgreSQL"
+	@echo "    make db-up fresh=1                PostgreSQL + reset DB + seed"
+	@echo "    make db-up fresh=1 location=1    PostgreSQL + reset + ubicaciones"
+	@echo "    make db-fresh                     Atajo para db-up fresh=1"
+	@echo "    make db-fresh-full                Atajo para db-up fresh=1 location=1"
+	@echo ""
+	@echo "  Workflow tipico:"
+	@echo "    make db-fresh-full && make run    Reset completo + ejecutar API"
+	@echo "    make dev-full                     Todo automatico (DB + API)"
+	@echo ""
+	@echo "  Git rapido:"
+	@echo "    make push m='fix: corregido bug en login'"
+	@echo "    make sync m='feat: nueva funcionalidad'"
+	@echo ""
+	@echo "================================================================================"
 
-build: ## Compila la aplicación
-	@echo "🔨 Compilando $(APP_NAME)..."
+build: ## Compila la aplicacion
+	@echo "Compilando $(APP_NAME)..."
 	@mkdir -p $(BUILD_DIR)
 	@go build -o $(BUILD_DIR)/$(APP_NAME) $(CMD_DIR)/main.go
-	@echo "✅ Compilación exitosa: $(BUILD_DIR)/$(APP_NAME)"
+	@echo "Compilacion exitosa: $(BUILD_DIR)/$(APP_NAME)"
 
-run: ## Ejecuta la aplicación (sin migraciones)
-	@echo "🚀 Ejecutando $(APP_NAME)..."
-	@echo "💡 Nota: Para migraciones usa 'make db-migrate' o 'loom db:migrate'"
+run: ## Ejecuta la aplicacion (sin migraciones)
+	@echo "Ejecutando $(APP_NAME)..."
+	@echo "Nota: Para migraciones usa 'make db-migrate' o 'loom db:migrate'"
 	@go run $(CMD_DIR)/main.go
 
 test: ## Ejecuta los tests
-	@echo "🧪 Ejecutando tests..."
+	@echo "Ejecutando tests..."
 	@go test -v ./...
 
 test-coverage: ## Ejecuta tests con cobertura
-	@echo "🧪 Ejecutando tests con cobertura..."
+	@echo "Ejecutando tests con cobertura..."
 	@go test -v -coverprofile=coverage.out ./...
 	@go tool cover -html=coverage.out -o coverage.html
-	@echo "📊 Reporte de cobertura generado: coverage.html"
+	@echo "Reporte de cobertura generado: coverage.html"
 
-fmt: ## Formatea el código
-	@echo "🎨 Formateando código..."
+fmt: ## Formatea el codigo
+	@echo "Formateando codigo..."
 	@go fmt ./...
 
 vet: ## Ejecuta go vet
-	@echo "🔍 Analizando código..."
+	@echo "Analizando codigo..."
 	@go vet ./...
 
-lint: ## Ejecuta golangci-lint (requiere instalación)
-	@echo "🔍 Ejecutando linter..."
+lint: ## Ejecuta golangci-lint (requiere instalacion)
+	@echo "Ejecutando linter..."
 	@golangci-lint run
 
 deps: ## Descarga las dependencias
-	@echo "📦 Descargando dependencias..."
+	@echo "Descargando dependencias..."
 	@go mod download
 	@go mod tidy
 
 clean: ## Limpia archivos generados
-	@echo "🧹 Limpiando archivos generados..."
+	@echo "Limpiando archivos generados..."
 	@rm -rf $(BUILD_DIR)
 	@rm -f coverage.out coverage.html
 	@go clean
 
 dev: ## Modo desarrollo con hot reload (requiere air)
-	@echo "🔥 Iniciando en modo desarrollo..."
+	@echo "Iniciando en modo desarrollo..."
 	@air
 
 dev-full: ## Setup completo desarrollo (DB + migrate + seed + run)
-	@echo "🚀 Starting development environment..."
+	@echo "Starting development environment..."
 	@$(MAKE) db-up
-	@echo "⏳ Waiting for PostgreSQL..."
+	@echo "Waiting for PostgreSQL..."
 	@sleep 3
 	@loom db:migrate --seed
-	@echo "✅ Ready! Starting API..."
+	@echo "Ready! Starting API..."
 	@go run $(CMD_DIR)/main.go
 
-fresh: ## Reset completo (clean DB + migrate + seed) - Usa loc=1 para incluir ubicaciones
-	@echo "🔄 Fresh install..."
+fresh: ## Reset completo (clean DB + migrate + seed) [location=1 para ubicaciones]
+	@echo "Fresh install..."
 	@$(MAKE) db-clean
 	@$(MAKE) db-up
-	@echo "⏳ Waiting for PostgreSQL..."
+	@echo "Waiting for PostgreSQL..."
 	@sleep 3
 	@loom db:fresh --seed
 	@if [ "$(location)" = "1" ]; then \
-		echo "🌍 Poblando ubicaciones..."; \
+		echo "Poblando ubicaciones..."; \
 		$(MAKE) db-location; \
 	fi
-	@echo "✅ Database fresh and seeded!"
+	@echo "Database fresh and seeded!"
 
 install-tools: ## Instala herramientas de desarrollo
-	@echo "🛠️  Instalando herramientas de desarrollo..."
+	@echo "Instalando herramientas de desarrollo..."
 	@go install github.com/cosmtrek/air@latest
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 # ============================================
-# COMANDOS DOCKER (API + DB)
+# COMANDOS DOCKER (API + DB) - PRODUCCION
 # ============================================
 
-up: ## Levanta toda la aplicación (API + PostgreSQL)
-	@echo "🚀 Starting DVRA API..."
+up: ## Levanta toda la aplicacion (API + PostgreSQL)
+	@echo "Starting DVRA API..."
 	@docker compose up -d
-	@echo "✅ API running on http://localhost:$(PORT)"
-	@echo "📖 Swagger: http://localhost:$(PORT)/swagger/index.html"
+	@echo "API running on http://localhost:$(PORT)"
+	@echo "Swagger: http://localhost:$(PORT)/swagger/index.html"
 
-down: ## Detiene toda la aplicación
-	@echo "🛑 Stopping DVRA..."
+down: ## Detiene toda la aplicacion
+	@echo "Stopping DVRA..."
 	@docker compose down
 
-restart: ## Reinicia toda la aplicación
-	@echo "🔄 Restarting DVRA..."
+restart: ## Reinicia toda la aplicacion
+	@echo "Restarting DVRA..."
 	@docker compose restart
 
 logs: ## Muestra logs de todos los servicios
@@ -165,102 +194,130 @@ logs-api: ## Muestra logs solo de la API
 	@docker compose logs -f api
 
 rebuild: ## Reconstruye y levanta la API
-	@echo "🔨 Rebuilding DVRA API..."
+	@echo "Rebuilding DVRA API..."
 	@docker compose build --no-cache api
 	@docker compose up -d api
-	@echo "✅ API rebuilt and running!"
+	@echo "API rebuilt and running!"
 
-# Comandos de Docker (solo PostgreSQL)
-db-up: ## Inicia solo PostgreSQL en Docker
-	@echo "🐳 Starting PostgreSQL..."
+# ============================================
+# COMANDOS DOCKER (solo PostgreSQL) - DESARROLLO
+# ============================================
+
+db-up: ## Inicia PostgreSQL [fresh=1 para reset] [location=1 para ubicaciones]
+	@echo "Starting PostgreSQL (DEV MODE)..."
 	@docker compose up -d postgres
-	@echo "✅ PostgreSQL running on localhost:$(DB_PORT)"
+	@echo "PostgreSQL running on localhost:$(DB_PORT)"
+	@if [ "$(fresh)" = "1" ]; then \
+		echo ""; \
+		echo "Fresh flag detected! Running database reset..."; \
+		echo "Waiting for PostgreSQL to be ready..."; \
+		sleep 3; \
+		loom db:fresh --seed; \
+		if [ "$(location)" = "1" ]; then \
+			echo "Poblando ubicaciones..."; \
+			$(MAKE) db-location; \
+		fi; \
+		echo "Database fresh and seeded!"; \
+	else \
+		echo ""; \
+		echo "TIP: Ejecuta tu API con 'make run' o 'make dev'"; \
+		echo "TIP: Para reset completo usa: make db-up fresh=1"; \
+		echo "TIP: Para reset + ubicaciones: make db-up fresh=1 location=1"; \
+	fi
 
 db-down: ## Detiene PostgreSQL
-	@echo "🛑 Stopping PostgreSQL..."
+	@echo "Stopping PostgreSQL..."
 	@docker compose stop postgres
 
 db-restart: ## Reinicia PostgreSQL
-	@echo "🔄 Restarting PostgreSQL..."
+	@echo "Restarting PostgreSQL..."
 	@docker compose restart postgres
 
 db-logs: ## Muestra logs de PostgreSQL
 	@docker compose logs -f postgres
 
 db-clean: ## Elimina PostgreSQL y volumenes
-	@echo "🧹 Cleaning database..."
+	@echo "Cleaning database..."
 	@docker compose down -v
-	@echo "✅ Database cleaned"
+	@echo "Database cleaned"
 
 db-shell: ## Accede a psql en el contenedor
 	@docker compose exec postgres psql -U $(DB_USER) -d $(DB_NAME)
 
-# Comandos de base de datos con LOOM
+db-fresh: ## Alias: db-up con fresh automatico
+	@$(MAKE) db-up fresh=1
+
+db-fresh-full: ## Alias: db-up + fresh + locations
+	@$(MAKE) db-up fresh=1 location=1
+
+# ============================================
+# COMANDOS BASE DE DATOS (LOOM)
+# ============================================
+
 db-migrate: ## Ejecuta migraciones con LOOM
-	@echo "🗃️  Running migrations..."
+	@echo "Running migrations..."
 	@loom db:migrate
 
 db-seed: ## Ejecuta seeders con LOOM
-	@echo "🌱 Running seeders..."
+	@echo "Running seeders..."
 	@loom db:seed
 
 db-location: ## Pobla datos de ubicaciones (countries, cities, etc)
-	@echo "🌍 Poblando datos de ubicaciones..."
+	@echo "Poblando datos de ubicaciones..."
 	@docker compose exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) < scripts/location.sql
-	@echo "✅ Datos de ubicaciones poblados exitosamente"
+	@echo "Datos de ubicaciones poblados exitosamente"
 
 # ============================================
 # COMANDOS GIT
 # ============================================
 
-# Push rápido: make push m="tu mensaje"
-push:
+push: ## Push rapido: make push m='mensaje'
 	@if [ -z "$(m)" ]; then \
-		echo "❌ Error: Debes proporcionar un mensaje"; \
+		echo "Error: Debes proporcionar un mensaje"; \
 		echo "   Uso: make push m='tu mensaje de commit'"; \
 		exit 1; \
 	fi
-	@echo "📦 Agregando archivos..."
+	@echo "Agregando archivos..."
 	@git add .
-	@echo "✍️  Commiteando: $(m)"
+	@echo "Commiteando: $(m)"
 	@git commit -m "$(m)"
-	@echo "🚀 Pusheando a origin/$(BRANCH)..."
+	@echo "Pusheando a origin/$(BRANCH)..."
 	@git push origin $(BRANCH)
-	@echo "✅ Push completado exitosamente!"
+	@echo "Push completado exitosamente!"
 
-# Pull desde origin
-pull:
-	@echo "⬇️  Pulling desde origin/$(BRANCH)..."
+pull: ## Pull desde origin
+	@echo "Pulling desde origin/$(BRANCH)..."
 	@git fetch origin
 	@git pull origin $(BRANCH)
-	@echo "✅ Pull completado!"
+	@echo "Pull completado!"
 
-# Ver estado de git
-status:
-	@echo "📊 Estado de Git (rama: $(BRANCH)):"
+status: ## Ver estado de git
+	@echo "Estado de Git (rama: $(BRANCH)):"
 	@echo ""
 	@git status
 
-# Sincronizar (pull + push)
-sync:
+sync: ## Sincronizar (pull + push): make sync m='mensaje'
 	@if [ -z "$(m)" ]; then \
-		echo "❌ Error: Debes proporcionar un mensaje"; \
+		echo "Error: Debes proporcionar un mensaje"; \
 		echo "   Uso: make sync m='tu mensaje de commit'"; \
 		exit 1; \
 	fi
-	@echo "⬇️  Pulling cambios..."
+	@echo "Pulling cambios..."
 	@git pull origin $(BRANCH)
-	@echo "📦 Agregando archivos..."
+	@echo "Agregando archivos..."
 	@git add .
-	@echo "✍️  Commiteando: $(m)"
+	@echo "Commiteando: $(m)"
 	@git commit -m "$(m)"
-	@echo "🚀 Pusheando a origin/$(BRANCH)..."
+	@echo "Pusheando a origin/$(BRANCH)..."
 	@git push origin $(BRANCH)
+	@echo "Sincronizacion completada!"
 
-# Generar documentación Swagger
-swagger: ## Genera documentación Swagger/OpenAPI
-	@echo "📖 Generando documentación Swagger..."
+# ============================================
+# DOCUMENTACION
+# ============================================
+
+swagger: ## Genera documentacion Swagger/OpenAPI
+	@echo "Generando documentacion Swagger..."
 	@~/go/bin/swag init -g cmd/dvra-api/main.go -o docs
-	@echo "✅ Documentación generada en docs/"
-	@echo "📝 Accede a http://localhost:8000/swagger/index.html"
-	@echo "✅ Sincronización completada!"
+	@echo "Documentacion generada en docs/"
+	@echo "Accede a http://localhost:8000/swagger/index.html"
