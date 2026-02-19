@@ -17,8 +17,11 @@ type ApplicationService interface {
 	GetApplicationsByCandidateID(candidateID uint) ([]models.Application, error)
 	GetApplicationsByCompanyID(companyID uint) ([]models.Application, error)
 	GetApplicationsByStage(stage string, companyID uint) ([]models.Application, error)
+	GetApplicationsGroupedByStage(companyID uint) (map[string][]models.Application, error)
 	CreateApplication(dto dtos.CreateApplicationDTO) (*models.Application, error)
 	UpdateApplication(id uint, dto dtos.UpdateApplicationDTO) (*models.Application, error)
+	MoveToStage(id uint, stage string) (*models.Application, error)
+	RateApplication(id uint, rating int) (*models.Application, error)
 	DeleteApplication(id uint) error
 }
 
@@ -69,6 +72,7 @@ func (s *applicationService) CreateApplication(dto dtos.CreateApplicationDTO) (*
 		CompanyID:   dto.CompanyID,
 		Stage:       dto.Stage,
 		Rating:      dto.Rating,
+		Notes:       dto.Notes,
 		AppliedAt:   now,
 	}
 
@@ -86,7 +90,7 @@ func (s *applicationService) UpdateApplication(id uint, dto dtos.UpdateApplicati
 
 	if dto.Stage != nil {
 		application.Stage = *dto.Stage
-		
+
 		// Auto-actualizar timestamps según el stage
 		now := time.Now()
 		if *dto.Stage == "rejected" && application.RejectedAt == nil {
@@ -98,6 +102,9 @@ func (s *applicationService) UpdateApplication(id uint, dto dtos.UpdateApplicati
 	}
 	if dto.Rating != nil {
 		application.Rating = dto.Rating
+	}
+	if dto.Notes != nil {
+		application.Notes = *dto.Notes
 	}
 	if dto.RejectedAt != nil {
 		application.RejectedAt = dto.RejectedAt
@@ -118,4 +125,61 @@ func (s *applicationService) DeleteApplication(id uint) error {
 		return fmt.Errorf("application not found")
 	}
 	return s.applicationRepo.Delete(id)
+}
+
+func (s *applicationService) GetApplicationsGroupedByStage(companyID uint) (map[string][]models.Application, error) {
+	applications, err := s.applicationRepo.GetByCompanyID(companyID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Initialize all stages
+	stages := []string{"applied", "screening", "technical", "offer", "hired"}
+	result := make(map[string][]models.Application)
+	for _, stage := range stages {
+		result[stage] = []models.Application{}
+	}
+
+	// Group applications by stage
+	for _, app := range applications {
+		result[app.Stage] = append(result[app.Stage], app)
+	}
+
+	return result, nil
+}
+
+func (s *applicationService) MoveToStage(id uint, stage string) (*models.Application, error) {
+	application, err := s.applicationRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if application == nil {
+		return nil, fmt.Errorf("application not found")
+	}
+
+	application.Stage = stage
+
+	// Auto-update timestamps based on stage
+	now := time.Now()
+	if stage == "rejected" && application.RejectedAt == nil {
+		application.RejectedAt = &now
+	}
+	if stage == "hired" && application.HiredAt == nil {
+		application.HiredAt = &now
+	}
+
+	return s.applicationRepo.Update(application)
+}
+
+func (s *applicationService) RateApplication(id uint, rating int) (*models.Application, error) {
+	application, err := s.applicationRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if application == nil {
+		return nil, fmt.Errorf("application not found")
+	}
+
+	application.Rating = &rating
+	return s.applicationRepo.Update(application)
 }

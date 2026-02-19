@@ -8,7 +8,11 @@ import (
 
 // Application represents the application entity in the database
 type Application struct {
-	gorm.Model
+	ID        uint           `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+
 	JobID       uint `gorm:"not null;index" json:"job_id"`
 	CandidateID uint `gorm:"not null;index" json:"candidate_id"`
 
@@ -21,6 +25,9 @@ type Application struct {
 
 	// Rating
 	Rating *int `gorm:"type:integer" json:"rating,omitempty"` // 1-5 estrellas
+
+	// Notes
+	Notes string `gorm:"type:text" json:"notes,omitempty"`
 
 	// Timestamps de estado
 	AppliedAt  time.Time  `gorm:"type:timestamp;default:now()" json:"applied_at"`

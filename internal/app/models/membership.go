@@ -8,7 +8,11 @@ import (
 
 // Membership represents the companymembership entity in the database
 type Membership struct {
-	gorm.Model
+	ID        uint           `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+
 	UserID    uint       `gorm:"not null;index:idx_user_company,priority:1" json:"user_id"`
 	CompanyID *uint      `gorm:"index:idx_user_company,priority:2" json:"company_id,omitempty"` // Nullable para SuperAdmin
 	Role      string     `gorm:"type:varchar(50);not null" json:"role"`

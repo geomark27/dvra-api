@@ -15,6 +15,8 @@ type ApplicationResponseDTO struct {
 	CompanyID   uint       `json:"company_id"`
 	Stage       string     `json:"stage"`
 	Rating      *int       `json:"rating,omitempty"`
+	Notes       string     `json:"notes,omitempty"`
+	AppliedAt   time.Time  `json:"applied_at"`
 	RejectedAt  *time.Time `json:"rejected_at,omitempty"`
 	HiredAt     *time.Time `json:"hired_at,omitempty"`
 }
@@ -26,14 +28,26 @@ type CreateApplicationDTO struct {
 	CompanyID   uint   `json:"company_id" validate:"required,min=1"`
 	Stage       string `json:"stage" validate:"required,oneof=applied screening technical offer hired rejected"`
 	Rating      *int   `json:"rating,omitempty" validate:"omitempty,min=1,max=5"`
+	Notes       string `json:"notes,omitempty"`
 }
 
 // UpdateApplicationDTO represents the data needed to update an application
 type UpdateApplicationDTO struct {
 	Stage      *string    `json:"stage,omitempty" validate:"omitempty,oneof=applied screening technical offer hired rejected"`
 	Rating     *int       `json:"rating,omitempty" validate:"omitempty,min=1,max=5"`
+	Notes      *string    `json:"notes,omitempty"`
 	RejectedAt *time.Time `json:"rejected_at,omitempty"`
 	HiredAt    *time.Time `json:"hired_at,omitempty"`
+}
+
+// MoveApplicationDTO represents the data needed to move an application to a stage
+type MoveApplicationDTO struct {
+	Stage string `json:"stage" validate:"required,oneof=applied screening technical offer hired rejected"`
+}
+
+// RateApplicationDTO represents the data needed to rate an application
+type RateApplicationDTO struct {
+	Rating int `json:"rating" validate:"required,min=1,max=5"`
 }
 
 // ToApplicationResponse converts an Application model to ApplicationResponseDTO
@@ -47,6 +61,8 @@ func ToApplicationResponse(app *models.Application) ApplicationResponseDTO {
 		CompanyID:   app.CompanyID,
 		Stage:       app.Stage,
 		Rating:      app.Rating,
+		Notes:       app.Notes,
+		AppliedAt:   app.AppliedAt,
 		RejectedAt:  app.RejectedAt,
 		HiredAt:     app.HiredAt,
 	}

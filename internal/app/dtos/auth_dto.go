@@ -90,19 +90,6 @@ type SwitchCompanyDTO struct {
 // SwitchCompanyResponseDTO represents switch company response
 type SwitchCompanyResponseDTO struct {
 	AccessToken string          `json:"access_token"`
-	Company     CompanyResponse	 `json:"company"`
+	Company     CompanyResponse `json:"company"`
 }
 
-// SuperAdminLoginDTO represents superadmin login request
-type SuperAdminLoginDTO struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
-}
-
-// SuperAdminLoginResponseDTO represents superadmin login response
-type SuperAdminLoginResponseDTO struct {
-	AccessToken  string       `json:"access_token"`
-	RefreshToken string       `json:"refresh_token"`
-	User         UserResponse `json:"user"`
-	IsSuperAdmin bool         `json:"is_superadmin"`
-}

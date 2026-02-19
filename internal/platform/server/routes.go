@@ -2,7 +2,6 @@ package server
 
 import (
 	"dvra-api/internal/app/handlers"
-	adminHandlers "dvra-api/internal/app/handlers/admin"
 	"dvra-api/internal/app/services"
 	"dvra-api/internal/platform/config"
 	"dvra-api/internal/shared/middleware"
@@ -28,7 +27,9 @@ func registerRoutes(
 	planHandler *handlers.PlanHandler,
 	systemValueHandler *handlers.SystemValueHandler,
 	locationHandler *handlers.LocationHandler,
-	superAdminHandler *adminHandlers.SuperAdminCompaniesHandler,
+	dashboardHandler *handlers.DashboardHandler,
+	publicHandler *handlers.PublicHandler,
+	platformSettingsHandler *handlers.PlatformSettingsHandler,
 	jwtService services.JWTService,
 	cfg *config.Config,
 ) {
@@ -37,7 +38,7 @@ func registerRoutes(
 		c.JSON(http.StatusOK, gin.H{
 			"message":        "Welcome to dvra-api!",
 			"status":         "success",
-			"version":        "v1.2.0",
+			"version":        "v1.4.0",
 			"generated_with": "Loom",
 			"endpoints": gin.H{
 				"health":       "/api/v1/health",
@@ -48,9 +49,10 @@ func registerRoutes(
 				"jobs":         "/api/v1/jobs",
 				"candidates":   "/api/v1/candidates",
 				"applications": "/api/v1/applications",
+				"dashboard":    "/api/v1/dashboard",
 				"plans":        "/api/v1/plans (public)",
 				"locations":    "/api/v1/locations (public)",
-				"admin":        "/api/v1/admin (SuperAdmin only)",
+				"public":       "/api/v1/public (career page)",
 				"swagger":      "/swagger/index.html",
 			},
 		})
@@ -75,9 +77,6 @@ func registerRoutes(
 			auth.POST("/register", authHandler.Register) // Deprecated: use register-company
 			auth.POST("/login", authHandler.Login)
 			auth.POST("/refresh", authHandler.RefreshToken)
-
-			// SuperAdmin login (separate endpoint)
-			auth.POST("/superadmin/login", authHandler.SuperAdminLogin)
 
 			// Protected auth routes
 			authProtected := auth.Group("")
@@ -115,13 +114,14 @@ func registerRoutes(
 				companies.DELETE("/:id", companyHandler.DeleteCompany)
 			}
 
-			// Membership routes (READ-ONLY for clients)
+			// Membership routes
 			memberships := protected.Group("/memberships")
 			{
-				memberships.GET("", membershipHandler.GetMemberships)          // Ver memberships de mi empresa
-				memberships.GET("/:id", membershipHandler.GetMembership)       // Ver detalle
-				memberships.PUT("/:id", membershipHandler.UpdateMembership)    // Actualizar roles
-				memberships.DELETE("/:id", membershipHandler.DeleteMembership) // Remover de empresa
+				memberships.GET("", membershipHandler.GetMemberships)
+				memberships.POST("", membershipHandler.CreateMembership)
+				memberships.GET("/:id", membershipHandler.GetMembership)
+				memberships.PUT("/:id", membershipHandler.UpdateMembership)
+				memberships.DELETE("/:id", membershipHandler.DeleteMembership)
 			}
 
 			// Job routes
@@ -136,28 +136,63 @@ func registerRoutes(
 				jobs.PATCH("/:id/close", jobHandler.CloseJob)
 			}
 
+			// Candidate routes
+			candidates := protected.Group("/candidates")
+			{
+				candidates.GET("", candidateHandler.GetCandidates)
+				candidates.POST("", candidateHandler.CreateCandidate)
+				candidates.GET("/:id", candidateHandler.GetCandidate)
+				candidates.PUT("/:id", candidateHandler.UpdateCandidate)
+				candidates.DELETE("/:id", candidateHandler.DeleteCandidate)
+				candidates.POST("/:id/upload-resume", candidateHandler.UploadResume)
+			}
+
 			// Application routes
 			applications := protected.Group("/applications")
 			{
 				applications.GET("", applicationHandler.GetApplications)
+				applications.GET("/by-stage", applicationHandler.GetApplicationsByStage)
 				applications.POST("", applicationHandler.CreateApplication)
 				applications.GET("/:id", applicationHandler.GetApplication)
 				applications.PUT("/:id", applicationHandler.UpdateApplication)
+				applications.PATCH("/:id/move", applicationHandler.MoveApplication)
+				applications.PATCH("/:id/rate", applicationHandler.RateApplication)
 				applications.DELETE("/:id", applicationHandler.DeleteApplication)
 			}
 
-			// System Values routes (public - read only)
+			// Dashboard routes
+			dashboard := protected.Group("/dashboard")
+			{
+				dashboard.GET("/stats", dashboardHandler.GetStats)
+			}
+
+			// System Values routes (read only)
 			systemValues := api.Group("/system-values")
 			{
-				systemValues.GET("/:category", systemValueHandler.GetByCategory) // Get values by category
+				systemValues.GET("/:category", systemValueHandler.GetByCategory)
 			}
 		}
 
 		// Public Plans routes (no auth required)
 		plans := api.Group("/plans")
 		{
-			plans.GET("", planHandler.GetPublicPlans)      // Public pricing page
-			plans.GET("/:slug", planHandler.GetPlanBySlug) // Get plan details by slug
+			plans.GET("", planHandler.GetPublicPlans)
+			plans.GET("/:slug", planHandler.GetPlanBySlug)
+		}
+
+		// PUBLIC CAREER PAGE ROUTES (no auth required)
+		public := api.Group("/public")
+		{
+			// Platform settings (public - for branding/config)
+			public.GET("/platform-settings", platformSettingsHandler.GetPublicSettings)
+
+			// Company info
+			public.GET("/companies/:slug", publicHandler.GetCompanyBySlug)
+			public.GET("/companies/:slug/jobs", publicHandler.GetPublishedJobsByCompany)
+
+			// Job details and applications
+			public.GET("/jobs/:id", publicHandler.GetPublishedJobByID)
+			public.POST("/jobs/:id/apply", publicHandler.ApplyToJob)
 		}
 
 		// Public Location routes (no auth required - READ ONLY)
@@ -187,78 +222,6 @@ func registerRoutes(
 			// Helpers
 			locations.GET("/hierarchy/:id", locationHandler.GetLocationHierarchy)
 			locations.GET("/search", locationHandler.SearchLocations)
-		}
-
-		// SuperAdmin routes (Global - No company scope required)
-		admin := api.Group("/admin")
-		admin.Use(middleware.AuthMiddleware(jwtService))
-		admin.Use(middleware.RequireSuperAdmin())
-		{
-			// Plan management (SuperAdmin only)
-			adminPlans := admin.Group("/plans")
-			{
-				adminPlans.GET("", planHandler.GetPlans)
-				adminPlans.POST("", planHandler.CreatePlan)
-				adminPlans.GET("/:id", planHandler.GetPlanByID)
-				adminPlans.PUT("/:id", planHandler.UpdatePlan)
-				adminPlans.PATCH("/:id/toggle", planHandler.TogglePlanStatus)
-				adminPlans.DELETE("/:id", planHandler.DeletePlan)
-				adminPlans.POST("/assign", planHandler.AssignPlanToCompany)
-			}
-
-			// Company management
-			admin.GET("/companies", superAdminHandler.GetAllCompanies)
-			admin.POST("/companies", superAdminHandler.CreateCompany)
-			admin.PUT("/companies/:id/plan", superAdminHandler.ChangeCompanyPlan)
-			admin.POST("/companies/:id/suspend", superAdminHandler.SuspendCompany)
-			admin.GET("/companies/:id/users", superAdminHandler.GetCompanyUsers)
-
-			// Membership management (Assign users to companies)
-			adminMemberships := admin.Group("/memberships")
-			{
-				adminMemberships.POST("", membershipHandler.CreateMembership) // Asignar usuario a empresa
-			}
-
-			// System Values management (CRUD for SuperAdmin)
-			adminSystemValues := admin.Group("/system-values")
-			{
-				adminSystemValues.GET("", systemValueHandler.GetAll)
-				adminSystemValues.POST("", systemValueHandler.Create)
-				adminSystemValues.PUT("/:id", systemValueHandler.Update)
-				adminSystemValues.DELETE("/:id", systemValueHandler.Delete)
-			}
-
-			// Location management (CRUD for SuperAdmin)
-			adminLocations := admin.Group("/locations")
-			{
-				// Regions
-				adminLocations.POST("/regions", locationHandler.CreateRegion)
-				adminLocations.PUT("/regions/:id", locationHandler.UpdateRegion)
-				adminLocations.DELETE("/regions/:id", locationHandler.DeleteRegion)
-
-				// Subregions
-				adminLocations.POST("/subregions", locationHandler.CreateSubregion)
-				adminLocations.PUT("/subregions/:id", locationHandler.UpdateSubregion)
-				adminLocations.DELETE("/subregions/:id", locationHandler.DeleteSubregion)
-
-				// Countries
-				adminLocations.POST("/countries", locationHandler.CreateCountry)
-				adminLocations.PUT("/countries/:id", locationHandler.UpdateCountry)
-				adminLocations.DELETE("/countries/:id", locationHandler.DeleteCountry)
-
-				// States
-				adminLocations.POST("/states", locationHandler.CreateState)
-				adminLocations.PUT("/states/:id", locationHandler.UpdateState)
-				adminLocations.DELETE("/states/:id", locationHandler.DeleteState)
-
-				// Cities
-				adminLocations.POST("/cities", locationHandler.CreateCity)
-				adminLocations.PUT("/cities/:id", locationHandler.UpdateCity)
-				adminLocations.DELETE("/cities/:id", locationHandler.DeleteCity)
-			}
-
-			// Analytics and reports
-			admin.GET("/analytics", superAdminHandler.GetGlobalAnalytics)
 		}
 	}
 }

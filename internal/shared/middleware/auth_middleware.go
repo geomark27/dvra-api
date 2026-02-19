@@ -90,43 +90,6 @@ func RequireCompany() gin.HandlerFunc {
 	}
 }
 
-// RequireSuperAdmin validates that user is SuperAdmin (no company_id, role = superadmin)
-func RequireSuperAdmin() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Must be authenticated
-		_, exists := c.Get("user_id")
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
-			c.Abort()
-			return
-		}
-
-		// Get role and company_id
-		role, roleExists := c.Get("role")
-		companyID, hasCompany := c.Get("company_id")
-
-		// SuperAdmin must have role = "superadmin"
-		if !roleExists || role != "superadmin" {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error": "SuperAdmin access required",
-			})
-			c.Abort()
-			return
-		}
-
-		// SuperAdmin must NOT have company context (global access)
-		if hasCompany && companyID != nil {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error": "SuperAdmin routes require no company context",
-			})
-			c.Abort()
-			return
-		}
-
-		c.Next()
-	}
-}
-
 // OptionalAuth validates token if present, but doesn't require it
 func OptionalAuth(jwtService services.JWTService) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -161,7 +124,6 @@ func OptionalAuth(jwtService services.JWTService) gin.HandlerFunc {
 // getRoleLevel returns the numeric level for a role
 func getRoleLevel(role string) int {
 	levels := map[string]int{
-		"superadmin":     100,
 		"admin":          50,
 		"recruiter":      30,
 		"hiring_manager": 20,

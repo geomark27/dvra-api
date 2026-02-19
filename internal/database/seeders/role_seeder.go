@@ -14,13 +14,6 @@ type RoleSeeder struct{}
 func (s *RoleSeeder) Run(db *gorm.DB) error {
 	roles := []models.Role{
 		{
-			Name:        "Super Admin",
-			Slug:        models.RoleSuperAdmin,
-			Description: "Acceso total al sistema, gestiona todas las empresas",
-			Level:       100,
-			IsSystem:    true,
-		},
-		{
 			Name:        "Admin",
 			Slug:        models.RoleAdmin,
 			Description: "Administrador de empresa, acceso total a su empresa",

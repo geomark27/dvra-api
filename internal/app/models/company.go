@@ -8,7 +8,11 @@ import (
 
 // Company represents the company entity in the database
 type Company struct {
-	gorm.Model
+	ID        uint           `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+
 	Name        string       `gorm:"type:varchar(255);not null" json:"name"`
 	Slug        string       `gorm:"type:varchar(100);uniqueIndex;not null" json:"slug"`
 	LogoURL     string       `gorm:"type:text" json:"logo_url,omitempty"`

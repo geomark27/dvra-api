@@ -1,12 +1,18 @@
 package models
 
 import (
+	"time"
+
 	"gorm.io/gorm"
 )
 
 // Job represents the job entity in the database
 type Job struct {
-	gorm.Model
+	ID        uint           `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+
 	CompanyID    uint     `gorm:"not null;index:idx_jobs_company_status,priority:1" json:"company_id"`
 	Title        string   `gorm:"type:varchar(255);not null" json:"title"`
 	Description  string   `gorm:"type:text" json:"description"`

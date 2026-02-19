@@ -2,6 +2,8 @@ package services
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
@@ -76,7 +78,39 @@ func (s *companyService) CreateCompany(dto dtos.CreateCompanyDTO) (*models.Compa
 		Timezone:    dto.Timezone,
 	}
 
-	return s.companyRepo.Create(company)
+	// Crear la empresa en la base de datos
+	createdCompany, err := s.companyRepo.Create(company)
+	if err != nil {
+		return nil, err
+	}
+
+	// Crear estructura de directorios para la empresa
+	if err := createCompanyDirectories(createdCompany.Slug); err != nil {
+		// Log error pero no fallar - los directorios se crearán al subir archivos
+		fmt.Printf("Warning: failed to create company directories for %s: %v\n", createdCompany.Slug, err)
+	}
+
+	return createdCompany, nil
+}
+
+// createCompanyDirectories crea la estructura de directorios para una empresa
+func createCompanyDirectories(slug string) error {
+	baseDir := filepath.Join("uploads", "companies", slug)
+
+	// Crear subdirectorios: logo, resumes, documents
+	dirs := []string{
+		filepath.Join(baseDir, "logo"),
+		filepath.Join(baseDir, "resumes"),
+		filepath.Join(baseDir, "documents"),
+	}
+
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		}
+	}
+
+	return nil
 }
 
 func (s *companyService) UpdateCompany(id uint, dto dtos.UpdateCompanyDTO) (*models.Company, error) {

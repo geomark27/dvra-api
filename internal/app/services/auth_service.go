@@ -18,7 +18,6 @@ var (
 	ErrInvalidPassword    = errors.New("invalid password")
 	ErrCompanyNotFound    = errors.New("company not found")
 	ErrNoMembership       = errors.New("user does not belong to this company")
-	ErrNotSuperAdmin      = errors.New("user is not a superadmin")
 )
 
 // AuthService handles authentication business logic
@@ -197,57 +196,6 @@ func (s *AuthService) RefreshToken(dto *dtos.RefreshTokenDTO) (*dtos.RefreshToke
 	return &dtos.RefreshTokenResponseDTO{
 		AccessToken:  accessToken,
 		RefreshToken: newRefreshToken,
-	}, nil
-}
-
-// SuperAdminLogin authenticates a superadmin user
-func (s *AuthService) SuperAdminLogin(dto *dtos.SuperAdminLoginDTO) (*dtos.SuperAdminLoginResponseDTO, error) {
-	// Find user by email
-	user, err := s.userRepo.FindByEmail(dto.Email)
-	if err != nil {
-		return nil, ErrInvalidCredentials
-	}
-
-	// Check if user is active
-	if !user.IsActive {
-		return nil, errors.New("account is inactive")
-	}
-
-	// Verify user is superadmin
-	if !user.IsSuperAdmin {
-		return nil, ErrNotSuperAdmin
-	}
-
-	// Verify password
-	if err := ComparePassword(user.PasswordHash, dto.Password); err != nil {
-		return nil, ErrInvalidCredentials
-	}
-
-	// Generate tokens WITHOUT company_id (superadmin is global)
-	accessToken, err := s.jwtService.GenerateAccessToken(user.ID, nil, user.Email, models.RoleSuperAdmin)
-	if err != nil {
-		return nil, err
-	}
-
-	refreshToken, err := s.jwtService.GenerateRefreshToken(user.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Update last login
-	s.userRepo.UpdateLastLogin(user.ID)
-
-	return &dtos.SuperAdminLoginResponseDTO{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		User: dtos.UserResponse{
-			ID:        user.ID,
-			Email:     user.Email,
-			FirstName: user.FirstName,
-			LastName:  user.LastName,
-			IsActive:  user.IsActive,
-		},
-		IsSuperAdmin: true,
 	}, nil
 }
 

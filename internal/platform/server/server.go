@@ -6,10 +6,8 @@ import (
 	"time"
 
 	"dvra-api/internal/app/handlers"
-	adminHandlers "dvra-api/internal/app/handlers/admin"
 	"dvra-api/internal/app/repositories"
 	"dvra-api/internal/app/services"
-	adminServices "dvra-api/internal/app/services/admin"
 	"dvra-api/internal/platform/config"
 
 	_ "dvra-api/docs" // Importar documentación generada por Swagger
@@ -46,6 +44,8 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	planRepo := repositories.NewPlanRepository(db)
 	systemValueRepo := repositories.NewSystemValueRepository(db)
 	locationRepo := repositories.NewLocationRepository()
+	dashboardRepo := repositories.NewDashboardRepository()
+	platformSettingsRepo := repositories.NewPlatformSettingsRepository(db)
 
 	// Create services (injecting repositories)
 	authService := services.NewAuthService(userRepo, planRepo, jwtService, db)
@@ -58,9 +58,9 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	planService := services.NewPlanService(planRepo, companyRepo, db)
 	systemValueService := services.NewSystemValueService(systemValueRepo)
 	locationService := services.NewLocationService(locationRepo)
-
-	// Create admin services
-	superAdminCompaniesService := adminServices.NewSuperAdminCompaniesService(db, companyRepo, userRepo, membershipRepo, planRepo)
+	dashboardService := services.NewDashboardService(dashboardRepo)
+	publicService := services.NewPublicService(companyRepo, jobRepo, candidateRepo, applicationRepo)
+	platformSettingsService := services.NewPlatformSettingsService(platformSettingsRepo)
 
 	// Create handlers (injecting services)
 	healthHandler := handlers.NewHealthHandler()
@@ -74,9 +74,9 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	planHandler := handlers.NewPlanHandler(planService)
 	systemValueHandler := handlers.NewSystemValueHandler(systemValueService)
 	locationHandler := handlers.NewLocationHandler(locationService)
-
-	// Create admin handlers
-	superAdminHandler := adminHandlers.NewSuperAdminCompaniesHandler(superAdminCompaniesService)
+	dashboardHandler := handlers.NewDashboardHandler(dashboardService)
+	publicHandler := handlers.NewPublicHandler(publicService)
+	platformSettingsHandler := handlers.NewPlatformSettingsHandler(platformSettingsService)
 
 	// Create Gin router
 	router := gin.Default()
@@ -85,7 +85,7 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	router.Use(corsMiddleware(cfg.CorsAllowedOrigins))
 
 	// Register routes (passing config for dynamic Swagger host)
-	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, planHandler, systemValueHandler, locationHandler, superAdminHandler, jwtService, cfg)
+	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, planHandler, systemValueHandler, locationHandler, dashboardHandler, publicHandler, platformSettingsHandler, jwtService, cfg)
 
 	// Configure HTTP server
 	httpServer := &http.Server{

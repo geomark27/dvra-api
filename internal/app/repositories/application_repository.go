@@ -15,6 +15,7 @@ type ApplicationRepository interface {
 	GetByCandidateID(candidateID uint) ([]models.Application, error)
 	GetByCompanyID(companyID uint) ([]models.Application, error)
 	GetByStage(stage string, companyID uint) ([]models.Application, error)
+	GetByCandidateAndJob(candidateID, jobID uint) (*models.Application, error)
 	Create(application *models.Application) (*models.Application, error)
 	Update(application *models.Application) (*models.Application, error)
 	Delete(id uint) error
@@ -77,6 +78,18 @@ func (r *applicationRepository) GetByStage(stage string, companyID uint) ([]mode
 		return nil, err
 	}
 	return applications, nil
+}
+
+// GetByCandidateAndJob checks if a candidate has already applied to a specific job
+func (r *applicationRepository) GetByCandidateAndJob(candidateID, jobID uint) (*models.Application, error) {
+	var application models.Application
+	if err := database.DB.Where("candidate_id = ? AND job_id = ?", candidateID, jobID).First(&application).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &application, nil
 }
 
 func (r *applicationRepository) Create(application *models.Application) (*models.Application, error) {

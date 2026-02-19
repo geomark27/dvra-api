@@ -16,6 +16,7 @@ type JobRepository interface {
 	GetByCompanyID(companyID uint) ([]models.Job, error)
 	GetByCompanyIDWithFilters(companyID uint, filters dtos.JobFilters) ([]models.Job, error)
 	GetByStatus(status string, companyID uint) ([]models.Job, error)
+	GetPublishedByCompanyID(companyID uint) ([]models.Job, error)
 	Create(job *models.Job) (*models.Job, error)
 	Update(job *models.Job) (*models.Job, error)
 	Delete(id uint) error
@@ -101,6 +102,20 @@ func (r *jobRepository) GetByCompanyIDWithFilters(companyID uint, filters dtos.J
 func (r *jobRepository) GetByStatus(status string, companyID uint) ([]models.Job, error) {
 	var jobs []models.Job
 	if err := database.DB.Where("status = ? AND company_id = ?", status, companyID).Find(&jobs).Error; err != nil {
+		return nil, err
+	}
+	return jobs, nil
+}
+
+// GetPublishedByCompanyID returns all published jobs for a company - for public career page
+func (r *jobRepository) GetPublishedByCompanyID(companyID uint) ([]models.Job, error) {
+	var jobs []models.Job
+	if err := database.DB.
+		Where("company_id = ? AND status = ?", companyID, "published").
+		Preload("Company").
+		Preload("City.State.Country").
+		Order("created_at DESC").
+		Find(&jobs).Error; err != nil {
 		return nil, err
 	}
 	return jobs, nil

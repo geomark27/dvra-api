@@ -19,4 +19,5 @@ var AllModels = []interface{}{
 	&models.Country{},
 	&models.State{},
 	&models.City{},
+	&models.PlatformSettings{},
 }

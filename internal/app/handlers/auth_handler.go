@@ -167,30 +167,6 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
-func (h *AuthHandler) SuperAdminLogin(c *gin.Context) {
-	var dto dtos.SuperAdminLoginDTO
-	if err := c.ShouldBindJSON(&dto); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	response, err := h.service.SuperAdminLogin(&dto)
-	if err != nil {
-		if err == services.ErrNotSuperAdmin {
-			c.JSON(http.StatusForbidden, gin.H{"error": "User is not a superadmin"})
-			return
-		}
-		if err == services.ErrInvalidCredentials {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, response)
-}
-
 // RegisterCompany godoc
 // @Summary      Registrar empresa con admin
 // @Description  Crea una nueva empresa y su usuario administrador
