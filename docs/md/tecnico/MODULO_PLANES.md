@@ -77,7 +77,7 @@ Módulo completo de gestión de planes de suscripción para Dvra ATS. Permite al
 {
   "name": "Starter",
   "slug": "starter",
-  "price": 29.99,
+  "price": 39.99,
   "trial_days": 14,
   "max_users": 5,
   "max_jobs": 10,
@@ -94,7 +94,7 @@ Módulo completo de gestión de planes de suscripción para Dvra ATS. Permite al
 {
   "name": "Professional",
   "slug": "professional",
-  "price": 89.99,
+  "price": 79.99,
   "trial_days": 14,
   "max_users": 15,
   "max_jobs": 50,
@@ -114,7 +114,7 @@ Módulo completo de gestión de planes de suscripción para Dvra ATS. Permite al
 {
   "name": "Enterprise",
   "slug": "enterprise",
-  "price": 149.99,
+  "price": 159.99,
   "trial_days": 30,
   "max_users": -1,           // Unlimited
   "max_jobs": -1,            // Unlimited
@@ -453,11 +453,11 @@ go run cmd/console/main.go seed
 ✅ Companies seeded
 ```
 
-**Planes creados automáticamente:**
+**Planes creados automáticamente** (fuente de verdad: `internal/database/seeders/plan_seeder.go`):
 1. Free ($0)
-2. Starter ($29.99)
-3. Professional ($99.99)
-4. Enterprise ($299.99)
+2. Starter ($39.99)
+3. Professional ($79.99)
+4. Enterprise ($159.99)
 
 ---
 

@@ -1017,5 +1017,5 @@ prospect → invited → registered → evaluated → approved → featured
 **FIN LÓGICA DE NEGOCIO**
 
 > Versión 3.0 | Diciembre 8, 2025  
-> Documentación técnica: Ver `ARCHITECTURE.md`  
-> Plan operativo Año 1: Ver `BUSINESS_PLAN_YEAR1.md`
+> Documentación técnica: Ver [`../tecnico/ARQUITECTURA.md`](../tecnico/ARQUITECTURA.md)  
+> Plan operativo Año 1: Ver [`PLAN_DE_NEGOCIO_ANO1.md`](./PLAN_DE_NEGOCIO_ANO1.md)

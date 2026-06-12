@@ -1839,9 +1839,10 @@ curl -X POST http://localhost:8001/api/v1/admin/system-values \
 
 ## 📚 Recursos Adicionales
 
-- [Documentación SuperAdmin](./SUPERADMIN.md)
-- [Arquitectura del Sistema](./ARCHITECTURE.md)
-- [Plan de Negocio Año 1](./BUSINESS_PLAN_YEAR1.md)
+- [Flujo SuperAdmin](./FLUJO_SUPERADMIN.md)
+- [Flujo Cliente](./FLUJO_CLIENTE.md)
+- [Arquitectura del Sistema](./ARQUITECTURA.md)
+- [Plan de Negocio Año 1](../negocio/PLAN_DE_NEGOCIO_ANO1.md)
 
 ---
 
