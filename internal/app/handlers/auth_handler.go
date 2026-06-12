@@ -5,6 +5,8 @@ import (
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/authctx"
+	"dvra-api/internal/shared/permissions"
 
 	"github.com/gin-gonic/gin"
 )
@@ -130,6 +132,11 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
+
+	// Rol y permisos de la empresa activa del token, para la UI
+	role := authctx.Role(c)
+	response.Role = role
+	response.Permissions = permissions.For(role)
 
 	c.JSON(http.StatusOK, response)
 }

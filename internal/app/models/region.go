@@ -1,10 +1,8 @@
 package models
 
-import "gorm.io/gorm"
-
 // Region represents the region entity in the database
 type Region struct {
-	gorm.Model
+	BaseModel
 	Name     string `gorm:"type:varchar(255);not null" json:"name"`
 	IsActive bool   `gorm:"type:boolean;default:true" json:"is_active"`
 

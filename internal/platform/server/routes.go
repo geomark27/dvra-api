@@ -5,6 +5,7 @@ import (
 	"dvra-api/internal/app/services"
 	"dvra-api/internal/platform/config"
 	"dvra-api/internal/shared/middleware"
+	"dvra-api/internal/shared/permissions"
 	"fmt"
 	"net/http"
 
@@ -97,73 +98,73 @@ func registerRoutes(
 			// User routes
 			users := protected.Group("/users")
 			{
-				users.GET("", userHandler.GetUsers)
-				users.POST("", userHandler.CreateUser)
-				users.GET("/:id", userHandler.GetUser)
-				users.PUT("/:id", userHandler.UpdateUser)
-				users.DELETE("/:id", userHandler.DeleteUser)
+				users.GET("", middleware.RequirePermission(permissions.UsersView), userHandler.GetUsers)
+				users.POST("", middleware.RequirePermission(permissions.UsersCreate), userHandler.CreateUser)
+				users.GET("/:id", middleware.RequirePermission(permissions.UsersView), userHandler.GetUser)
+				users.PUT("/:id", middleware.RequirePermission(permissions.UsersUpdate), userHandler.UpdateUser)
+				users.DELETE("/:id", middleware.RequirePermission(permissions.UsersDelete), userHandler.DeleteUser)
 			}
 
 			// Company routes
 			companies := protected.Group("/companies")
 			{
-				companies.GET("", companyHandler.GetCompanies)
-				companies.POST("", companyHandler.CreateCompany)
-				companies.GET("/:id", companyHandler.GetCompany)
-				companies.PUT("/:id", companyHandler.UpdateCompany)
-				companies.DELETE("/:id", companyHandler.DeleteCompany)
+				companies.GET("", middleware.RequirePermission(permissions.CompaniesView), companyHandler.GetCompanies)
+				companies.POST("", middleware.RequirePermission(permissions.CompaniesCreate), companyHandler.CreateCompany)
+				companies.GET("/:id", middleware.RequirePermission(permissions.CompaniesView), companyHandler.GetCompany)
+				companies.PUT("/:id", middleware.RequirePermission(permissions.CompaniesUpdate), companyHandler.UpdateCompany)
+				companies.DELETE("/:id", middleware.RequirePermission(permissions.CompaniesDelete), companyHandler.DeleteCompany)
 			}
 
 			// Membership routes
 			memberships := protected.Group("/memberships")
 			{
-				memberships.GET("", membershipHandler.GetMemberships)
-				memberships.POST("", membershipHandler.CreateMembership)
-				memberships.GET("/:id", membershipHandler.GetMembership)
-				memberships.PUT("/:id", membershipHandler.UpdateMembership)
-				memberships.DELETE("/:id", membershipHandler.DeleteMembership)
+				memberships.GET("", middleware.RequirePermission(permissions.MembershipsView), membershipHandler.GetMemberships)
+				memberships.POST("", middleware.RequirePermission(permissions.MembershipsCreate), membershipHandler.CreateMembership)
+				memberships.GET("/:id", middleware.RequirePermission(permissions.MembershipsView), membershipHandler.GetMembership)
+				memberships.PUT("/:id", middleware.RequirePermission(permissions.MembershipsUpdate), membershipHandler.UpdateMembership)
+				memberships.DELETE("/:id", middleware.RequirePermission(permissions.MembershipsDelete), membershipHandler.DeleteMembership)
 			}
 
 			// Job routes
 			jobs := protected.Group("/jobs")
 			{
-				jobs.GET("", jobHandler.GetJobs)
-				jobs.POST("", jobHandler.CreateJob)
-				jobs.GET("/:id", jobHandler.GetJob)
-				jobs.PUT("/:id", jobHandler.UpdateJob)
-				jobs.DELETE("/:id", jobHandler.DeleteJob)
-				jobs.PATCH("/:id/publish", jobHandler.PublishJob)
-				jobs.PATCH("/:id/close", jobHandler.CloseJob)
+				jobs.GET("", middleware.RequirePermission(permissions.JobsView), jobHandler.GetJobs)
+				jobs.POST("", middleware.RequirePermission(permissions.JobsCreate), jobHandler.CreateJob)
+				jobs.GET("/:id", middleware.RequirePermission(permissions.JobsView), jobHandler.GetJob)
+				jobs.PUT("/:id", middleware.RequirePermission(permissions.JobsUpdate), jobHandler.UpdateJob)
+				jobs.DELETE("/:id", middleware.RequirePermission(permissions.JobsDelete), jobHandler.DeleteJob)
+				jobs.PATCH("/:id/publish", middleware.RequirePermission(permissions.JobsPublish), jobHandler.PublishJob)
+				jobs.PATCH("/:id/close", middleware.RequirePermission(permissions.JobsClose), jobHandler.CloseJob)
 			}
 
 			// Candidate routes
 			candidates := protected.Group("/candidates")
 			{
-				candidates.GET("", candidateHandler.GetCandidates)
-				candidates.POST("", candidateHandler.CreateCandidate)
-				candidates.GET("/:id", candidateHandler.GetCandidate)
-				candidates.PUT("/:id", candidateHandler.UpdateCandidate)
-				candidates.DELETE("/:id", candidateHandler.DeleteCandidate)
-				candidates.POST("/:id/upload-resume", candidateHandler.UploadResume)
+				candidates.GET("", middleware.RequirePermission(permissions.CandidatesView), candidateHandler.GetCandidates)
+				candidates.POST("", middleware.RequirePermission(permissions.CandidatesCreate), candidateHandler.CreateCandidate)
+				candidates.GET("/:id", middleware.RequirePermission(permissions.CandidatesView), candidateHandler.GetCandidate)
+				candidates.PUT("/:id", middleware.RequirePermission(permissions.CandidatesUpdate), candidateHandler.UpdateCandidate)
+				candidates.DELETE("/:id", middleware.RequirePermission(permissions.CandidatesDelete), candidateHandler.DeleteCandidate)
+				candidates.POST("/:id/upload-resume", middleware.RequirePermission(permissions.CandidatesUploadResume), candidateHandler.UploadResume)
 			}
 
 			// Application routes
 			applications := protected.Group("/applications")
 			{
-				applications.GET("", applicationHandler.GetApplications)
-				applications.GET("/by-stage", applicationHandler.GetApplicationsByStage)
-				applications.POST("", applicationHandler.CreateApplication)
-				applications.GET("/:id", applicationHandler.GetApplication)
-				applications.PUT("/:id", applicationHandler.UpdateApplication)
-				applications.PATCH("/:id/move", applicationHandler.MoveApplication)
-				applications.PATCH("/:id/rate", applicationHandler.RateApplication)
-				applications.DELETE("/:id", applicationHandler.DeleteApplication)
+				applications.GET("", middleware.RequirePermission(permissions.ApplicationsView), applicationHandler.GetApplications)
+				applications.GET("/by-stage", middleware.RequirePermission(permissions.ApplicationsView), applicationHandler.GetApplicationsByStage)
+				applications.POST("", middleware.RequirePermission(permissions.ApplicationsCreate), applicationHandler.CreateApplication)
+				applications.GET("/:id", middleware.RequirePermission(permissions.ApplicationsView), applicationHandler.GetApplication)
+				applications.PUT("/:id", middleware.RequirePermission(permissions.ApplicationsUpdate), applicationHandler.UpdateApplication)
+				applications.PATCH("/:id/move", middleware.RequirePermission(permissions.ApplicationsMove), applicationHandler.MoveApplication)
+				applications.PATCH("/:id/rate", middleware.RequirePermission(permissions.ApplicationsRate), applicationHandler.RateApplication)
+				applications.DELETE("/:id", middleware.RequirePermission(permissions.ApplicationsDelete), applicationHandler.DeleteApplication)
 			}
 
 			// Dashboard routes
 			dashboard := protected.Group("/dashboard")
 			{
-				dashboard.GET("/stats", dashboardHandler.GetStats)
+				dashboard.GET("/stats", middleware.RequirePermission(permissions.DashboardView), dashboardHandler.GetStats)
 			}
 
 			// System Values routes (read only)

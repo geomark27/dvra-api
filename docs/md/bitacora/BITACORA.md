@@ -6,6 +6,46 @@
 
 ---
 
+## 2026-06-12 — Sistema de Permisos por Acción (RBAC en código)
+
+**Qué se hizo:**
+- Nuevo paquete `internal/shared/permissions`: matriz rol → permisos en código, organizada por módulos (jobs.go, candidates.go, applications.go, users.go, companies.go, memberships.go, dashboard.go), análogo a un seeder de permisos por módulo pero verificado en compile-time. Punto único de consulta: `permissions.Can(role, permission)` — si a futuro se necesitan roles personalizados por empresa, solo se cambia la implementación de `Can()` a BD con caché, sin tocar rutas ni constantes.
+- Nuevo middleware `RequirePermission(perm)` aplicado a TODAS las rutas protegidas en `routes.go` (estilo declarativo, como `can:` de Laravel). Antes ningún endpoint distinguía roles dentro de la empresa: un rol `user` (solo lectura) podía crear jobs o mover el pipeline.
+- Permisos no asignados a ningún rol = exclusivos de SuperAdmin (companies.create/delete, memberships.create según RN-MEMB-004).
+- Nuevo paquete `internal/shared/authctx`: accesores tipados al contexto (`Role`, `IsSuperAdmin`, `UserID`, `CompanyID`). Refactor de los 34 `if role == "superadmin"` dispersos en 8 handlers → `authctx.IsSuperAdmin(c)`; el literal "superadmin" ya no existe fuera de `permissions`/`authctx`.
+- Fix: `getRoleLevel` no incluía `superadmin` (habría recibido nivel 0 con `RequireRole`); ahora nivel 100.
+- `GET /auth/me` ahora devuelve `role` y `permissions` de la empresa activa para que el frontend muestre/oculte acciones (mismo contrato que con Spatie).
+- Primeros tests unitarios del proyecto: `permissions_test.go` valida la matriz por rol.
+
+**Pendientes:**
+- [ ] Chequeos a nivel de recurso (hiring_manager edita solo sus jobs asignados) — requiere tabla de asignaciones (RN-MEMB-007)
+- [ ] Refactorizar `c.Get("company_id")` en handlers a `authctx.CompanyID(c)`
+- [ ] Cuando exista invitaciones (Fase 2): otorgar `memberships.invite` a admin
+
+**Referencia vigente:** `negocio/LOGICA_DE_NEGOCIO.md` sección 3.2 (matriz) y `internal/shared/permissions/`
+
+---
+
+## 2026-06-12 — BaseModel unificado + diseño de perfiles internos/externos
+
+**Qué se hizo:**
+- Nuevo `models.BaseModel` (`internal/app/models/base.go`): equivalente a `gorm.Model` pero con tags JSON en snake_case (`id`, `created_at`, `updated_at`, `deleted_at`).
+- Refactor de TODOS los modelos para embeber `BaseModel`: los 6 que duplicaban los campos inline (User, Company, Job, Candidate, Application, Membership) y los que usaban `gorm.Model` (Plan, Role, ubicaciones, SystemValue, PlatformSettings). No se usó `gorm.Model` directo porque no tiene tags JSON y los primeros 6 se serializan directamente en las respuestas de la API.
+- `BaseModel` genera las mismas columnas que `gorm.Model`, así que no hay impacto en BD; excepción: `platform_settings` gana `created_at` y `deleted_at` (AutoMigrate las agrega; el soft delete es inerte porque el singleton nunca se elimina).
+- Convención a futuro: todo modelo nuevo embebe `BaseModel`, nunca `gorm.Model` ni campos inline.
+- Verificado con `go build ./...`, `go vet ./...` y tests.
+- Documentado el diseño de **perfiles internos vs externos** (recruiters freelance/agencias) en `negocio/LOGICA_DE_NEGOCIO.md` sección 3.4: RN-MEMB-006 (`member_type`), RN-MEMB-007 (alcance del externo), RN-MEMB-008 (atribución y reporting por recruiter), y su incorporación al roadmap Fase 2.
+
+**Pendientes:**
+- [ ] Implementar invitaciones por email (prerequisito, ya era Fase 2)
+- [ ] Implementar `member_type` + asignación vacante ↔ recruiter
+- [ ] Historial de pipeline con atribución
+- [ ] Reportes por recruiter
+
+**Referencia vigente:** `negocio/LOGICA_DE_NEGOCIO.md` (sección 3.4)
+
+---
+
 ## 2025-12-22/23 — Módulo de Ubicaciones (Locations)
 
 **Qué se hizo:**

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"dvra-api/internal/shared/authctx"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -23,10 +24,9 @@ func NewCandidateHandler(candidateService services.CandidateService) *CandidateH
 }
 
 func (h *CandidateHandler) GetCandidates(c *gin.Context) {
-	role, _ := c.Get("role")
 
 	// SuperAdmin puede ver todos los candidates
-	if role == "superadmin" {
+	if authctx.IsSuperAdmin(c) {
 		candidates, err := h.candidateService.GetAllCandidates()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve candidates"})
@@ -63,8 +63,7 @@ func (h *CandidateHandler) GetCandidate(c *gin.Context) {
 	}
 
 	// Validar acceso: SuperAdmin o miembro de la misma empresa
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		companyIDVal, exists := c.Get("company_id")
 		if !exists {
 			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
@@ -89,8 +88,7 @@ func (h *CandidateHandler) CreateCandidate(c *gin.Context) {
 	}
 
 	// Forzar company_id del token para usuarios normales
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		companyIDVal, exists := c.Get("company_id")
 		if !exists {
 			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
@@ -113,8 +111,7 @@ func (h *CandidateHandler) UpdateCandidate(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
 
 	// Validar que el candidate pertenece a la empresa del usuario
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		candidate, err := h.candidateService.GetCandidateByID(uint(id))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Candidate not found"})
@@ -150,8 +147,7 @@ func (h *CandidateHandler) DeleteCandidate(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
 
 	// Validar que el candidate pertenece a la empresa del usuario
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		candidate, err := h.candidateService.GetCandidateByID(uint(id))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Candidate not found"})
@@ -195,8 +191,7 @@ func (h *CandidateHandler) UploadResume(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
 
 	// Validate access
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		candidate, err := h.candidateService.GetCandidateByID(uint(id))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Candidate not found"})

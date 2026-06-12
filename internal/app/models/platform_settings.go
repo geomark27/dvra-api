@@ -1,14 +1,9 @@
 package models
 
-import (
-	"time"
-)
-
 // PlatformSettings representa la configuración global del SaaS
 // Solo debe existir UNA fila en esta tabla (singleton)
 type PlatformSettings struct {
-	ID uint `gorm:"primarykey" json:"id"`
-
+	BaseModel
 	// =========================================================================
 	// BRANDING
 	// =========================================================================
@@ -58,8 +53,7 @@ type PlatformSettings struct {
 	// =========================================================================
 	// METADATA
 	// =========================================================================
-	UpdatedAt   time.Time `json:"updated_at"`
-	UpdatedByID *uint     `gorm:"type:int" json:"updated_by_id,omitempty"`
+	UpdatedByID *uint `gorm:"type:int" json:"updated_by_id,omitempty"`
 }
 
 func (PlatformSettings) TableName() string {

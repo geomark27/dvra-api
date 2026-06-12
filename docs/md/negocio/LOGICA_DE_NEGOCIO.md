@@ -147,6 +147,11 @@ User (Nivel 10)
 
 ### 3.2 Matriz de Permisos
 
+> **Implementación:** esta matriz está aplicada en código en `internal/shared/permissions/`
+> (un archivo por módulo) y se exige por endpoint vía el middleware `RequirePermission`
+> en `routes.go`. Las celdas "Solo asignados / Solo sus jobs" requieren chequeo a nivel
+> de recurso, pendiente de la tabla de asignaciones (ver RN-MEMB-007).
+
 | Acción | Super | Admin | Recruiter | Hiring Mgr | User |
 |--------|-------|-------|-----------|------------|------|
 | **Company** |
@@ -208,6 +213,59 @@ User (Nivel 10)
 - Tras aceptar: `pending` → `active`
 - Admin puede suspender: `active` → `suspended` (no puede hacer login)
 - Admin puede remover: cualquier estado → `removed` (soft delete)
+
+### 3.4 Perfiles Internos vs Externos (Roadmap)
+
+> **Estado:** diseño aprobado, pendiente de implementación. Habilita el caso de uso
+> de reclutadores freelance/agencias que dan servicio a una o varias empresas cliente.
+
+**Concepto.** El rol define *qué puede hacer* un miembro (admin, recruiter, hiring_manager);
+el tipo de miembro define *hasta dónde llega*. Una empresa (ej. su departamento de RRHH)
+puede invitar a un reclutador externo que trabaja solo sobre las vacantes que le asignen,
+sin acceso al resto de la operación. El modelo multi-empresa actual ya lo soporta de base:
+el freelancer es un usuario con N memberships (una por cliente) y usa `switch-company`
+para moverse entre ellas.
+
+**RN-MEMB-006: Tipo de miembro (interno / externo)**
+- Cada membership tiene un `member_type`: `internal` (default) | `external`
+- `member_type` es independiente del rol: un `recruiter` puede ser interno o externo
+- El tipo lo define quien invita y solo un Admin puede cambiarlo
+
+**RN-MEMB-007: Alcance del colaborador externo**
+- Solo ve y opera las vacantes que tiene asignadas (tabla de asignación vacante ↔ recruiter)
+- No accede a: configuración de empresa, billing, plan, gestión de usuarios, exportación de datos
+- Visibilidad de datos sensibles del candidato (salario esperado, notas internas): configurable por empresa
+- Dentro de sus vacantes asignadas opera igual que un recruiter interno:
+  crear candidatos, mover el pipeline, calificar, comentar
+
+**Matriz de permisos (recruiter interno vs externo):**
+
+| Capacidad | Admin | Recruiter interno | Recruiter externo |
+|-----------|-------|-------------------|-------------------|
+| Configuración de empresa, plan, billing | ✅ | ❌ | ❌ |
+| Invitar/gestionar usuarios | ✅ | ❌ | ❌ |
+| Ver todas las vacantes | ✅ | ✅ | Solo asignadas |
+| Crear/editar candidatos y aplicaciones | ✅ | ✅ | Solo en sus vacantes |
+| Mover candidatos en el pipeline | ✅ | ✅ | Solo en sus vacantes |
+| Ver datos sensibles del candidato | ✅ | ✅ | Configurable |
+| Exportar datos | ✅ | ✅ | ❌ |
+
+**RN-MEMB-008: Atribución y reporting por recruiter**
+- Todo cambio de etapa en el pipeline registra `(user_id, from_stage, to_stage, timestamp)`
+  (historial de pipeline); jobs, candidates y applications registran quién los creó
+- Sobre ese historial se construyen reportes por recruiter (interno o externo):
+  - Candidatos sourceados y aplicaciones gestionadas
+  - Tiempo promedio por etapa y time-to-hire
+  - Tasa de conversión a contratado
+  - Comparativa interno vs externo (¿rinde el freelancer que la empresa paga?)
+- **Monetización:** reportes por recruiter como feature de tiers altos (Professional/Enterprise)
+
+**Orden de implementación recomendado** (cada paso funciona solo y habilita el siguiente):
+1. Sistema de invitaciones por email (Fase 2 ya planificada; el modelo `Membership`
+   ya tiene `invited_by`, `invited_at`, `joined_at`)
+2. `member_type` en Membership + tabla de asignación vacante ↔ recruiter
+3. Historial de pipeline con atribución por usuario
+4. Reportes por recruiter sobre ese historial
 
 ---
 
@@ -911,6 +969,8 @@ prospect → invited → registered → evaluated → approved → featured
 - Email templates personalizables
 - GitHub OAuth (preview)
 - Reportes avanzados
+- Perfiles internos/externos + invitaciones (ver sección 3.4): habilita recruiters freelance/agencias
+- Reportes por recruiter (atribución de pipeline, ver RN-MEMB-008) como feature Professional/Enterprise
 - Customer success tools (health scoring)
 
 **Q4 (Oct-Dic):**

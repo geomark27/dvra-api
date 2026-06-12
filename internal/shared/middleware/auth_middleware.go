@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/permissions"
 
 	"github.com/gin-gonic/gin"
 )
@@ -124,10 +125,11 @@ func OptionalAuth(jwtService services.JWTService) gin.HandlerFunc {
 // getRoleLevel returns the numeric level for a role
 func getRoleLevel(role string) int {
 	levels := map[string]int{
-		"admin":          50,
-		"recruiter":      30,
-		"hiring_manager": 20,
-		"user":           10,
+		permissions.RoleSuperAdmin:    100,
+		permissions.RoleAdmin:         50,
+		permissions.RoleRecruiter:     30,
+		permissions.RoleHiringManager: 20,
+		permissions.RoleUser:          10,
 	}
 
 	if level, exists := levels[role]; exists {

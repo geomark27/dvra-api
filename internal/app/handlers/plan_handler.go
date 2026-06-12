@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"dvra-api/internal/shared/authctx"
 	"net/http"
 	"strconv"
 
@@ -72,13 +73,12 @@ func (h *PlanHandler) CreatePlan(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /admin/plans [get]
 func (h *PlanHandler) GetPlans(c *gin.Context) {
-	role, _ := c.Get("role")
 
 	var plans []dtos.PlanResponse
 	var err error
 
 	// SuperAdmin can see all plans
-	if role == "superadmin" {
+	if authctx.IsSuperAdmin(c) {
 		plans, err = h.planService.GetAllPlans()
 	} else {
 		// Regular users only see public active plans

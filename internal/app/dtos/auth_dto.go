@@ -21,13 +21,17 @@ type LoginResponseDTO struct {
 	User         UserResponse `json:"user"`
 }
 
-// UserResponse represents user data in auth response
+// UserResponse represents user data in auth response.
+// Role y Permissions solo se llenan en GET /auth/me: corresponden a la
+// empresa activa del token, para que el frontend muestre/oculte acciones.
 type UserResponse struct {
-	ID        uint   `json:"id"`
-	Email     string `json:"email"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	IsActive  bool   `json:"is_active"`
+	ID          uint     `json:"id"`
+	Email       string   `json:"email"`
+	FirstName   string   `json:"first_name"`
+	LastName    string   `json:"last_name"`
+	IsActive    bool     `json:"is_active"`
+	Role        string   `json:"role,omitempty"`
+	Permissions []string `json:"permissions,omitempty"`
 }
 
 // RefreshTokenDTO represents the refresh token request
@@ -92,4 +96,3 @@ type SwitchCompanyResponseDTO struct {
 	AccessToken string          `json:"access_token"`
 	Company     CompanyResponse `json:"company"`
 }
-

@@ -2,16 +2,11 @@ package models
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 // Application represents the application entity in the database
 type Application struct {
-	ID        uint           `gorm:"primarykey" json:"id"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+	BaseModel
 
 	JobID       uint `gorm:"not null;index" json:"job_id"`
 	CandidateID uint `gorm:"not null;index" json:"candidate_id"`

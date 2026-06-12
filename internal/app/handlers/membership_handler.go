@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"dvra-api/internal/shared/authctx"
 	"net/http"
 	"strconv"
 
@@ -35,10 +36,9 @@ func NewMembershipHandler(membershipService services.MembershipService) *Members
 // @Security     BearerAuth
 // @Router       /memberships [get]
 func (h *MembershipHandler) GetMemberships(c *gin.Context) {
-	role, _ := c.Get("role")
 
 	// SuperAdmin puede ver todas las memberships
-	if role == "superadmin" {
+	if authctx.IsSuperAdmin(c) {
 		memberships, err := h.membershipService.GetAllMemberships()
 		if err != nil {
 			h.logger.Error("Failed to get memberships", "error", err)
@@ -80,8 +80,7 @@ func (h *MembershipHandler) GetMembership(c *gin.Context) {
 	}
 
 	// Validar acceso: SuperAdmin o miembro de la misma empresa
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		companyIDVal, exists := c.Get("company_id")
 		if !exists {
 			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
@@ -114,8 +113,7 @@ func (h *MembershipHandler) CreateMembership(c *gin.Context) {
 	// SOLO SuperAdmin puede crear memberships (MVP)
 	// Los clientes crean usuarios que automáticamente se agregan a su empresa
 	// Sistema de invitaciones → Fase 2
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		c.JSON(http.StatusForbidden, gin.H{
 			"error": "Only superadmin can assign users to companies. Regular users should create new users instead.",
 		})
@@ -150,8 +148,7 @@ func (h *MembershipHandler) UpdateMembership(c *gin.Context) {
 	}
 
 	// Validar que el membership pertenece a la empresa del usuario
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		membership, err := h.membershipService.GetMembershipByID(uint(id))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Membership not found"})
@@ -192,8 +189,7 @@ func (h *MembershipHandler) DeleteMembership(c *gin.Context) {
 	}
 
 	// Validar que el membership pertenece a la empresa del usuario
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		membership, err := h.membershipService.GetMembershipByID(uint(id))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Membership not found"})

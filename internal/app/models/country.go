@@ -1,10 +1,8 @@
 package models
 
-import "gorm.io/gorm"
-
 // Country represents the country entity in the database
 type Country struct {
-	gorm.Model
+	BaseModel
 	Name        string `gorm:"type:varchar(100);not null" json:"name"`
 	NumericCode string `gorm:"type:varchar(3);not null;" json:"numeric_code"`
 	Iso2        string `gorm:"type:varchar(2);not null;uniqueIndex" json:"iso2"`

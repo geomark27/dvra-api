@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"dvra-api/internal/shared/authctx"
 	"net/http"
 	"strconv"
 
@@ -21,7 +22,6 @@ func NewJobHandler(jobService services.JobService) *JobHandler {
 }
 
 func (h *JobHandler) GetJobs(c *gin.Context) {
-	role, _ := c.Get("role")
 
 	// Leer filtros de query params
 	var filters dtos.JobFilters
@@ -34,7 +34,7 @@ func (h *JobHandler) GetJobs(c *gin.Context) {
 	h.logger.Info("Filters received: Status=%s, LocationType=%s, CityID=%v", filters.Status, filters.LocationType, filters.CityID)
 
 	// SuperAdmin puede ver todos los jobs
-	if role == "superadmin" {
+	if authctx.IsSuperAdmin(c) {
 		jobs, err := h.jobService.GetAllJobsWithFilters(filters)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve jobs"})
@@ -76,8 +76,7 @@ func (h *JobHandler) GetJob(c *gin.Context) {
 	}
 
 	// Validar acceso: SuperAdmin o miembro de la misma empresa
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		companyIDVal, exists := c.Get("company_id")
 		if !exists {
 			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
@@ -101,8 +100,7 @@ func (h *JobHandler) CreateJob(c *gin.Context) {
 	}
 
 	// Forzar company_id del token para usuarios normales
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		companyIDVal, exists := c.Get("company_id")
 		if !exists {
 			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
@@ -124,8 +122,7 @@ func (h *JobHandler) UpdateJob(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
 
 	// Validar que el job pertenece a la empresa del usuario
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		job, err := h.jobService.GetJobByID(uint(id))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
@@ -160,8 +157,7 @@ func (h *JobHandler) DeleteJob(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
 
 	// Validar que el job pertenece a la empresa del usuario
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		job, err := h.jobService.GetJobByID(uint(id))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
@@ -203,8 +199,7 @@ func (h *JobHandler) PublishJob(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
 
 	// Validar que el job pertenece a la empresa del usuario
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		job, err := h.jobService.GetJobByID(uint(id))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
@@ -247,8 +242,7 @@ func (h *JobHandler) CloseJob(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
 
 	// Validar que el job pertenece a la empresa del usuario
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		job, err := h.jobService.GetJobByID(uint(id))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})

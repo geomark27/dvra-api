@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"dvra-api/internal/shared/authctx"
 	"net/http"
 
 	"dvra-api/internal/app/services"
@@ -30,10 +31,9 @@ func NewDashboardHandler(dashboardService services.DashboardService) *DashboardH
 // @Security     BearerAuth
 // @Router       /dashboard/stats [get]
 func (h *DashboardHandler) GetStats(c *gin.Context) {
-	role, _ := c.Get("role")
 
 	// SuperAdmin gets stats for all companies (or can pass company_id as query param)
-	if role == "superadmin" {
+	if authctx.IsSuperAdmin(c) {
 		// For now, superadmin gets empty stats or could aggregate
 		// You could add a ?company_id query param for superadmin to see specific company
 		queryCompanyID := c.Query("company_id")

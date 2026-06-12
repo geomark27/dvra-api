@@ -1,17 +1,8 @@
 package models
 
-import (
-	"time"
-
-	"gorm.io/gorm"
-)
-
 // Candidate represents the candidate entity in the database
 type Candidate struct {
-	ID        uint           `gorm:"primarykey" json:"id"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+	BaseModel
 
 	CompanyID uint `gorm:"not null;index:idx_candidates_company_email,priority:1" json:"company_id"`
 

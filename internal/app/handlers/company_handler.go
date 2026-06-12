@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"dvra-api/internal/shared/authctx"
 	"net/http"
 	"strconv"
 
@@ -37,10 +38,9 @@ func NewCompanyHandler(companyService services.CompanyService) *CompanyHandler {
 // @Security     BearerAuth
 // @Router       /companies [get]
 func (h *CompanyHandler) GetCompanies(c *gin.Context) {
-	role, _ := c.Get("role")
 
 	// SuperAdmin puede ver todas las empresas
-	if role == "superadmin" {
+	if authctx.IsSuperAdmin(c) {
 		companies, err := h.companyService.GetAllCompanies()
 		if err != nil {
 			h.logger.Error("Failed to get companies", "error", err)
@@ -103,10 +103,8 @@ func (h *CompanyHandler) GetCompany(c *gin.Context) {
 		return
 	}
 
-	role, _ := c.Get("role")
-
 	// Validar acceso: SuperAdmin o miembro de la empresa
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		companyIDVal, exists := c.Get("company_id")
 		if !exists {
 			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
@@ -184,8 +182,7 @@ func (h *CompanyHandler) UpdateCompany(c *gin.Context) {
 	}
 
 	// Validar acceso: SuperAdmin o miembro de esa empresa
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		companyIDVal, exists := c.Get("company_id")
 		if !exists {
 			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
@@ -236,8 +233,7 @@ func (h *CompanyHandler) DeleteCompany(c *gin.Context) {
 	}
 
 	// Validar acceso: Solo SuperAdmin puede eliminar empresas
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Only superadmin can delete companies"})
 		return
 	}

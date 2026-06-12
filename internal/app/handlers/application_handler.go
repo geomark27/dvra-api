@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"dvra-api/internal/shared/authctx"
 	"net/http"
 	"strconv"
 
@@ -32,10 +33,9 @@ func NewApplicationHandler(applicationService services.ApplicationService) *Appl
 // @Security     BearerAuth
 // @Router       /applications [get]
 func (h *ApplicationHandler) GetApplications(c *gin.Context) {
-	role, _ := c.Get("role")
 
 	// SuperAdmin puede ver todas las applications
-	if role == "superadmin" {
+	if authctx.IsSuperAdmin(c) {
 		applications, err := h.applicationService.GetAllApplications()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve applications"})
@@ -70,8 +70,7 @@ func (h *ApplicationHandler) GetApplication(c *gin.Context) {
 	}
 
 	// Validar acceso: SuperAdmin o miembro de la misma empresa
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		companyIDVal, exists := c.Get("company_id")
 		if !exists {
 			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
@@ -108,8 +107,7 @@ func (h *ApplicationHandler) CreateApplication(c *gin.Context) {
 	}
 
 	// Forzar company_id del token para usuarios normales
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		companyIDVal, exists := c.Get("company_id")
 		if !exists {
 			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
@@ -131,8 +129,7 @@ func (h *ApplicationHandler) UpdateApplication(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
 
 	// Validar que la application pertenece a la empresa del usuario
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		application, err := h.applicationService.GetApplicationByID(uint(id))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
@@ -167,8 +164,7 @@ func (h *ApplicationHandler) DeleteApplication(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
 
 	// Validar que la application pertenece a la empresa del usuario
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		application, err := h.applicationService.GetApplicationByID(uint(id))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
@@ -205,10 +201,9 @@ func (h *ApplicationHandler) DeleteApplication(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /applications/by-stage [get]
 func (h *ApplicationHandler) GetApplicationsByStage(c *gin.Context) {
-	role, _ := c.Get("role")
 
 	var companyID uint
-	if role == "superadmin" {
+	if authctx.IsSuperAdmin(c) {
 		// SuperAdmin needs to specify company_id via query param
 		queryCompanyID := c.Query("company_id")
 		if queryCompanyID == "" {
@@ -257,8 +252,7 @@ func (h *ApplicationHandler) MoveApplication(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
 
 	// Validate access
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		application, err := h.applicationService.GetApplicationByID(uint(id))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
@@ -309,8 +303,7 @@ func (h *ApplicationHandler) RateApplication(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
 
 	// Validate access
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		application, err := h.applicationService.GetApplicationByID(uint(id))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})

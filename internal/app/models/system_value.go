@@ -1,12 +1,8 @@
 package models
 
-import (
-	"gorm.io/gorm"
-)
-
 // SystemValue represents system catalogs/lookups for dynamic select options
 type SystemValue struct {
-	gorm.Model
+	BaseModel
 	Category     string  `gorm:"type:varchar(50);not null;index:idx_system_values_category_value,priority:1" json:"category"`
 	Value        string  `gorm:"type:varchar(100);not null;index:idx_system_values_category_value,priority:2" json:"value"`
 	Label        string  `gorm:"type:varchar(200);not null" json:"label"`

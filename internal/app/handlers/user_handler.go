@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"dvra-api/internal/shared/authctx"
 	"net/http"
 	"strconv"
 
@@ -37,10 +38,9 @@ func NewUserHandler(userService services.UserService) *UserHandler {
 // @Security     BearerAuth
 // @Router       /users [get]
 func (h *UserHandler) GetUsers(c *gin.Context) {
-	role, _ := c.Get("role")
 
 	// SuperAdmin puede ver todos los usuarios
-	if role == "superadmin" {
+	if authctx.IsSuperAdmin(c) {
 		users, err := h.userService.GetAllUsers()
 		if err != nil {
 			h.logger.Error("Failed to get users", "error", err)
@@ -127,8 +127,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 
 	// Validar acceso: SuperAdmin puede ver cualquier user
 	// Usuarios normales solo pueden ver users de su empresa
-	role, _ := c.Get("role")
-	if role != "superadmin" {
+	if !authctx.IsSuperAdmin(c) {
 		companyIDVal, exists := c.Get("company_id")
 		if !exists {
 			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
