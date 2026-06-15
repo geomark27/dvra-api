@@ -37,6 +37,7 @@ func SeedPlans(db *gorm.DB) error {
 			CanUseCustomBrand:  false,
 			CanUseAPI:          false,
 			CanUseIntegrations: false,
+			CanUseStaffing:     false,
 			SupportLevel:       "email",
 		},
 		{
@@ -59,6 +60,7 @@ func SeedPlans(db *gorm.DB) error {
 			CanUseCustomBrand:  false,
 			CanUseAPI:          false,
 			CanUseIntegrations: false,
+			CanUseStaffing:     false,
 			SupportLevel:       "email",
 		},
 		{
@@ -81,6 +83,7 @@ func SeedPlans(db *gorm.DB) error {
 			CanUseCustomBrand:  true,
 			CanUseAPI:          true,
 			CanUseIntegrations: true,
+			CanUseStaffing:     true,
 			SupportLevel:       "priority",
 		},
 		{
@@ -103,6 +106,7 @@ func SeedPlans(db *gorm.DB) error {
 			CanUseCustomBrand:  true,
 			CanUseAPI:          true,
 			CanUseIntegrations: true,
+			CanUseStaffing:     true,
 			SupportLevel:       "dedicated",
 		},
 	}

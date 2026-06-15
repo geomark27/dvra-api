@@ -52,6 +52,9 @@ func (r *jobRepository) GetAllWithFilters(filters dtos.JobFilters) ([]models.Job
 	if filters.CityID != nil {
 		query = query.Where("city_id = ?", *filters.CityID)
 	}
+	if filters.StaffingClientID != nil {
+		query = query.Where("staffing_client_id = ?", *filters.StaffingClientID)
+	}
 
 	if err := query.Find(&jobs).Error; err != nil {
 		return nil, err
@@ -91,6 +94,9 @@ func (r *jobRepository) GetByCompanyIDWithFilters(companyID uint, filters dtos.J
 	}
 	if filters.CityID != nil {
 		query = query.Where("city_id = ?", *filters.CityID)
+	}
+	if filters.StaffingClientID != nil {
+		query = query.Where("staffing_client_id = ?", *filters.StaffingClientID)
 	}
 
 	if err := query.Find(&jobs).Error; err != nil {

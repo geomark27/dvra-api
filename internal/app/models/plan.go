@@ -22,6 +22,7 @@ type Plan struct {
 	CanUseCustomBrand  bool    `gorm:"default:false" json:"can_use_custom_brand"`
 	CanUseAPI          bool    `gorm:"default:false" json:"can_use_api"`
 	CanUseIntegrations bool    `gorm:"default:false" json:"can_use_integrations"`
+	CanUseStaffing     bool    `gorm:"default:false" json:"can_use_staffing"`                 // Habilita módulo de staffing/outsourcing
 	SupportLevel       string  `gorm:"type:varchar(50);default:'email'" json:"support_level"` // email, priority, dedicated
 }
 
@@ -58,6 +59,8 @@ func (p *Plan) HasFeature(feature string) bool {
 		return p.CanUseAPI
 	case "integrations":
 		return p.CanUseIntegrations
+	case "staffing":
+		return p.CanUseStaffing
 	default:
 		return false
 	}

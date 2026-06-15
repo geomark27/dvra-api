@@ -25,7 +25,10 @@ func registerRoutes(
 	candidateHandler *handlers.CandidateHandler,
 	applicationHandler *handlers.ApplicationHandler,
 	jobHandler *handlers.JobHandler,
+	staffingClientHandler *handlers.StaffingClientHandler,
+	placementHandler *handlers.PlacementHandler,
 	planHandler *handlers.PlanHandler,
+	planService services.PlanService,
 	systemValueHandler *handlers.SystemValueHandler,
 	locationHandler *handlers.LocationHandler,
 	dashboardHandler *handlers.DashboardHandler,
@@ -42,19 +45,21 @@ func registerRoutes(
 			"version":        "v1.4.0",
 			"generated_with": "Loom",
 			"endpoints": gin.H{
-				"health":       "/api/v1/health",
-				"auth":         "/api/v1/auth",
-				"users":        "/api/v1/users",
-				"companies":    "/api/v1/companies",
-				"memberships":  "/api/v1/memberships",
-				"jobs":         "/api/v1/jobs",
-				"candidates":   "/api/v1/candidates",
-				"applications": "/api/v1/applications",
-				"dashboard":    "/api/v1/dashboard",
-				"plans":        "/api/v1/plans (public)",
-				"locations":    "/api/v1/locations (public)",
-				"public":       "/api/v1/public (career page)",
-				"swagger":      "/swagger/index.html",
+				"health":           "/api/v1/health",
+				"auth":             "/api/v1/auth",
+				"users":            "/api/v1/users",
+				"companies":        "/api/v1/companies",
+				"memberships":      "/api/v1/memberships",
+				"jobs":             "/api/v1/jobs",
+				"staffing_clients": "/api/v1/staffing-clients",
+				"placements":       "/api/v1/placements",
+				"candidates":       "/api/v1/candidates",
+				"applications":     "/api/v1/applications",
+				"dashboard":        "/api/v1/dashboard",
+				"plans":            "/api/v1/plans (public)",
+				"locations":        "/api/v1/locations (public)",
+				"public":           "/api/v1/public (career page)",
+				"swagger":          "/swagger/index.html",
 			},
 		})
 	})
@@ -135,6 +140,28 @@ func registerRoutes(
 				jobs.DELETE("/:id", middleware.RequirePermission(permissions.JobsDelete), jobHandler.DeleteJob)
 				jobs.PATCH("/:id/publish", middleware.RequirePermission(permissions.JobsPublish), jobHandler.PublishJob)
 				jobs.PATCH("/:id/close", middleware.RequirePermission(permissions.JobsClose), jobHandler.CloseJob)
+			}
+
+			// Staffing client routes (gateado por plan vía RequireFeature)
+			staffingClients := protected.Group("/staffing-clients")
+			staffingClients.Use(middleware.RequireFeature(planService, "staffing"))
+			{
+				staffingClients.GET("", middleware.RequirePermission(permissions.StaffingClientsView), staffingClientHandler.GetStaffingClients)
+				staffingClients.POST("", middleware.RequirePermission(permissions.StaffingClientsCreate), staffingClientHandler.CreateStaffingClient)
+				staffingClients.GET("/:id", middleware.RequirePermission(permissions.StaffingClientsView), staffingClientHandler.GetStaffingClient)
+				staffingClients.PUT("/:id", middleware.RequirePermission(permissions.StaffingClientsUpdate), staffingClientHandler.UpdateStaffingClient)
+				staffingClients.DELETE("/:id", middleware.RequirePermission(permissions.StaffingClientsDelete), staffingClientHandler.DeleteStaffingClient)
+			}
+
+			// Placement routes (gateado por plan vía RequireFeature)
+			placements := protected.Group("/placements")
+			placements.Use(middleware.RequireFeature(planService, "staffing"))
+			{
+				placements.GET("", middleware.RequirePermission(permissions.PlacementsView), placementHandler.GetPlacements)
+				placements.POST("", middleware.RequirePermission(permissions.PlacementsCreate), placementHandler.CreatePlacement)
+				placements.GET("/:id", middleware.RequirePermission(permissions.PlacementsView), placementHandler.GetPlacement)
+				placements.PUT("/:id", middleware.RequirePermission(permissions.PlacementsUpdate), placementHandler.UpdatePlacement)
+				placements.DELETE("/:id", middleware.RequirePermission(permissions.PlacementsDelete), placementHandler.DeletePlacement)
 			}
 
 			// Candidate routes

@@ -29,6 +29,7 @@ type PlanService interface {
 	TogglePlanStatus(id uint, isActive bool) (*dtos.PlanResponse, error)
 	DeletePlan(id uint) error
 	AssignPlanToCompany(companyID uint, planSlug string) error
+	CompanyHasFeature(companyID uint, feature string) (bool, error)
 }
 
 type planService struct {
@@ -81,6 +82,7 @@ func (s *planService) CreatePlan(dto *dtos.PlanDTO) (*dtos.PlanResponse, error) 
 		CanUseCustomBrand:  dto.CanUseCustomBrand,
 		CanUseAPI:          dto.CanUseAPI,
 		CanUseIntegrations: dto.CanUseIntegrations,
+		CanUseStaffing:     dto.CanUseStaffing,
 		SupportLevel:       dto.SupportLevel,
 	}
 
@@ -208,6 +210,9 @@ func (s *planService) UpdatePlan(id uint, dto *dtos.UpdatePlanDTO) (*dtos.PlanRe
 	if dto.CanUseIntegrations != nil {
 		plan.CanUseIntegrations = *dto.CanUseIntegrations
 	}
+	if dto.CanUseStaffing != nil {
+		plan.CanUseStaffing = *dto.CanUseStaffing
+	}
 	if dto.SupportLevel != nil {
 		plan.SupportLevel = *dto.SupportLevel
 	}
@@ -290,6 +295,29 @@ func (s *planService) AssignPlanToCompany(companyID uint, planSlug string) error
 	return err
 }
 
+// CompanyHasFeature reporta si el plan de la empresa habilita un feature
+// (ver Plan.HasFeature). Resuelve Company.PlanTier (slug) → Plan → flag.
+// Es el chequeo de entitlement que usa el middleware RequireFeature.
+func (s *planService) CompanyHasFeature(companyID uint, feature string) (bool, error) {
+	company, err := s.companyRepo.GetByID(companyID)
+	if err != nil {
+		return false, err
+	}
+	if company == nil {
+		return false, ErrCompanyNotFound
+	}
+
+	plan, err := s.planRepo.FindBySlug(company.PlanTier)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, ErrPlanNotFound
+		}
+		return false, err
+	}
+
+	return plan.HasFeature(feature), nil
+}
+
 // Helper functions
 func (s *planService) toPlanResponse(plan *models.Plan) *dtos.PlanResponse {
 	return &dtos.PlanResponse{
@@ -313,6 +341,7 @@ func (s *planService) toPlanResponse(plan *models.Plan) *dtos.PlanResponse {
 		CanUseCustomBrand:  plan.CanUseCustomBrand,
 		CanUseAPI:          plan.CanUseAPI,
 		CanUseIntegrations: plan.CanUseIntegrations,
+		CanUseStaffing:     plan.CanUseStaffing,
 		SupportLevel:       plan.SupportLevel,
 		CreatedAt:          plan.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:          plan.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),

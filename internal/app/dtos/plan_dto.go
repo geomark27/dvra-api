@@ -21,6 +21,7 @@ type PlanDTO struct {
 	CanUseCustomBrand  bool    `json:"can_use_custom_brand"`
 	CanUseAPI          bool    `json:"can_use_api"`
 	CanUseIntegrations bool    `json:"can_use_integrations"`
+	CanUseStaffing     bool    `json:"can_use_staffing"`
 	SupportLevel       string  `json:"support_level" binding:"required,oneof=email priority dedicated"`
 }
 
@@ -44,6 +45,7 @@ type UpdatePlanDTO struct {
 	CanUseCustomBrand  *bool    `json:"can_use_custom_brand"`
 	CanUseAPI          *bool    `json:"can_use_api"`
 	CanUseIntegrations *bool    `json:"can_use_integrations"`
+	CanUseStaffing     *bool    `json:"can_use_staffing"`
 	SupportLevel       *string  `json:"support_level" binding:"omitempty,oneof=email priority dedicated"`
 }
 
@@ -69,6 +71,7 @@ type PlanResponse struct {
 	CanUseCustomBrand  bool    `json:"can_use_custom_brand"`
 	CanUseAPI          bool    `json:"can_use_api"`
 	CanUseIntegrations bool    `json:"can_use_integrations"`
+	CanUseStaffing     bool    `json:"can_use_staffing"`
 	SupportLevel       string  `json:"support_level"`
 	CreatedAt          string  `json:"created_at"`
 	UpdatedAt          string  `json:"updated_at"`

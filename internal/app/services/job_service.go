@@ -24,11 +24,29 @@ type JobService interface {
 }
 
 type jobService struct {
-	jobRepo repositories.JobRepository
+	jobRepo      repositories.JobRepository
+	staffingRepo repositories.StaffingClientRepository
 }
 
-func NewJobService(jobRepo repositories.JobRepository) JobService {
-	return &jobService{jobRepo: jobRepo}
+func NewJobService(jobRepo repositories.JobRepository, staffingRepo repositories.StaffingClientRepository) JobService {
+	return &jobService{jobRepo: jobRepo, staffingRepo: staffingRepo}
+}
+
+// validateStaffingClient asegura que el cliente final exista y pertenezca a la
+// misma empresa que el job (integridad cross-tenant). Sin esta validación un
+// tenant podría enganchar jobs a clientes de otro tenant.
+func (s *jobService) validateStaffingClient(companyID, staffingClientID uint) error {
+	client, err := s.staffingRepo.GetByID(staffingClientID)
+	if err != nil {
+		return err
+	}
+	if client == nil {
+		return fmt.Errorf("staffing client not found")
+	}
+	if client.CompanyID != companyID {
+		return fmt.Errorf("staffing client does not belong to your company")
+	}
+	return nil
 }
 
 func (s *jobService) GetAllJobs() ([]models.Job, error) {
@@ -68,6 +86,13 @@ func (s *jobService) CreateJob(dto dtos.CreateJobDTO) (*models.Job, error) {
 		status = "draft"
 	}
 
+	// Si el job se asigna a un cliente final, debe ser del mismo tenant
+	if dto.StaffingClientID != nil {
+		if err := s.validateStaffingClient(dto.CompanyID, *dto.StaffingClientID); err != nil {
+			return nil, err
+		}
+	}
+
 	job := &models.Job{
 		CompanyID:         dto.CompanyID,
 		Title:             dto.Title,
@@ -81,6 +106,7 @@ func (s *jobService) CreateJob(dto dtos.CreateJobDTO) (*models.Job, error) {
 		Status:            status,
 		AssignedRecruiter: dto.AssignedRecruiter,
 		HiringManager:     dto.HiringManager,
+		StaffingClientID:  dto.StaffingClientID,
 	}
 
 	return s.jobRepo.Create(job)
@@ -127,6 +153,12 @@ func (s *jobService) UpdateJob(id uint, dto dtos.UpdateJobDTO) (*models.Job, err
 	}
 	if dto.HiringManager != nil {
 		job.HiringManager = dto.HiringManager
+	}
+	if dto.StaffingClientID != nil {
+		if err := s.validateStaffingClient(job.CompanyID, *dto.StaffingClientID); err != nil {
+			return nil, err
+		}
+		job.StaffingClientID = dto.StaffingClientID
 	}
 
 	return s.jobRepo.Update(job)

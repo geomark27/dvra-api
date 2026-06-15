@@ -7,9 +7,10 @@ import (
 
 // JobFilters represents filters for listing jobs
 type JobFilters struct {
-	Status       string `form:"status"`
-	LocationType string `form:"location_type"`
-	CityID       *uint  `form:"city_id"`
+	Status           string `form:"status"`
+	LocationType     string `form:"location_type"`
+	CityID           *uint  `form:"city_id"`
+	StaffingClientID *uint  `form:"staffing_client_id"`
 }
 
 // JobResponseDTO represents the job data in API responses
@@ -31,6 +32,7 @@ type JobResponseDTO struct {
 	City              *models.City    `json:"city,omitempty"`
 	AssignedRecruiter *uint           `json:"assigned_recruiter,omitempty"`
 	HiringManager     *uint           `json:"hiring_manager,omitempty"`
+	StaffingClientID  *uint           `json:"staffing_client_id,omitempty"`
 }
 
 // CreateJobDTO represents the data needed to create a job
@@ -47,6 +49,7 @@ type CreateJobDTO struct {
 	CityID            *uint    `json:"city_id,omitempty"`
 	AssignedRecruiter *uint    `json:"assigned_recruiter,omitempty"`
 	HiringManager     *uint    `json:"hiring_manager,omitempty"`
+	StaffingClientID  *uint    `json:"staffing_client_id,omitempty"` // opcional: activa modo staffing
 }
 
 // UpdateJobDTO represents the data needed to update a job
@@ -62,6 +65,7 @@ type UpdateJobDTO struct {
 	CityID            *uint    `json:"city_id,omitempty"`
 	AssignedRecruiter *uint    `json:"assigned_recruiter,omitempty"`
 	HiringManager     *uint    `json:"hiring_manager,omitempty"`
+	StaffingClientID  *uint    `json:"staffing_client_id,omitempty"`
 }
 
 // ToJobResponse converts a Job model to JobResponseDTO
@@ -84,6 +88,7 @@ func ToJobResponse(job *models.Job) JobResponseDTO {
 		City:              job.City,
 		AssignedRecruiter: job.AssignedRecruiter,
 		HiringManager:     job.HiringManager,
+		StaffingClientID:  job.StaffingClientID,
 	}
 }
 

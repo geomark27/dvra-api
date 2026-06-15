@@ -41,6 +41,8 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	candidateRepo := repositories.NewCandidateRepository()
 	applicationRepo := repositories.NewApplicationRepository()
 	jobRepo := repositories.NewJobRepository()
+	staffingClientRepo := repositories.NewStaffingClientRepository()
+	placementRepo := repositories.NewPlacementRepository()
 	planRepo := repositories.NewPlanRepository(db)
 	systemValueRepo := repositories.NewSystemValueRepository(db)
 	locationRepo := repositories.NewLocationRepository()
@@ -54,7 +56,9 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	membershipService := services.NewMembershipService(membershipRepo)
 	candidateService := services.NewCandidateService(candidateRepo)
 	applicationService := services.NewApplicationService(applicationRepo)
-	jobService := services.NewJobService(jobRepo)
+	jobService := services.NewJobService(jobRepo, staffingClientRepo)
+	staffingClientService := services.NewStaffingClientService(staffingClientRepo)
+	placementService := services.NewPlacementService(placementRepo, applicationRepo, staffingClientRepo)
 	planService := services.NewPlanService(planRepo, companyRepo, db)
 	systemValueService := services.NewSystemValueService(systemValueRepo)
 	locationService := services.NewLocationService(locationRepo)
@@ -71,6 +75,8 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	candidateHandler := handlers.NewCandidateHandler(candidateService)
 	applicationHandler := handlers.NewApplicationHandler(applicationService)
 	jobHandler := handlers.NewJobHandler(jobService)
+	staffingClientHandler := handlers.NewStaffingClientHandler(staffingClientService)
+	placementHandler := handlers.NewPlacementHandler(placementService)
 	planHandler := handlers.NewPlanHandler(planService)
 	systemValueHandler := handlers.NewSystemValueHandler(systemValueService)
 	locationHandler := handlers.NewLocationHandler(locationService)
@@ -85,7 +91,7 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	router.Use(corsMiddleware(cfg.CorsAllowedOrigins))
 
 	// Register routes (passing config for dynamic Swagger host)
-	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, planHandler, systemValueHandler, locationHandler, dashboardHandler, publicHandler, platformSettingsHandler, jwtService, cfg)
+	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, staffingClientHandler, placementHandler, planHandler, planService, systemValueHandler, locationHandler, dashboardHandler, publicHandler, platformSettingsHandler, jwtService, cfg)
 
 	// Configure HTTP server
 	httpServer := &http.Server{

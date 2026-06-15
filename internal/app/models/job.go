@@ -24,6 +24,9 @@ type Job struct {
 	Company      *Company      `gorm:"foreignKey:CompanyID" json:"company,omitempty"`
 	City         *City         `gorm:"foreignKey:CityID" json:"city,omitempty"`
 	Applications []Application `gorm:"foreignKey:JobID" json:"applications,omitempty"`
+
+	StaffingClientID *uint           `gorm:"index" json:"staffing_client_id,omitempty"`
+	StaffingClient   *StaffingClient `gorm:"foreignKey:StaffingClientID" json:"staffing_client,omitempty"`
 }
 
 // TableName overrides the table name (optional)

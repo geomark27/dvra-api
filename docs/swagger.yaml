@@ -61,6 +61,8 @@ definitions:
       job_id:
         minimum: 1
         type: integer
+      notes:
+        type: string
       rating:
         maximum: 5
         minimum: 1
@@ -120,32 +122,6 @@ definitions:
     - slug
     - timezone
     type: object
-  dtos.CreateCompanyWithAdminDTO:
-    properties:
-      admin_email:
-        type: string
-      admin_first_name:
-        type: string
-      admin_last_name:
-        type: string
-      admin_password:
-        minLength: 8
-        type: string
-      company_name:
-        type: string
-      company_slug:
-        type: string
-      plan_slug:
-        description: Opcional, default "free"
-        type: string
-    required:
-    - admin_email
-    - admin_first_name
-    - admin_last_name
-    - admin_password
-    - company_name
-    - company_slug
-    type: object
   dtos.CreateCountryDTO:
     properties:
       iso2:
@@ -170,36 +146,6 @@ definitions:
     - name
     - numeric_code
     - phone_code
-    type: object
-  dtos.CreateJobDTO:
-    properties:
-      assigned_recruiter:
-        type: integer
-      company_id:
-        minimum: 1
-        type: integer
-      description:
-        type: string
-      hiring_manager:
-        type: integer
-      location:
-        maxLength: 255
-        type: string
-      status:
-        enum:
-        - draft
-        - active
-        - on_hold
-        - closed
-        type: string
-      title:
-        maxLength: 255
-        minLength: 3
-        type: string
-    required:
-    - company_id
-    - description
-    - title
     type: object
   dtos.CreateMembershipDTO:
     properties:
@@ -230,6 +176,49 @@ definitions:
     - role
     - user_id
     type: object
+  dtos.CreatePlacementDTO:
+    properties:
+      application_id:
+        minimum: 1
+        type: integer
+      bill_rate_amount:
+        type: number
+      bill_rate_currency:
+        type: string
+      bill_rate_type:
+        enum:
+        - hourly
+        - monthly
+        type: string
+      contract_type:
+        enum:
+        - outsourcing
+        - staffing
+        - project
+        type: string
+      end_date:
+        type: string
+      notes:
+        type: string
+      pay_rate_amount:
+        type: number
+      position:
+        type: string
+      staffing_client_id:
+        minimum: 1
+        type: integer
+      start_date:
+        type: string
+      status:
+        enum:
+        - active
+        - ended
+        - suspended
+        type: string
+    required:
+    - application_id
+    - staffing_client_id
+    type: object
   dtos.CreateRegionDTO:
     properties:
       name:
@@ -238,6 +227,42 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  dtos.CreateStaffingClientDTO:
+    properties:
+      company_id:
+        type: integer
+      contact_email:
+        type: string
+      contact_name:
+        type: string
+      contact_phone:
+        type: string
+      industry:
+        type: string
+      logo_url:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      notes:
+        type: string
+      slug:
+        maxLength: 100
+        minLength: 2
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        - prospect
+        type: string
+      website:
+        type: string
+    required:
+    - name
+    - slug
     type: object
   dtos.CreateStateDTO:
     properties:
@@ -323,6 +348,20 @@ definitions:
     - email
     - password
     type: object
+  dtos.MoveApplicationDTO:
+    properties:
+      stage:
+        enum:
+        - applied
+        - screening
+        - technical
+        - offer
+        - hired
+        - rejected
+        type: string
+    required:
+    - stage
+    type: object
   dtos.PlanDTO:
     properties:
       billing_cycle:
@@ -337,6 +376,8 @@ definitions:
       can_use_custom_brand:
         type: boolean
       can_use_integrations:
+        type: boolean
+      can_use_staffing:
         type: boolean
       currency:
         type: string
@@ -394,6 +435,8 @@ definitions:
         type: boolean
       can_use_integrations:
         type: boolean
+      can_use_staffing:
+        type: boolean
       created_at:
         type: string
       currency:
@@ -430,6 +473,109 @@ definitions:
         type: integer
       updated_at:
         type: string
+    type: object
+  dtos.PlatformSettingsFullDTO:
+    properties:
+      default_plan_tier:
+        type: string
+      default_trial_days:
+        description: Business defaults
+        type: integer
+      docs_url:
+        type: string
+      favicon_url:
+        type: string
+      github_url:
+        type: string
+      id:
+        type: integer
+      legal_address:
+        type: string
+      legal_company_name:
+        description: Legal
+        type: string
+      legal_country:
+        type: string
+      legal_tax_id:
+        type: string
+      linkedin_url:
+        type: string
+      logo_dark_url:
+        type: string
+      logo_url:
+        type: string
+      marketing_url:
+        description: URLs
+        type: string
+      platform_name:
+        description: Branding
+        type: string
+      platform_short:
+        type: string
+      primary_color:
+        type: string
+      privacy_url:
+        type: string
+      sales_email:
+        type: string
+      support_email:
+        description: Contact
+        type: string
+      tagline:
+        type: string
+      terms_url:
+        type: string
+      twitter_url:
+        description: Social
+        type: string
+      updated_at:
+        description: Metadata
+        type: string
+      updated_by_id:
+        type: integer
+    type: object
+  dtos.PlatformSettingsPublicDTO:
+    properties:
+      docs_url:
+        type: string
+      favicon_url:
+        type: string
+      github_url:
+        type: string
+      linkedin_url:
+        type: string
+      logo_dark_url:
+        type: string
+      logo_url:
+        type: string
+      marketing_url:
+        type: string
+      platform_name:
+        type: string
+      platform_short:
+        type: string
+      primary_color:
+        type: string
+      privacy_url:
+        type: string
+      support_email:
+        type: string
+      tagline:
+        type: string
+      terms_url:
+        type: string
+      twitter_url:
+        description: Social media
+        type: string
+    type: object
+  dtos.RateApplicationDTO:
+    properties:
+      rating:
+        maximum: 5
+        minimum: 1
+        type: integer
+    required:
+    - rating
     type: object
   dtos.RefreshTokenDTO:
     properties:
@@ -566,6 +712,40 @@ definitions:
       timezones:
         type: string
     type: object
+  dtos.UpdatePlacementDTO:
+    properties:
+      bill_rate_amount:
+        type: number
+      bill_rate_currency:
+        type: string
+      bill_rate_type:
+        enum:
+        - hourly
+        - monthly
+        type: string
+      contract_type:
+        enum:
+        - outsourcing
+        - staffing
+        - project
+        type: string
+      end_date:
+        type: string
+      notes:
+        type: string
+      pay_rate_amount:
+        type: number
+      position:
+        type: string
+      start_date:
+        type: string
+      status:
+        enum:
+        - active
+        - ended
+        - suspended
+        type: string
+    type: object
   dtos.UpdatePlanDTO:
     properties:
       billing_cycle:
@@ -580,6 +760,8 @@ definitions:
       can_use_custom_brand:
         type: boolean
       can_use_integrations:
+        type: boolean
+      can_use_staffing:
         type: boolean
       currency:
         type: string
@@ -616,6 +798,59 @@ definitions:
         minimum: 0
         type: integer
     type: object
+  dtos.UpdatePlatformSettingsDTO:
+    properties:
+      default_plan_tier:
+        type: string
+      default_trial_days:
+        description: Business defaults
+        type: integer
+      docs_url:
+        type: string
+      favicon_url:
+        type: string
+      github_url:
+        type: string
+      legal_address:
+        type: string
+      legal_company_name:
+        description: Legal
+        type: string
+      legal_country:
+        type: string
+      legal_tax_id:
+        type: string
+      linkedin_url:
+        type: string
+      logo_dark_url:
+        type: string
+      logo_url:
+        type: string
+      marketing_url:
+        description: URLs
+        type: string
+      platform_name:
+        description: Branding
+        type: string
+      platform_short:
+        type: string
+      primary_color:
+        type: string
+      privacy_url:
+        type: string
+      sales_email:
+        type: string
+      support_email:
+        description: Contact
+        type: string
+      tagline:
+        type: string
+      terms_url:
+        type: string
+      twitter_url:
+        description: Social
+        type: string
+    type: object
   dtos.UpdateRegionDTO:
     properties:
       is_active:
@@ -623,6 +858,37 @@ definitions:
       name:
         maxLength: 255
         minLength: 2
+        type: string
+    type: object
+  dtos.UpdateStaffingClientDTO:
+    properties:
+      contact_email:
+        type: string
+      contact_name:
+        type: string
+      contact_phone:
+        type: string
+      industry:
+        type: string
+      logo_url:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      notes:
+        type: string
+      slug:
+        maxLength: 100
+        minLength: 2
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        - prospect
+        type: string
+      website:
         type: string
     type: object
   dtos.UpdateStateDTO:
@@ -671,110 +937,6 @@ info:
   title: DVRA API
   version: 1.2.0
 paths:
-  /admin/analytics:
-    get:
-      consumes:
-      - application/json
-      description: Obtiene estadísticas globales de la plataforma
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Analíticas globales (SuperAdmin)
-      tags:
-      - SuperAdmin
-  /admin/companies:
-    get:
-      consumes:
-      - application/json
-      description: Obtiene todas las empresas con paginación y filtros
-      parameters:
-      - default: 1
-        description: Página
-        in: query
-        name: page
-        type: integer
-      - default: 20
-        description: Límite
-        in: query
-        name: limit
-        type: integer
-      - description: Búsqueda
-        in: query
-        name: search
-        type: string
-      - description: Filtrar por plan
-        in: query
-        name: plan_tier
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Listar todas las empresas (SuperAdmin)
-      tags:
-      - SuperAdmin
-    post:
-      consumes:
-      - application/json
-      description: Crea una nueva empresa y su usuario administrador
-      parameters:
-      - description: Datos de empresa y admin
-        in: body
-        name: company
-        required: true
-        schema:
-          $ref: '#/definitions/dtos.CreateCompanyWithAdminDTO'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "409":
-          description: Conflict
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Crear empresa con admin (SuperAdmin)
-      tags:
-      - SuperAdmin
   /admin/memberships:
     post:
       consumes:
@@ -1220,6 +1382,134 @@ paths:
       summary: Crear postulación
       tags:
       - Applications
+  /applications/{id}/move:
+    patch:
+      consumes:
+      - application/json
+      description: Mueve una postulación a una etapa del pipeline
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Stage data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.MoveApplicationDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Move application to a stage
+      tags:
+      - Applications
+  /applications/{id}/rate:
+    patch:
+      consumes:
+      - application/json
+      description: Asigna una calificación a una postulación
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Rating data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.RateApplicationDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Rate an application
+      tags:
+      - Applications
+  /applications/by-stage:
+    get:
+      consumes:
+      - application/json
+      description: Obtiene postulaciones agrupadas por etapa (para Kanban board)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get applications grouped by stage
+      tags:
+      - Applications
   /auth/login:
     post:
       consumes:
@@ -1375,6 +1665,55 @@ paths:
       summary: Registrar empresa con admin
       tags:
       - Authentication
+  /candidates/{id}/upload-resume:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Sube un CV/Resume para un candidato
+      parameters:
+      - description: Candidate ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Resume file
+        in: formData
+        name: resume
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload resume for candidate
+      tags:
+      - Candidates
   /companies:
     get:
       consumes:
@@ -1477,12 +1816,11 @@ paths:
       summary: Obtener empresa por ID
       tags:
       - Companies
-  /jobs:
+  /dashboard/stats:
     get:
       consumes:
       - application/json
-      description: Obtiene empleos (todos si es SuperAdmin, de la empresa si es usuario
-        normal)
+      description: Obtiene estadísticas del dashboard para la empresa actual
       produces:
       - application/json
       responses:
@@ -1503,35 +1841,35 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Listar empleos
+      summary: Get dashboard statistics
       tags:
-      - Jobs
-    post:
+      - Dashboard
+  /jobs/{id}/close:
+    patch:
       consumes:
       - application/json
-      description: Crea un nuevo empleo en la empresa actual
+      description: Cambia el estado del job a 'closed'
       parameters:
-      - description: Datos del empleo
-        in: body
-        name: job
+      - description: Job ID
+        in: path
+        name: id
         required: true
-        schema:
-          $ref: '#/definitions/dtos.CreateJobDTO'
+        type: integer
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
+        "200":
+          description: OK
           schema:
             additionalProperties: true
             type: object
         "403":
           description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
           schema:
             additionalProperties: true
             type: object
@@ -1542,7 +1880,46 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Crear empleo
+      summary: Cerrar empleo
+      tags:
+      - Jobs
+  /jobs/{id}/publish:
+    patch:
+      consumes:
+      - application/json
+      description: Cambia el estado del job a 'active'
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Publicar empleo
       tags:
       - Jobs
   /locations/cities:
@@ -2065,6 +2442,208 @@ paths:
       summary: Listar membresías
       tags:
       - Memberships
+  /placements:
+    get:
+      consumes:
+      - application/json
+      description: Lista las colocaciones de la empresa del token. Requiere un plan
+        con el módulo staffing habilitado.
+      parameters:
+      - description: Filtrar por estado (active, ended, suspended)
+        in: query
+        name: status
+        type: string
+      - description: Filtrar por cliente final
+        in: query
+        name: staffing_client_id
+        type: integer
+      - description: Filtrar por candidato
+        in: query
+        name: candidate_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar colocaciones (placements)
+      tags:
+      - Placements
+    post:
+      consumes:
+      - application/json
+      description: Coloca a un candidato en un cliente final a partir de una Application
+        en etapa 'hired'. Valida que la application y el cliente pertenezcan a la
+        empresa del token. candidate_id/job_id se copian de la application.
+      parameters:
+      - description: Datos de la colocación (staffing_client_id + application_id requeridos)
+        in: body
+        name: placement
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreatePlacementDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Crear colocación
+      tags:
+      - Placements
+  /placements/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Elimina (soft delete) una colocación (validada contra la empresa
+        del token)
+      parameters:
+      - description: ID de la colocación
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Eliminar colocación
+      tags:
+      - Placements
+    get:
+      consumes:
+      - application/json
+      description: Obtiene una colocación por ID (validada contra la empresa del token)
+      parameters:
+      - description: ID de la colocación
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Obtener colocación
+      tags:
+      - Placements
+    put:
+      consumes:
+      - application/json
+      description: Actualiza datos de contrato, billing y estado de una colocación
+        (el origen application/candidate/cliente es inmutable). Validada contra la
+        empresa del token.
+      parameters:
+      - description: ID de la colocación
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Campos a actualizar
+        in: body
+        name: placement
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdatePlacementDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Actualizar colocación
+      tags:
+      - Placements
   /plans:
     get:
       description: Get all public active plans for pricing page
@@ -2116,6 +2695,461 @@ paths:
       summary: Get plan by slug
       tags:
       - plans
+  /public/companies/{slug}:
+    get:
+      consumes:
+      - application/json
+      description: Returns public company information for career page
+      parameters:
+      - description: Company slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get company info by slug
+      tags:
+      - Public
+  /public/companies/{slug}/jobs:
+    get:
+      consumes:
+      - application/json
+      description: Returns all published jobs for a company's career page
+      parameters:
+      - description: Company slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get published jobs by company slug
+      tags:
+      - Public
+  /public/jobs/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Returns a published job's details for career page
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get published job by ID
+      tags:
+      - Public
+  /public/jobs/{id}/apply:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Submit a job application (public, no auth required)
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: First name
+        in: formData
+        name: first_name
+        required: true
+        type: string
+      - description: Last name
+        in: formData
+        name: last_name
+        required: true
+        type: string
+      - description: Email
+        in: formData
+        name: email
+        required: true
+        type: string
+      - description: Phone
+        in: formData
+        name: phone
+        type: string
+      - description: LinkedIn URL
+        in: formData
+        name: linkedin_url
+        type: string
+      - description: GitHub URL
+        in: formData
+        name: github_url
+        type: string
+      - description: Cover letter
+        in: formData
+        name: cover_letter
+        type: string
+      - description: Resume file (PDF, DOC, DOCX)
+        in: formData
+        name: resume
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Apply to a job
+      tags:
+      - Public
+  /public/platform-settings:
+    get:
+      consumes:
+      - application/json
+      description: Returns public platform configuration (branding, contact, URLs)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.PlatformSettingsPublicDTO'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get public platform settings
+      tags:
+      - public
+  /staffing-clients:
+    get:
+      consumes:
+      - application/json
+      description: Lista los clientes finales de la empresa del token. Requiere un
+        plan con el módulo staffing habilitado.
+      parameters:
+      - description: Filtrar por estado (active, inactive, prospect)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar clientes finales (staffing)
+      tags:
+      - StaffingClients
+    post:
+      consumes:
+      - application/json
+      description: Crea un cliente final dentro de la empresa del token (company_id
+        se fuerza del token). Requiere plan con módulo staffing.
+      parameters:
+      - description: Datos del cliente final
+        in: body
+        name: staffing_client
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateStaffingClientDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Crear cliente final
+      tags:
+      - StaffingClients
+  /staffing-clients/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Elimina (soft delete) un cliente final (validado contra la empresa
+        del token)
+      parameters:
+      - description: ID del cliente final
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Eliminar cliente final
+      tags:
+      - StaffingClients
+    get:
+      consumes:
+      - application/json
+      description: Obtiene un cliente final por ID (validado contra la empresa del
+        token)
+      parameters:
+      - description: ID del cliente final
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Obtener cliente final
+      tags:
+      - StaffingClients
+    put:
+      consumes:
+      - application/json
+      description: Actualiza parcialmente un cliente final (validado contra la empresa
+        del token)
+      parameters:
+      - description: ID del cliente final
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Campos a actualizar
+        in: body
+        name: staffing_client
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdateStaffingClientDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Actualizar cliente final
+      tags:
+      - StaffingClients
+  /superadmin/platform-settings:
+    get:
+      consumes:
+      - application/json
+      description: Returns complete platform configuration including business defaults
+        and legal info
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.PlatformSettingsFullDTO'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get full platform settings (SuperAdmin only)
+      tags:
+      - superadmin
+    put:
+      consumes:
+      - application/json
+      description: Updates platform configuration (partial update supported)
+      parameters:
+      - description: Settings to update
+        in: body
+        name: settings
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdatePlatformSettingsDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.PlatformSettingsFullDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update platform settings (SuperAdmin only)
+      tags:
+      - superadmin
   /system-values/{category}:
     get:
       consumes:

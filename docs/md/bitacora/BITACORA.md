@@ -6,6 +6,33 @@
 
 ---
 
+## 2026-06-14 — Módulo Staffing / Outsourcing (StaffingClient + Placement)
+
+**Contexto:** habilitar a Dvra para firmas de staffing/outsourcing (que gestionan talento para clientes finales), no solo empresas que reclutan para sí mismas. Caso motivador: una firma que presta personal a un cliente final. Se modeló como segmento objetivo sin romper el multi-tenancy existente.
+
+**Decisión de arquitectura:** el cliente final NO es un tenant. `company_id` sigue siendo la ÚNICA frontera de aislamiento; el cliente final es una dimensión interna del tenant.
+
+**Qué se hizo:**
+- Nuevos modelos `StaffingClient` (cliente final dentro del tenant) y `Placement` (colocación de un candidato en un cliente final, con datos de contrato y billing). Reescritos para embeber `BaseModel` (antes usaban `gorm.Model`, sin tags JSON ni `TableName()`) y registrados en `AllModels` para AutoMigrate (antes estaban huérfanos: las tablas nunca se creaban).
+- `Job.StaffingClientID *uint` opcional: `nil` = reclutamiento propio; con valor = modo staffing. Filtro `GET /jobs?staffing_client_id=` y exposición en respuestas.
+- `Placement` **deriva de una `Application` en etapa `hired`**: `candidate_id`/`job_id` se copian de ella (no se confían del body). El service valida integridad cross-tenant: application y cliente final deben pertenecer al mismo `company_id`. Igual validación al asignar `Job.StaffingClientID`.
+- CRUD completo de ambos (dto/repo/service/handler + rutas `/api/v1/staffing-clients` y `/api/v1/placements`), con scoping manual por `company_id` (mismo patrón que jobs) y slug único por empresa validado en service (no índice único, para no chocar con soft delete).
+- **Entitlement por plan:** nuevo flag `Plan.CanUseStaffing` + `Plan.HasFeature("staffing")` + método `PlanService.CompanyHasFeature()`. Nuevo middleware `RequireFeature(planService, "staffing")` (ortogonal a `RequirePermission`: la acción exige plan que lo incluya Y rol que lo permita). Seeder: Professional y Enterprise lo traen activo.
+- Nuevos permisos en `permissions/staffing.go` (`staffing_clients.*`, `placements.*`) con grants por rol (delete solo admin, igual que jobs; `user` no ve placements por el billing).
+- Anotaciones Swagger en los 10 endpoints nuevos.
+- Verificado con `go build ./...`, `go vet ./...` y tests (`permissions` pasa).
+
+**Pendientes:**
+- [ ] Regenerar Swagger: `make swagger` (requiere instalar `swag`; no estaba en el entorno al implementar)
+- [ ] BD ya poblada: `SeedPlans` omite planes existentes, así que las filas Professional/Enterprise NO obtienen `can_use_staffing=true` solas (AutoMigrate agrega la columna con default `false`). Actualizar vía `PUT /plans/:id` o SQL. En BD fresca (`make fresh`) quedan correctas.
+- [ ] `PUT /jobs/:id` no permite desasignar el cliente (mandar `staffing_client_id: null` se interpreta como "no enviado") — requiere flag explícito si se necesita.
+- [ ] Tests unitarios del flujo staffing (validaciones de integridad y entitlement)
+- [ ] Evaluar control field-level sobre pay/bill rate (datos sensibles) por rol
+
+**Referencia vigente:** `internal/app/models/{staffing_client,placement}.go`, `internal/shared/permissions/staffing.go`, `internal/shared/middleware/feature_middleware.go`
+
+---
+
 ## 2026-06-12 — Sistema de Permisos por Acción (RBAC en código)
 
 **Qué se hizo:**

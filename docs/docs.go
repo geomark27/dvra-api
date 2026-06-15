@@ -23,165 +23,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/admin/analytics": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Obtiene estadísticas globales de la plataforma",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "SuperAdmin"
-                ],
-                "summary": "Analíticas globales (SuperAdmin)",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/admin/companies": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Obtiene todas las empresas con paginación y filtros",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "SuperAdmin"
-                ],
-                "summary": "Listar todas las empresas (SuperAdmin)",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Página",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Límite",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Búsqueda",
-                        "name": "search",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filtrar por plan",
-                        "name": "plan_tier",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Crea una nueva empresa y su usuario administrador",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "SuperAdmin"
-                ],
-                "summary": "Crear empresa con admin (SuperAdmin)",
-                "parameters": [
-                    {
-                        "description": "Datos de empresa y admin",
-                        "name": "company",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dtos.CreateCompanyWithAdminDTO"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/admin/memberships": {
             "post": {
                 "security": [
@@ -868,6 +709,199 @@ const docTemplate = `{
                 }
             }
         },
+        "/applications/by-stage": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Obtiene postulaciones agrupadas por etapa (para Kanban board)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Get applications grouped by stage",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/applications/{id}/move": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mueve una postulación a una etapa del pipeline",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Move application to a stage",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Application ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Stage data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.MoveApplicationDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/applications/{id}/rate": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Asigna una calificación a una postulación",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Rate an application",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Application ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Rating data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.RateApplicationDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Autentica un usuario y retorna tokens JWT",
@@ -1100,6 +1134,79 @@ const docTemplate = `{
                 }
             }
         },
+        "/candidates/{id}/upload-resume": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Sube un CV/Resume para un candidato",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Candidates"
+                ],
+                "summary": "Upload resume for candidate",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Candidate ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Resume file",
+                        "name": "resume",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/companies": {
             "get": {
                 "security": [
@@ -1254,14 +1361,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/jobs": {
+        "/dashboard/stats": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Obtiene empleos (todos si es SuperAdmin, de la empresa si es usuario normal)",
+                "description": "Obtiene estadísticas del dashboard para la empresa actual",
                 "consumes": [
                     "application/json"
                 ],
@@ -1269,9 +1376,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Jobs"
+                    "Dashboard"
                 ],
-                "summary": "Listar empleos",
+                "summary": "Get dashboard statistics",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1295,14 +1402,16 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
-            "post": {
+            }
+        },
+        "/jobs/{id}/close": {
+            "patch": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Crea un nuevo empleo en la empresa actual",
+                "description": "Cambia el estado del job a 'closed'",
                 "consumes": [
                     "application/json"
                 ],
@@ -1312,28 +1421,19 @@ const docTemplate = `{
                 "tags": [
                     "Jobs"
                 ],
-                "summary": "Crear empleo",
+                "summary": "Cerrar empleo",
                 "parameters": [
                     {
-                        "description": "Datos del empleo",
-                        "name": "job",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dtos.CreateJobDTO"
-                        }
+                        "type": "integer",
+                        "description": "Job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1341,6 +1441,72 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/jobs/{id}/publish": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cambia el estado del job a 'active'",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Jobs"
+                ],
+                "summary": "Publicar empleo",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2161,6 +2327,303 @@ const docTemplate = `{
                 }
             }
         },
+        "/placements": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lista las colocaciones de la empresa del token. Requiere un plan con el módulo staffing habilitado.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Placements"
+                ],
+                "summary": "Listar colocaciones (placements)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filtrar por estado (active, ended, suspended)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filtrar por cliente final",
+                        "name": "staffing_client_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filtrar por candidato",
+                        "name": "candidate_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Coloca a un candidato en un cliente final a partir de una Application en etapa 'hired'. Valida que la application y el cliente pertenezcan a la empresa del token. candidate_id/job_id se copian de la application.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Placements"
+                ],
+                "summary": "Crear colocación",
+                "parameters": [
+                    {
+                        "description": "Datos de la colocación (staffing_client_id + application_id requeridos)",
+                        "name": "placement",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CreatePlacementDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/placements/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Obtiene una colocación por ID (validada contra la empresa del token)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Placements"
+                ],
+                "summary": "Obtener colocación",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID de la colocación",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Actualiza datos de contrato, billing y estado de una colocación (el origen application/candidate/cliente es inmutable). Validada contra la empresa del token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Placements"
+                ],
+                "summary": "Actualizar colocación",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID de la colocación",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Campos a actualizar",
+                        "name": "placement",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.UpdatePlacementDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Elimina (soft delete) una colocación (validada contra la empresa del token)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Placements"
+                ],
+                "summary": "Eliminar colocación",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID de la colocación",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/plans": {
             "get": {
                 "description": "Get all public active plans for pricing page",
@@ -2219,6 +2682,683 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/public/companies/{slug}": {
+            "get": {
+                "description": "Returns public company information for career page",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Get company info by slug",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Company slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/public/companies/{slug}/jobs": {
+            "get": {
+                "description": "Returns all published jobs for a company's career page",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Get published jobs by company slug",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Company slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/public/jobs/{id}": {
+            "get": {
+                "description": "Returns a published job's details for career page",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Get published job by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/public/jobs/{id}/apply": {
+            "post": {
+                "description": "Submit a job application (public, no auth required)",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Apply to a job",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "First name",
+                        "name": "first_name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Last name",
+                        "name": "last_name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Email",
+                        "name": "email",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Phone",
+                        "name": "phone",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "LinkedIn URL",
+                        "name": "linkedin_url",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "GitHub URL",
+                        "name": "github_url",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cover letter",
+                        "name": "cover_letter",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Resume file (PDF, DOC, DOCX)",
+                        "name": "resume",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/public/platform-settings": {
+            "get": {
+                "description": "Returns public platform configuration (branding, contact, URLs)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public"
+                ],
+                "summary": "Get public platform settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.PlatformSettingsPublicDTO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/staffing-clients": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lista los clientes finales de la empresa del token. Requiere un plan con el módulo staffing habilitado.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "StaffingClients"
+                ],
+                "summary": "Listar clientes finales (staffing)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filtrar por estado (active, inactive, prospect)",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Crea un cliente final dentro de la empresa del token (company_id se fuerza del token). Requiere plan con módulo staffing.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "StaffingClients"
+                ],
+                "summary": "Crear cliente final",
+                "parameters": [
+                    {
+                        "description": "Datos del cliente final",
+                        "name": "staffing_client",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CreateStaffingClientDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/staffing-clients/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Obtiene un cliente final por ID (validado contra la empresa del token)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "StaffingClients"
+                ],
+                "summary": "Obtener cliente final",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID del cliente final",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Actualiza parcialmente un cliente final (validado contra la empresa del token)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "StaffingClients"
+                ],
+                "summary": "Actualizar cliente final",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID del cliente final",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Campos a actualizar",
+                        "name": "staffing_client",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.UpdateStaffingClientDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Elimina (soft delete) un cliente final (validado contra la empresa del token)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "StaffingClients"
+                ],
+                "summary": "Eliminar cliente final",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID del cliente final",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/superadmin/platform-settings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns complete platform configuration including business defaults and legal info",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "superadmin"
+                ],
+                "summary": "Get full platform settings (SuperAdmin only)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.PlatformSettingsFullDTO"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates platform configuration (partial update supported)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "superadmin"
+                ],
+                "summary": "Update platform settings (SuperAdmin only)",
+                "parameters": [
+                    {
+                        "description": "Settings to update",
+                        "name": "settings",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.UpdatePlatformSettingsDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.PlatformSettingsFullDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2654,6 +3794,9 @@ const docTemplate = `{
                     "type": "integer",
                     "minimum": 1
                 },
+                "notes": {
+                    "type": "string"
+                },
                 "rating": {
                     "type": "integer",
                     "maximum": 5,
@@ -2727,42 +3870,6 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.CreateCompanyWithAdminDTO": {
-            "type": "object",
-            "required": [
-                "admin_email",
-                "admin_first_name",
-                "admin_last_name",
-                "admin_password",
-                "company_name",
-                "company_slug"
-            ],
-            "properties": {
-                "admin_email": {
-                    "type": "string"
-                },
-                "admin_first_name": {
-                    "type": "string"
-                },
-                "admin_last_name": {
-                    "type": "string"
-                },
-                "admin_password": {
-                    "type": "string",
-                    "minLength": 8
-                },
-                "company_name": {
-                    "type": "string"
-                },
-                "company_slug": {
-                    "type": "string"
-                },
-                "plan_slug": {
-                    "description": "Opcional, default \"free\"",
-                    "type": "string"
-                }
-            }
-        },
         "dtos.CreateCountryDTO": {
             "type": "object",
             "required": [
@@ -2795,47 +3902,6 @@ const docTemplate = `{
                 },
                 "timezones": {
                     "type": "string"
-                }
-            }
-        },
-        "dtos.CreateJobDTO": {
-            "type": "object",
-            "required": [
-                "company_id",
-                "description",
-                "title"
-            ],
-            "properties": {
-                "assigned_recruiter": {
-                    "type": "integer"
-                },
-                "company_id": {
-                    "type": "integer",
-                    "minimum": 1
-                },
-                "description": {
-                    "type": "string"
-                },
-                "hiring_manager": {
-                    "type": "integer"
-                },
-                "location": {
-                    "type": "string",
-                    "maxLength": 255
-                },
-                "status": {
-                    "type": "string",
-                    "enum": [
-                        "draft",
-                        "active",
-                        "on_hold",
-                        "closed"
-                    ]
-                },
-                "title": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 3
                 }
             }
         },
@@ -2879,6 +3945,67 @@ const docTemplate = `{
                 }
             }
         },
+        "dtos.CreatePlacementDTO": {
+            "type": "object",
+            "required": [
+                "application_id",
+                "staffing_client_id"
+            ],
+            "properties": {
+                "application_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "bill_rate_amount": {
+                    "type": "number"
+                },
+                "bill_rate_currency": {
+                    "type": "string"
+                },
+                "bill_rate_type": {
+                    "type": "string",
+                    "enum": [
+                        "hourly",
+                        "monthly"
+                    ]
+                },
+                "contract_type": {
+                    "type": "string",
+                    "enum": [
+                        "outsourcing",
+                        "staffing",
+                        "project"
+                    ]
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "pay_rate_amount": {
+                    "type": "number"
+                },
+                "position": {
+                    "type": "string"
+                },
+                "staffing_client_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "ended",
+                        "suspended"
+                    ]
+                }
+            }
+        },
         "dtos.CreateRegionDTO": {
             "type": "object",
             "required": [
@@ -2889,6 +4016,57 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 255,
                     "minLength": 2
+                }
+            }
+        },
+        "dtos.CreateStaffingClientDTO": {
+            "type": "object",
+            "required": [
+                "name",
+                "slug"
+            ],
+            "properties": {
+                "company_id": {
+                    "type": "integer"
+                },
+                "contact_email": {
+                    "type": "string"
+                },
+                "contact_name": {
+                    "type": "string"
+                },
+                "contact_phone": {
+                    "type": "string"
+                },
+                "industry": {
+                    "type": "string"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 2
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive",
+                        "prospect"
+                    ]
+                },
+                "website": {
+                    "type": "string"
                 }
             }
         },
@@ -3015,6 +4193,25 @@ const docTemplate = `{
                 }
             }
         },
+        "dtos.MoveApplicationDTO": {
+            "type": "object",
+            "required": [
+                "stage"
+            ],
+            "properties": {
+                "stage": {
+                    "type": "string",
+                    "enum": [
+                        "applied",
+                        "screening",
+                        "technical",
+                        "offer",
+                        "hired",
+                        "rejected"
+                    ]
+                }
+            }
+        },
         "dtos.PlanDTO": {
             "type": "object",
             "required": [
@@ -3043,6 +4240,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "can_use_integrations": {
+                    "type": "boolean"
+                },
+                "can_use_staffing": {
                     "type": "boolean"
                 },
                 "currency": {
@@ -3117,6 +4317,9 @@ const docTemplate = `{
                 "can_use_integrations": {
                     "type": "boolean"
                 },
+                "can_use_staffing": {
+                    "type": "boolean"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -3170,6 +4373,157 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "dtos.PlatformSettingsFullDTO": {
+            "type": "object",
+            "properties": {
+                "default_plan_tier": {
+                    "type": "string"
+                },
+                "default_trial_days": {
+                    "description": "Business defaults",
+                    "type": "integer"
+                },
+                "docs_url": {
+                    "type": "string"
+                },
+                "favicon_url": {
+                    "type": "string"
+                },
+                "github_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "legal_address": {
+                    "type": "string"
+                },
+                "legal_company_name": {
+                    "description": "Legal",
+                    "type": "string"
+                },
+                "legal_country": {
+                    "type": "string"
+                },
+                "legal_tax_id": {
+                    "type": "string"
+                },
+                "linkedin_url": {
+                    "type": "string"
+                },
+                "logo_dark_url": {
+                    "type": "string"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "marketing_url": {
+                    "description": "URLs",
+                    "type": "string"
+                },
+                "platform_name": {
+                    "description": "Branding",
+                    "type": "string"
+                },
+                "platform_short": {
+                    "type": "string"
+                },
+                "primary_color": {
+                    "type": "string"
+                },
+                "privacy_url": {
+                    "type": "string"
+                },
+                "sales_email": {
+                    "type": "string"
+                },
+                "support_email": {
+                    "description": "Contact",
+                    "type": "string"
+                },
+                "tagline": {
+                    "type": "string"
+                },
+                "terms_url": {
+                    "type": "string"
+                },
+                "twitter_url": {
+                    "description": "Social",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "description": "Metadata",
+                    "type": "string"
+                },
+                "updated_by_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dtos.PlatformSettingsPublicDTO": {
+            "type": "object",
+            "properties": {
+                "docs_url": {
+                    "type": "string"
+                },
+                "favicon_url": {
+                    "type": "string"
+                },
+                "github_url": {
+                    "type": "string"
+                },
+                "linkedin_url": {
+                    "type": "string"
+                },
+                "logo_dark_url": {
+                    "type": "string"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "marketing_url": {
+                    "type": "string"
+                },
+                "platform_name": {
+                    "type": "string"
+                },
+                "platform_short": {
+                    "type": "string"
+                },
+                "primary_color": {
+                    "type": "string"
+                },
+                "privacy_url": {
+                    "type": "string"
+                },
+                "support_email": {
+                    "type": "string"
+                },
+                "tagline": {
+                    "type": "string"
+                },
+                "terms_url": {
+                    "type": "string"
+                },
+                "twitter_url": {
+                    "description": "Social media",
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.RateApplicationDTO": {
+            "type": "object",
+            "required": [
+                "rating"
+            ],
+            "properties": {
+                "rating": {
+                    "type": "integer",
+                    "maximum": 5,
+                    "minimum": 1
                 }
             }
         },
@@ -3373,6 +4727,55 @@ const docTemplate = `{
                 }
             }
         },
+        "dtos.UpdatePlacementDTO": {
+            "type": "object",
+            "properties": {
+                "bill_rate_amount": {
+                    "type": "number"
+                },
+                "bill_rate_currency": {
+                    "type": "string"
+                },
+                "bill_rate_type": {
+                    "type": "string",
+                    "enum": [
+                        "hourly",
+                        "monthly"
+                    ]
+                },
+                "contract_type": {
+                    "type": "string",
+                    "enum": [
+                        "outsourcing",
+                        "staffing",
+                        "project"
+                    ]
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "pay_rate_amount": {
+                    "type": "number"
+                },
+                "position": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "ended",
+                        "suspended"
+                    ]
+                }
+            }
+        },
         "dtos.UpdatePlanDTO": {
             "type": "object",
             "properties": {
@@ -3393,6 +4796,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "can_use_integrations": {
+                    "type": "boolean"
+                },
+                "can_use_staffing": {
                     "type": "boolean"
                 },
                 "currency": {
@@ -3446,6 +4852,83 @@ const docTemplate = `{
                 }
             }
         },
+        "dtos.UpdatePlatformSettingsDTO": {
+            "type": "object",
+            "properties": {
+                "default_plan_tier": {
+                    "type": "string"
+                },
+                "default_trial_days": {
+                    "description": "Business defaults",
+                    "type": "integer"
+                },
+                "docs_url": {
+                    "type": "string"
+                },
+                "favicon_url": {
+                    "type": "string"
+                },
+                "github_url": {
+                    "type": "string"
+                },
+                "legal_address": {
+                    "type": "string"
+                },
+                "legal_company_name": {
+                    "description": "Legal",
+                    "type": "string"
+                },
+                "legal_country": {
+                    "type": "string"
+                },
+                "legal_tax_id": {
+                    "type": "string"
+                },
+                "linkedin_url": {
+                    "type": "string"
+                },
+                "logo_dark_url": {
+                    "type": "string"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "marketing_url": {
+                    "description": "URLs",
+                    "type": "string"
+                },
+                "platform_name": {
+                    "description": "Branding",
+                    "type": "string"
+                },
+                "platform_short": {
+                    "type": "string"
+                },
+                "primary_color": {
+                    "type": "string"
+                },
+                "privacy_url": {
+                    "type": "string"
+                },
+                "sales_email": {
+                    "type": "string"
+                },
+                "support_email": {
+                    "description": "Contact",
+                    "type": "string"
+                },
+                "tagline": {
+                    "type": "string"
+                },
+                "terms_url": {
+                    "type": "string"
+                },
+                "twitter_url": {
+                    "description": "Social",
+                    "type": "string"
+                }
+            }
+        },
         "dtos.UpdateRegionDTO": {
             "type": "object",
             "properties": {
@@ -3456,6 +4939,50 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 255,
                     "minLength": 2
+                }
+            }
+        },
+        "dtos.UpdateStaffingClientDTO": {
+            "type": "object",
+            "properties": {
+                "contact_email": {
+                    "type": "string"
+                },
+                "contact_name": {
+                    "type": "string"
+                },
+                "contact_phone": {
+                    "type": "string"
+                },
+                "industry": {
+                    "type": "string"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 2
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive",
+                        "prospect"
+                    ]
+                },
+                "website": {
+                    "type": "string"
                 }
             }
         },
