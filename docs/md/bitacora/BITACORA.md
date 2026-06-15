@@ -6,6 +6,29 @@
 
 ---
 
+## 2026-06-14 — Estándares de Desarrollo: documento + skills + enforcement + auditoría
+
+**Contexto:** formalizar los estándares de Dvra (cómo se escribe y estructura el código) no solo por escrito, sino **operacionalizados** como skills de Claude que validan a la entrada y a la salida de cada tarea.
+
+**Qué se hizo:**
+- **Documento fuente de verdad** `docs/md/tecnico/ESTANDARES_DESARROLLO.md`: stack, cómo se escribe/estructura/verifica/documenta el código, **regla de oro multi-tenant** (`company_id` única frontera), autorización vs entitlement, proceso **HU → HT** y **Definición de Done**.
+- **Skills** (`.claude/skills/`): `hu-a-ht` (puerta de entrada: traduce Historia de Usuario funcional a Historia Técnica validando estándares) y `validar-estandares` (puerta de salida: valida el diff contra la Definición de Done). Ambas anclan al documento como fuente de verdad.
+- **Enforcement automático**: `.golangci.yml` (v1.64.8: errcheck, govet, ineffassign, staticcheck, unused, gofmt — sin `misspell` por falsos positivos en español, sin `goimports` local-prefixes por churn), `.editorconfig`, CI en `.github/workflows/ci.yml` (gofmt+vet+build+test+lint), hook `scripts/git-hooks/pre-commit`, y targets `make check`/`fmt-check`/`hooks-install` (+ `swag` en `install-tools`).
+- **Baseline verde**: se cerró deuda mínima pre-existente — 4 `errcheck` (`CloseDB` en CLI, `UpdateLastLogin` best-effort) y 4 archivos sin `gofmt`. `make check` pasa entero.
+- **Auditoría de brechas** `docs/md/tecnico/AUDITORIA_ESTANDARES.md`: hallazgos priorizados con evidencia numérica.
+
+**Pendientes (del plan de remediación de la auditoría):**
+- [ ] **A1** — Unificar validación: 47 tags `validate` en 6 DTOs no se ejecutan; migrar a `binding`.
+- [ ] **C1 (Fase 4)** — Centralizar el scoping multi-tenant (41 usos de `IsSuperAdmin` repetidos); riesgo de fuga cross-tenant. Candidato a estrenar las skills.
+- [ ] **M1** — Migrar 7 handlers de `c.Get("company_id")` a `authctx`.
+- [ ] **M2** — Unificar repos hacia `db` inyectado (10 usan global `database.DB`); habilita tests.
+- [ ] **A2** — Tests de services con validaciones (hoy 1 test / 16 services).
+- [ ] **B1** — Check en CI de que Swagger esté regenerado.
+
+**Referencia vigente:** `docs/md/tecnico/ESTANDARES_DESARROLLO.md`, `docs/md/tecnico/AUDITORIA_ESTANDARES.md`, `.claude/skills/`
+
+---
+
 ## 2026-06-14 — Módulo Staffing / Outsourcing (StaffingClient + Placement)
 
 **Contexto:** habilitar a Dvra para firmas de staffing/outsourcing (que gestionan talento para clientes finales), no solo empresas que reclutan para sí mismas. Caso motivador: una firma que presta personal a un cliente final. Se modeló como segmento objetivo sin romper el multi-tenancy existente.
