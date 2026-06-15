@@ -1,178 +1,53 @@
-# dvra-api
+# Dvra API
 
-dvra-api project generated with Loom
+Backend del **Dvra ATS** — plataforma SaaS multi-tenant de reclutamiento (Applicant Tracking System) para startups tech en LATAM, con marketplace de talento (Red Dvra) en el roadmap.
 
-## 🚀 Características
+API REST construida en **Go 1.24 + Gin + GORM + PostgreSQL 16**, con autenticación JWT, multi-empresa (switch de contexto), pipeline de candidatos, dashboard analítico y career page pública.
 
-- ✅ **Arquitectura modular** inspirada en NestJS
-- ✅ **Estructura idiomática de Go** siguiendo golang-standard/project-layout
-- ✅ **API REST** con endpoints CRUD de usuarios
-- ✅ **Inyección de dependencias** clara y mantenible
-- ✅ **Middleware CORS** configurado
-- ✅ **Health checks** implementados
-- ✅ **Helpers reutilizables** de Loom para desarrollo rápido
-- ✅ **Documentación de API** incluida
-- ✅ **Makefile** con comandos útiles
-- ✅ **Variables de entorno** configuradas
+## 📚 Documentación
 
-## 📁 Estructura del Proyecto
+Toda la documentación está consolidada en 4 documentos:
 
-```
-dvra-api/
-├── cmd/
-│   └── dvra-api/
-│       └── main.go              # Punto de entrada
-├── internal/
-│   ├── app/
-│   │   ├── handlers/            # Controllers (HTTP handlers)
-│   │   │   ├── health_handler.go
-│   │   │   └── user_handler.go
-│   │   ├── services/            # Lógica de negocio
-│   │   │   └── user_service.go
-│   │   ├── dtos/                # Data Transfer Objects
-│   │   │   └── user_dto.go
-│   │   ├── models/              # Modelos de datos
-│   │   │   └── user.go
-│   │   ├── repositories/        # Capa de persistencia
-│   │   │   └── user_repository.go
-│   │   └── middleware/          # Middlewares HTTP
-│   │       └── cors_middleware.go
-│   ├── config/                  # Configuración
-│   │   └── config.go
-│   └── server/                  # Configuración del servidor
-│       ├── server.go
-│       └── routes.go
-├── pkg/                         # Código reutilizable
-├── docs/                        # Documentación
-│   └── API.md
-├── scripts/                     # Scripts de build/deploy
-├── .env.example                 # Variables de entorno de ejemplo
-├── .gitignore
-├── Makefile                     # Comandos de desarrollo
-├── go.mod
-└── README.md
-```
+| Documento | Contenido |
+|---|---|
+| [docs/01_LOGICA_DE_NEGOCIO.md](docs/01_LOGICA_DE_NEGOCIO.md) | Visión del producto, modelo de negocio dual (ATS + Marketplace), roles y permisos, reglas de negocio, pipeline, pricing y límites por plan, compliance |
+| [docs/02_PLAN_DE_NEGOCIO.md](docs/02_PLAN_DE_NEGOCIO.md) | Plan operativo y financiero del Año 1: objetivos, timeline mensual, go-to-market, modelo financiero, KPIs, riesgos y visión multi-año |
+| [docs/03_FLUJO_DE_USO.md](docs/03_FLUJO_DE_USO.md) | Flujo completo de uso de la aplicación por actor: registro/onboarding, multi-empresa, equipo, jobs, candidatos, pipeline, career page, SuperAdmin |
+| [docs/04_DOCUMENTACION_TECNICA_API.md](docs/04_DOCUMENTACION_TECNICA_API.md) | Detalle técnico del backend: stack, arquitectura, modelos de datos, endpoints, JWT/middleware, multi-tenancy, seeders, Swagger, despliegue y deuda técnica |
 
-## 🏃‍♂️ Inicio Rápido
-
-### Instalación
+## 🏃 Inicio rápido
 
 ```bash
-cd dvra-api
 cp .env.example .env
 go mod tidy
+
+# Base de datos + seeders
+make db-fresh          # drop + migrate + seed (~7 s)
+
+# Ejecutar
+make run               # API en http://localhost:8080
+
+# O con Docker
+docker compose up -d
 ```
 
-### Ejecución
+- **Swagger UI:** http://localhost:8080/swagger/index.html (regenerar con `make swagger`)
+- **Health check:** `GET /api/v1/health`
+- **Comandos disponibles:** `make help`
 
-```bash
-# Usando Go directamente
-go run cmd/dvra-api/main.go
+## 🏗️ Arquitectura (resumen)
 
-# O usando Makefile
-make run
+```
+cmd/dvra-api        → entry point del servidor HTTP
+cmd/console         → CLI (migrate / seed)
+internal/app        → handlers → services → repositories → models (+ dtos)
+internal/platform   → config y server (DI + rutas)
+internal/shared     → middleware (auth JWT, roles)
+internal/database   → init + seeders
 ```
 
-El servidor estará disponible en: **http://localhost:8080**
+Detalle completo en [docs/04_DOCUMENTACION_TECNICA_API.md](docs/04_DOCUMENTACION_TECNICA_API.md).
 
-### Desarrollo
+---
 
-```bash
-# Ver todos los comandos disponibles
-make help
-
-# Compilar
-make build
-
-# Ejecutar tests
-make test
-
-# Formatear código
-make fmt
-
-# Analizar código
-make vet
-```
-
-## 🔌 API Endpoints
-
-| Método | Endpoint | Descripción |
-|---------|----------|-------------|
-| GET | `/` | Información general |
-| GET | `/api/v1/health` | Estado del servicio |
-| GET | `/api/v1/users` | Obtener todos los usuarios |
-| POST | `/api/v1/users` | Crear usuario |
-| GET | `/api/v1/users/{id}` | Obtener usuario por ID |
-| PUT | `/api/v1/users/{id}` | Actualizar usuario |
-| DELETE | `/api/v1/users/{id}` | Eliminar usuario |
-
-📖 **Documentación detallada**: [docs/API.md](docs/API.md)
-
-## 🧪 Pruebas Rápidas
-
-```bash
-# Obtener información general
-curl http://localhost:8080
-
-# Health check
-curl http://localhost:8080/api/v1/health
-
-# Obtener usuarios
-curl http://localhost:8080/api/v1/users
-
-# Crear usuario
-curl -X POST http://localhost:8080/api/v1/users \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Ana García", "email": "ana@example.com", "age": 28}'
-```
-
-## 🏗️ Arquitectura
-
-Este proyecto sigue el patrón de **arquitectura por capas** inspirado en frameworks como NestJS:
-
-- **Handlers**: Manejan las peticiones HTTP y las respuestas
-- **Services**: Contienen la lógica de negocio
-- **Repositories**: Manejan la persistencia de datos  
-- **DTOs**: Definen la estructura de datos de entrada/salida
-- **Models**: Representan las entidades del dominio
-- **Middleware**: Procesan las peticiones de forma transversal
-
-## 📦 Helpers de Loom
-
-Este proyecto usa los helpers opcionales de Loom para desarrollo más rápido:
-
-- `helpers.RespondJSON()` - Respuestas HTTP estandarizadas
-- `helpers.ValidateStruct()` - Validación de structs
-- `helpers.Logger` - Logging estructurado
-- `helpers.AppError` - Manejo de errores mejorado
-
-Para actualizar los helpers:
-```bash
-go get -u github.com/geomark27/loom-go
-```
-
-## 🔧 Configuración
-
-Las variables de entorno se definen en `.env`:
-
-```bash
-PORT=8080
-ENVIRONMENT=development
-LOG_LEVEL=info
-CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
-```
-
-## 📚 Próximos Pasos
-
-1. **Agregar base de datos**: Reemplazar el repositorio en memoria
-2. **Implementar autenticación**: JWT, OAuth, etc.
-3. **Agregar validaciones**: Validador de structs más robusto
-4. **Tests**: Crear tests unitarios e integración  
-5. **Logging**: Implementar logging estructurado
-6. **Métricas**: Prometheus, health checks avanzados
-
-## 🛠️ Generado con
-
-Este proyecto fue generado con [**Loom**](https://github.com/geomark27/loom-go) - El tejedor de proyectos Go.
-
-¡Disfruta desarrollando con Go! 🎉
+Proyecto generado inicialmente con [Loom](https://github.com/geomark27/loom-go).
