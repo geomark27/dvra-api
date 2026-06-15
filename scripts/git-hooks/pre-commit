@@ -1,0 +1,26 @@
+#!/bin/sh
+# Pre-commit hook de Dvra: bloquea el commit si el código no cumple lo mínimo.
+# Instalar con: make hooks-install
+set -e
+
+# Solo archivos Go staged (añadidos/copiados/modificados)
+staged_go="$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$' || true)"
+
+if [ -n "$staged_go" ]; then
+	echo "[pre-commit] gofmt..."
+	unformatted="$(gofmt -l $staged_go)"
+	if [ -n "$unformatted" ]; then
+		echo "Archivos Go sin formatear:"
+		echo "$unformatted"
+		echo "Corrige con: gofmt -w $unformatted"
+		exit 1
+	fi
+fi
+
+echo "[pre-commit] go vet..."
+go vet ./...
+
+echo "[pre-commit] go build..."
+go build ./...
+
+echo "[pre-commit] OK"

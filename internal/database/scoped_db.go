@@ -3,9 +3,9 @@ package database
 import "gorm.io/gorm"
 
 type ScopedDB struct {
-    db        *gorm.DB
-    companyID *uint
-    userID    uint
+	db        *gorm.DB
+	companyID *uint
+	userID    uint
 }
 
 func NewScopedDB(db *gorm.DB, companyID *uint, userID uint) *ScopedDB {
@@ -16,11 +16,10 @@ func NewScopedDB(db *gorm.DB, companyID *uint, userID uint) *ScopedDB {
 	}
 }
 
-func (s *ScopedDB) WithCompanyScope() *gorm.DB  {
+func (s *ScopedDB) WithCompanyScope() *gorm.DB {
 	if s.companyID == nil {
 		return s.db
 	}
-	
+
 	return s.db.Where("company_id = ?", &s.companyID)
 }
-

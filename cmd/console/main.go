@@ -56,7 +56,7 @@ func runMigrate(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatalf("❌ Error connecting to database: %v", err)
 	}
-	defer database.CloseDB()
+	defer func() { _ = database.CloseDB() }()
 
 	// Check for fresh flag
 	fresh, _ := cmd.Flags().GetBool("fresh")
@@ -90,7 +90,7 @@ func runSeed(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatalf("❌ Error connecting to database: %v", err)
 	}
-	defer database.CloseDB()
+	defer func() { _ = database.CloseDB() }()
 
 	runSeedLogic(db)
 }

@@ -135,8 +135,8 @@ func (s *AuthService) Login(dto *dtos.LoginDTO) (*dtos.LoginResponseDTO, error) 
 		return nil, err
 	}
 
-	// Update last login
-	s.userRepo.UpdateLastLogin(user.ID)
+	// Update last login (best-effort: no debe bloquear el login)
+	_ = s.userRepo.UpdateLastLogin(user.ID)
 
 	return &dtos.LoginResponseDTO{
 		AccessToken:  accessToken,
@@ -462,8 +462,8 @@ func (s *AuthService) LoginWithCompanies(dto *dtos.LoginDTO) (*dtos.LoginRespons
 		return nil, err
 	}
 
-	// Update last login
-	s.userRepo.UpdateLastLogin(user.ID)
+	// Update last login (best-effort: no debe bloquear el login)
+	_ = s.userRepo.UpdateLastLogin(user.ID)
 
 	return &dtos.LoginResponseWithCompaniesDTO{
 		AccessToken:  accessToken,

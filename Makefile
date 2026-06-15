@@ -6,7 +6,7 @@ ifneq (,$(wildcard .env))
 	export
 endif
 
-.PHONY: build run test clean fmt vet deps help
+.PHONY: build run test clean fmt fmt-check vet lint check hooks-install deps help
 
 # Variables
 APP_NAME=dvra-api
@@ -58,8 +58,10 @@ help: ## Muestra esta ayuda
 	@echo "    test               Ejecuta los tests"
 	@echo "    test-coverage      Ejecuta tests con cobertura"
 	@echo "    fmt                Formatea el codigo"
+	@echo "    fmt-check          Verifica formato (falla si hay archivos sin gofmt)"
 	@echo "    vet                Ejecuta go vet"
 	@echo "    lint               Ejecuta golangci-lint"
+	@echo "    check              Gate de calidad: fmt-check + vet + lint + test + build"
 	@echo ""
 	@echo "  Git (rama: $(BRANCH)):"
 	@echo "    push m='msg'       Add + Commit + Push a $(BRANCH)"
@@ -70,7 +72,8 @@ help: ## Muestra esta ayuda
 	@echo "  Utilidades:"
 	@echo "    clean              Limpia archivos generados"
 	@echo "    deps               Descarga las dependencias"
-	@echo "    install-tools      Instala herramientas de desarrollo (air, golangci-lint)"
+	@echo "    install-tools      Instala herramientas de desarrollo (air, golangci-lint, swag)"
+	@echo "    hooks-install      Instala el git hook de pre-commit"
 	@echo "    swagger            Genera documentacion Swagger"
 	@echo ""
 	@echo "================================================================================"
@@ -123,9 +126,31 @@ vet: ## Ejecuta go vet
 	@echo "Analizando codigo..."
 	@go vet ./...
 
+fmt-check: ## Verifica formato sin modificar (falla si hay archivos sin gofmt)
+	@echo "Verificando formato..."
+	@unformatted=$$(gofmt -l .); \
+	if [ -n "$$unformatted" ]; then \
+		echo "Archivos sin gofmt:"; echo "$$unformatted"; \
+		echo "Corrige con: gofmt -w ."; exit 1; \
+	fi; \
+	echo "Formato OK"
+
 lint: ## Ejecuta golangci-lint (requiere instalacion)
 	@echo "Ejecutando linter..."
 	@golangci-lint run
+
+check: ## Gate de calidad: fmt-check + vet + lint + test + build
+	@$(MAKE) fmt-check
+	@$(MAKE) vet
+	@$(MAKE) lint
+	@$(MAKE) test
+	@$(MAKE) build
+	@echo "Todos los checks pasaron"
+
+hooks-install: ## Instala el git hook de pre-commit
+	@cp scripts/git-hooks/pre-commit .git/hooks/pre-commit
+	@chmod +x .git/hooks/pre-commit
+	@echo "Hook pre-commit instalado en .git/hooks/pre-commit"
 
 deps: ## Descarga las dependencias
 	@echo "Descargando dependencias..."
@@ -168,6 +193,7 @@ install-tools: ## Instala herramientas de desarrollo
 	@echo "Instalando herramientas de desarrollo..."
 	@go install github.com/cosmtrek/air@latest
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@go install github.com/swaggo/swag/cmd/swag@latest
 
 # ============================================
 # COMANDOS DOCKER (API + DB) - PRODUCCION

@@ -20,17 +20,17 @@ type PublicCompanyResponseDTO struct {
 
 // PublicJobResponseDTO represents a job listing for public career page
 type PublicJobResponseDTO struct {
-	ID           uint                    `json:"id"`
-	Title        string                  `json:"title"`
-	Description  string                  `json:"description"`
-	Requirements string                  `json:"requirements,omitempty"`
-	Benefits     string                  `json:"benefits,omitempty"`
-	SalaryMin    *float64                `json:"salary_min,omitempty"`
-	SalaryMax    *float64                `json:"salary_max,omitempty"`
-	LocationType string                  `json:"location_type"`
-	City         *PublicCityDTO          `json:"city,omitempty"`
-	CreatedAt    time.Time               `json:"created_at"`
-	Company      *PublicCompanyShortDTO  `json:"company,omitempty"`
+	ID           uint                   `json:"id"`
+	Title        string                 `json:"title"`
+	Description  string                 `json:"description"`
+	Requirements string                 `json:"requirements,omitempty"`
+	Benefits     string                 `json:"benefits,omitempty"`
+	SalaryMin    *float64               `json:"salary_min,omitempty"`
+	SalaryMax    *float64               `json:"salary_max,omitempty"`
+	LocationType string                 `json:"location_type"`
+	City         *PublicCityDTO         `json:"city,omitempty"`
+	CreatedAt    time.Time              `json:"created_at"`
+	Company      *PublicCompanyShortDTO `json:"company,omitempty"`
 }
 
 // PublicCityDTO for public responses (simplified version)

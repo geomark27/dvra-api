@@ -40,7 +40,7 @@ func NewJWTService(accessSecret, refreshSecret string) JWTService {
 	return &jwtService{
 		accessSecret:  accessSecret,
 		refreshSecret: refreshSecret,
-		accessTTL:     1 * time.Hour,    // Access token: 1 hour
+		accessTTL:     1 * time.Hour,       // Access token: 1 hour
 		refreshTTL:    30 * 24 * time.Hour, // Refresh token: 30 days
 	}
 }

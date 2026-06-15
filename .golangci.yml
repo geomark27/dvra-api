@@ -1,0 +1,18 @@
+# Configuración de golangci-lint (formato v1.x).
+# Ejecutar: make lint  (o golangci-lint run)
+#
+# Nota: NO se habilita `misspell` porque el estándar del proyecto es comentar en
+# español (§2.5) y misspell solo conoce inglés (marcaría "clientes", "directorios",
+# etc. como errores). Tampoco `goimports` con local-prefixes, para no imponer una
+# reagrupación masiva de imports; el formato lo garantiza `gofmt`.
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck      # errores no comprobados
+    - govet         # go vet
+    - ineffassign   # asignaciones inútiles
+    - staticcheck   # análisis estático
+    - unused        # código no usado
+    - gofmt         # formato
