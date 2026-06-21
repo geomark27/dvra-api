@@ -7,6 +7,7 @@ import (
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/apperr"
 
 	"github.com/geomark27/loom-go/pkg/helpers"
 	"github.com/gin-gonic/gin"
@@ -75,7 +76,7 @@ func (h *MembershipHandler) GetMembership(c *gin.Context) {
 
 	membership, err := h.membershipService.GetMembershipByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -134,7 +135,7 @@ func (h *MembershipHandler) CreateMembership(c *gin.Context) {
 
 	membership, err := h.membershipService.CreateMembership(dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": membership})
@@ -151,7 +152,7 @@ func (h *MembershipHandler) UpdateMembership(c *gin.Context) {
 	if !authctx.IsSuperAdmin(c) {
 		membership, err := h.membershipService.GetMembershipByID(uint(id))
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Membership not found"})
+			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 			return
 		}
 		companyIDVal, exists := c.Get("company_id")
@@ -174,7 +175,7 @@ func (h *MembershipHandler) UpdateMembership(c *gin.Context) {
 
 	membership, err := h.membershipService.UpdateMembership(uint(id), dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -192,7 +193,7 @@ func (h *MembershipHandler) DeleteMembership(c *gin.Context) {
 	if !authctx.IsSuperAdmin(c) {
 		membership, err := h.membershipService.GetMembershipByID(uint(id))
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Membership not found"})
+			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 			return
 		}
 		companyIDVal, exists := c.Get("company_id")
@@ -208,7 +209,7 @@ func (h *MembershipHandler) DeleteMembership(c *gin.Context) {
 	}
 
 	if err := h.membershipService.DeleteMembership(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 

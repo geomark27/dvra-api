@@ -3,6 +3,7 @@ package handlers
 import (
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/apperr"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -97,7 +98,7 @@ func (h *PlatformSettingsHandler) UpdateSettings(c *gin.Context) {
 
 	settings, err := h.service.Update(&updateDTO, userID.(uint))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 

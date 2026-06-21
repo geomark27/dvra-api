@@ -15,26 +15,26 @@ type PlacementFilters struct {
 
 // PlacementResponseDTO representa la colocación en las respuestas de la API
 type PlacementResponseDTO struct {
-	ID               uint                   `json:"id"`
-	CreatedAt        time.Time              `json:"created_at"`
-	UpdatedAt        time.Time              `json:"updated_at"`
-	CompanyID        uint                   `json:"company_id"`
-	StaffingClientID uint                   `json:"staffing_client_id"`
-	CandidateID      uint                   `json:"candidate_id"`
-	JobID            *uint                  `json:"job_id,omitempty"`
-	ApplicationID    *uint                  `json:"application_id,omitempty"`
-	StartDate        *time.Time             `json:"start_date,omitempty"`
-	EndDate          *time.Time             `json:"end_date,omitempty"`
-	ContractType     string                 `json:"contract_type,omitempty"`
-	Position         string                 `json:"position,omitempty"`
-	BillRateAmount   *float64               `json:"bill_rate_amount,omitempty"`
-	BillRateCurrency string                 `json:"bill_rate_currency,omitempty"`
-	BillRateType     string                 `json:"bill_rate_type,omitempty"`
-	PayRateAmount    *float64               `json:"pay_rate_amount,omitempty"`
-	Status           string                 `json:"status"`
-	Notes            string                 `json:"notes,omitempty"`
-	StaffingClient   *models.StaffingClient `json:"staffing_client,omitempty"`
-	Candidate        *models.Candidate      `json:"candidate,omitempty"`
+	ID               uint                       `json:"id"`
+	CreatedAt        time.Time                  `json:"created_at"`
+	UpdatedAt        time.Time                  `json:"updated_at"`
+	CompanyID        uint                       `json:"company_id"`
+	StaffingClientID uint                       `json:"staffing_client_id"`
+	CandidateID      uint                       `json:"candidate_id"`
+	JobID            uint                       `json:"job_id"`
+	ApplicationID    uint                       `json:"application_id"`
+	StartDate        *time.Time                 `json:"start_date,omitempty"`
+	EndDate          *time.Time                 `json:"end_date,omitempty"`
+	ContractType     string                     `json:"contract_type,omitempty"`
+	Position         string                     `json:"position,omitempty"`
+	BillRateAmount   *float64                   `json:"bill_rate_amount,omitempty"`
+	BillRateCurrency string                     `json:"bill_rate_currency,omitempty"`
+	BillRateType     string                     `json:"bill_rate_type,omitempty"`
+	PayRateAmount    *float64                   `json:"pay_rate_amount,omitempty"`
+	Status           string                     `json:"status"`
+	Notes            string                     `json:"notes,omitempty"`
+	StaffingClient   *StaffingClientResponseDTO `json:"staffing_client,omitempty"`
+	Candidate        *CandidateResponseDTO      `json:"candidate,omitempty"`
 }
 
 // CreatePlacementDTO representa los datos para crear una colocación.
@@ -73,7 +73,7 @@ type UpdatePlacementDTO struct {
 
 // ToPlacementResponse convierte un modelo Placement a su DTO de respuesta
 func ToPlacementResponse(p *models.Placement) PlacementResponseDTO {
-	return PlacementResponseDTO{
+	dto := PlacementResponseDTO{
 		ID:               p.ID,
 		CreatedAt:        p.CreatedAt,
 		UpdatedAt:        p.UpdatedAt,
@@ -92,9 +92,16 @@ func ToPlacementResponse(p *models.Placement) PlacementResponseDTO {
 		PayRateAmount:    p.PayRateAmount,
 		Status:           p.Status,
 		Notes:            p.Notes,
-		StaffingClient:   p.StaffingClient,
-		Candidate:        p.Candidate,
 	}
+	if p.StaffingClient != nil {
+		r := ToStaffingClientResponse(p.StaffingClient)
+		dto.StaffingClient = &r
+	}
+	if p.Candidate != nil {
+		r := ToCandidateResponse(p.Candidate)
+		dto.Candidate = &r
+	}
+	return dto
 }
 
 // ToPlacementResponseList convierte un slice de Placement a DTOs

@@ -1,11 +1,10 @@
 package services
 
 import (
-	"fmt"
-
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
+	"dvra-api/internal/shared/apperr"
 )
 
 // PlacementService define el contrato del servicio de colocaciones
@@ -13,8 +12,9 @@ type PlacementService interface {
 	GetByCompanyID(companyID uint, filters dtos.PlacementFilters) ([]models.Placement, error)
 	GetByID(id uint) (*models.Placement, error)
 	Create(companyID uint, dto dtos.CreatePlacementDTO) (*models.Placement, error)
-	Update(id uint, dto dtos.UpdatePlacementDTO) (*models.Placement, error)
-	Delete(id uint) error
+	// companyID = 0 omite la validación de tenant (SuperAdmin).
+	Update(id, companyID uint, dto dtos.UpdatePlacementDTO) (*models.Placement, error)
+	Delete(id, companyID uint) error
 }
 
 type placementService struct {
@@ -48,7 +48,7 @@ func (s *placementService) GetByID(id uint) (*models.Placement, error) {
 		return nil, err
 	}
 	if placement == nil {
-		return nil, fmt.Errorf("placement not found")
+		return nil, apperr.NotFound("placement not found")
 	}
 	return placement, nil
 }
@@ -56,7 +56,8 @@ func (s *placementService) GetByID(id uint) (*models.Placement, error) {
 // Create valida la integridad antes de colocar:
 //  1. el cliente final pertenece al mismo tenant (companyID),
 //  2. la application existe y pertenece al mismo tenant,
-//  3. la application está en etapa 'hired'.
+//  3. la application está en etapa 'hired',
+//  4. no existe ya un placement para esa application.
 //
 // CandidateID y JobID se copian de la application (no se confía en el body).
 func (s *placementService) Create(companyID uint, dto dtos.CreatePlacementDTO) (*models.Placement, error) {
@@ -66,10 +67,10 @@ func (s *placementService) Create(companyID uint, dto dtos.CreatePlacementDTO) (
 		return nil, err
 	}
 	if client == nil {
-		return nil, fmt.Errorf("staffing client not found")
+		return nil, apperr.NotFound("staffing client not found")
 	}
 	if client.CompanyID != companyID {
-		return nil, fmt.Errorf("staffing client does not belong to your company")
+		return nil, apperr.Forbidden("staffing client does not belong to your company")
 	}
 
 	// 2. Application del mismo tenant
@@ -78,15 +79,24 @@ func (s *placementService) Create(companyID uint, dto dtos.CreatePlacementDTO) (
 		return nil, err
 	}
 	if application == nil {
-		return nil, fmt.Errorf("application not found")
+		return nil, apperr.NotFound("application not found")
 	}
 	if application.CompanyID != companyID {
-		return nil, fmt.Errorf("application does not belong to your company")
+		return nil, apperr.Forbidden("application does not belong to your company")
 	}
 
 	// 3. Solo se coloca a candidatos contratados
 	if application.Stage != "hired" {
-		return nil, fmt.Errorf("application must be in 'hired' stage to create a placement")
+		return nil, apperr.BadRequest("application must be in 'hired' stage to create a placement")
+	}
+
+	// 4. Evitar placements duplicados para la misma application
+	exists, err := s.repo.ExistsByApplicationID(dto.ApplicationID)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, apperr.Conflict("a placement already exists for this application")
 	}
 
 	status := dto.Status
@@ -94,15 +104,12 @@ func (s *placementService) Create(companyID uint, dto dtos.CreatePlacementDTO) (
 		status = "active"
 	}
 
-	jobID := application.JobID
-	appID := application.ID
-
 	placement := &models.Placement{
 		CompanyID:        companyID,
 		StaffingClientID: dto.StaffingClientID,
 		CandidateID:      application.CandidateID,
-		JobID:            &jobID,
-		ApplicationID:    &appID,
+		JobID:            application.JobID,
+		ApplicationID:    application.ID,
 		StartDate:        dto.StartDate,
 		EndDate:          dto.EndDate,
 		ContractType:     dto.ContractType,
@@ -117,13 +124,16 @@ func (s *placementService) Create(companyID uint, dto dtos.CreatePlacementDTO) (
 	return s.repo.Create(placement)
 }
 
-func (s *placementService) Update(id uint, dto dtos.UpdatePlacementDTO) (*models.Placement, error) {
+func (s *placementService) Update(id, companyID uint, dto dtos.UpdatePlacementDTO) (*models.Placement, error) {
 	placement, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
 	if placement == nil {
-		return nil, fmt.Errorf("placement not found")
+		return nil, apperr.NotFound("placement not found")
+	}
+	if companyID > 0 && placement.CompanyID != companyID {
+		return nil, apperr.Forbidden("access denied")
 	}
 
 	if dto.StartDate != nil {
@@ -160,13 +170,16 @@ func (s *placementService) Update(id uint, dto dtos.UpdatePlacementDTO) (*models
 	return s.repo.Update(placement)
 }
 
-func (s *placementService) Delete(id uint) error {
+func (s *placementService) Delete(id, companyID uint) error {
 	placement, err := s.repo.GetByID(id)
 	if err != nil {
 		return err
 	}
 	if placement == nil {
-		return fmt.Errorf("placement not found")
+		return apperr.NotFound("placement not found")
+	}
+	if companyID > 0 && placement.CompanyID != companyID {
+		return apperr.Forbidden("access denied")
 	}
 	return s.repo.Delete(id)
 }

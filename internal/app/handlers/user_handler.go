@@ -7,6 +7,7 @@ import (
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/apperr"
 
 	"github.com/geomark27/loom-go/pkg/helpers"
 	"github.com/gin-gonic/gin"
@@ -112,16 +113,8 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 
 	user, err := h.userService.GetUserByID(id)
 	if err != nil {
-		if err.Error() == "user not found" {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "User not found",
-			})
-			return
-		}
 		h.logger.Error("Failed to get user", "error", err, "user_id", id)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to retrieve user",
-		})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -191,9 +184,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	user, err := h.userService.CreateUser(dto)
 	if err != nil {
 		h.logger.Error("Failed to create user", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to create user",
-		})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	h.logger.Info("User created successfully", "user_id", user.ID)
@@ -248,16 +239,8 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	user, err := h.userService.UpdateUser(id, dto)
 	if err != nil {
-		if err.Error() == "user not found" {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "User not found",
-			})
-			return
-		}
 		h.logger.Error("Failed to update user", "error", err, "user_id", id)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to update user",
-		})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	h.logger.Info("User updated successfully", "user_id", id)
@@ -293,16 +276,8 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	id := uint(idParam)
 
 	if err := h.userService.DeleteUser(id); err != nil {
-		if err.Error() == "user not found" {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "User not found",
-			})
-			return
-		}
 		h.logger.Error("Failed to delete user", "error", err, "user_id", id)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to delete user",
-		})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	h.logger.Info("User deleted successfully", "user_id", id)

@@ -6,18 +6,23 @@ import (
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
+	"dvra-api/internal/shared/apperr"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
+// Errores de dominio de auth. Son valores *apperr.AppError, de modo que llevan
+// su código HTTP y los handlers pueden usar apperr.StatusCode(err); las
+// comparaciones errors.Is/== siguen funcionando por identidad. Los mensajes de
+// credenciales son deliberadamente genéricos (no revelan si el email existe).
 var (
-	ErrInvalidCredentials = errors.New("invalid email or password")
-	ErrEmailExists        = errors.New("email already exists")
-	ErrUserNotFound       = errors.New("user not found")
-	ErrInvalidPassword    = errors.New("invalid password")
-	ErrCompanyNotFound    = errors.New("company not found")
-	ErrNoMembership       = errors.New("user does not belong to this company")
+	ErrInvalidCredentials = apperr.Unauthorized("invalid email or password")
+	ErrEmailExists        = apperr.Conflict("email already exists")
+	ErrUserNotFound       = apperr.NotFound("user not found")
+	ErrInvalidPassword    = apperr.Unauthorized("invalid password")
+	ErrCompanyNotFound    = apperr.NotFound("company not found")
+	ErrNoMembership       = apperr.Forbidden("user does not belong to this company")
 )
 
 // AuthService handles authentication business logic
@@ -100,7 +105,7 @@ func (s *AuthService) Login(dto *dtos.LoginDTO) (*dtos.LoginResponseDTO, error) 
 
 	// Check if user is active
 	if !user.IsActive {
-		return nil, errors.New("account is inactive")
+		return nil, apperr.Forbidden("account is inactive")
 	}
 
 	// Verify password
@@ -156,7 +161,7 @@ func (s *AuthService) RefreshToken(dto *dtos.RefreshTokenDTO) (*dtos.RefreshToke
 	// Validate refresh token
 	claims, err := s.jwtService.ValidateToken(dto.RefreshToken)
 	if err != nil {
-		return nil, errors.New("invalid refresh token")
+		return nil, apperr.Unauthorized("invalid refresh token")
 	}
 
 	// Get user
@@ -166,7 +171,7 @@ func (s *AuthService) RefreshToken(dto *dtos.RefreshTokenDTO) (*dtos.RefreshToke
 	}
 
 	if !user.IsActive {
-		return nil, errors.New("account is inactive")
+		return nil, apperr.Forbidden("account is inactive")
 	}
 
 	// Get user's default membership
@@ -425,7 +430,7 @@ func (s *AuthService) LoginWithCompanies(dto *dtos.LoginDTO) (*dtos.LoginRespons
 
 	// Check if user is active
 	if !user.IsActive {
-		return nil, errors.New("account is inactive")
+		return nil, apperr.Forbidden("account is inactive")
 	}
 
 	// Verify password

@@ -1,11 +1,10 @@
 package services
 
 import (
-	"fmt"
-
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
+	"dvra-api/internal/shared/apperr"
 )
 
 // JobService define el contrato del servicio de jobs
@@ -41,10 +40,10 @@ func (s *jobService) validateStaffingClient(companyID, staffingClientID uint) er
 		return err
 	}
 	if client == nil {
-		return fmt.Errorf("staffing client not found")
+		return apperr.NotFound("staffing client not found")
 	}
 	if client.CompanyID != companyID {
-		return fmt.Errorf("staffing client does not belong to your company")
+		return apperr.Forbidden("staffing client does not belong to your company")
 	}
 	return nil
 }
@@ -63,7 +62,7 @@ func (s *jobService) GetJobByID(id uint) (*models.Job, error) {
 		return nil, err
 	}
 	if job == nil {
-		return nil, fmt.Errorf("job not found")
+		return nil, apperr.NotFound("job not found")
 	}
 	return job, nil
 }
@@ -118,7 +117,7 @@ func (s *jobService) UpdateJob(id uint, dto dtos.UpdateJobDTO) (*models.Job, err
 		return nil, err
 	}
 	if job == nil {
-		return nil, fmt.Errorf("job not found")
+		return nil, apperr.NotFound("job not found")
 	}
 
 	if dto.Title != nil {
@@ -170,12 +169,12 @@ func (s *jobService) PublishJob(id uint) (*models.Job, error) {
 		return nil, err
 	}
 	if job == nil {
-		return nil, fmt.Errorf("job not found")
+		return nil, apperr.NotFound("job not found")
 	}
 
 	// Validar que el job tenga los campos mínimos requeridos
 	if job.Title == "" || job.Description == "" {
-		return nil, fmt.Errorf("job must have title and description to be published")
+		return nil, apperr.BadRequest("job must have title and description to be published")
 	}
 
 	job.Status = "active"
@@ -188,7 +187,7 @@ func (s *jobService) CloseJob(id uint) (*models.Job, error) {
 		return nil, err
 	}
 	if job == nil {
-		return nil, fmt.Errorf("job not found")
+		return nil, apperr.NotFound("job not found")
 	}
 
 	job.Status = "closed"
@@ -201,7 +200,7 @@ func (s *jobService) DeleteJob(id uint) error {
 		return err
 	}
 	if job == nil {
-		return fmt.Errorf("job not found")
+		return apperr.NotFound("job not found")
 	}
 	return s.jobRepo.Delete(id)
 }

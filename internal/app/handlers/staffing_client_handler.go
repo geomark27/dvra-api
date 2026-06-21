@@ -6,6 +6,7 @@ import (
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/apperr"
 	"dvra-api/internal/shared/authctx"
 
 	"github.com/gin-gonic/gin"
@@ -67,15 +68,21 @@ func (h *StaffingClientHandler) GetStaffingClients(c *gin.Context) {
 // @Produce      json
 // @Param        id   path      int  true  "ID del cliente final"
 // @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
 // @Failure      403  {object}  map[string]interface{}
 // @Failure      404  {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /staffing-clients/{id} [get]
 func (h *StaffingClientHandler) GetStaffingClient(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
 	client, err := h.service.GetByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -104,6 +111,7 @@ func (h *StaffingClientHandler) GetStaffingClient(c *gin.Context) {
 // @Success      201              {object}  map[string]interface{}
 // @Failure      400              {object}  map[string]interface{}
 // @Failure      403              {object}  map[string]interface{}
+// @Failure      409              {object}  map[string]interface{}
 // @Failure      500              {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /staffing-clients [post]
@@ -130,7 +138,7 @@ func (h *StaffingClientHandler) CreateStaffingClient(c *gin.Context) {
 
 	client, err := h.service.Create(dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": dtos.ToStaffingClientResponse(client)})
@@ -148,27 +156,26 @@ func (h *StaffingClientHandler) CreateStaffingClient(c *gin.Context) {
 // @Failure      400              {object}  map[string]interface{}
 // @Failure      403              {object}  map[string]interface{}
 // @Failure      404              {object}  map[string]interface{}
+// @Failure      409              {object}  map[string]interface{}
 // @Failure      500              {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /staffing-clients/{id} [put]
 func (h *StaffingClientHandler) UpdateStaffingClient(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
 
+	// companyID = 0 → SuperAdmin (el service omite la validación de tenant)
+	var companyID uint
 	if !authctx.IsSuperAdmin(c) {
-		client, err := h.service.GetByID(uint(id))
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Staffing client not found"})
-			return
-		}
-		companyID, ok := authctx.CompanyID(c)
+		cid, ok := authctx.CompanyID(c)
 		if !ok {
 			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
 			return
 		}
-		if client.CompanyID != companyID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			return
-		}
+		companyID = cid
 	}
 
 	var dto dtos.UpdateStaffingClientDTO
@@ -176,9 +183,10 @@ func (h *StaffingClientHandler) UpdateStaffingClient(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	updated, err := h.service.Update(uint(id), dto)
+
+	updated, err := h.service.Update(uint(id), companyID, dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": dtos.ToStaffingClientResponse(updated)})
@@ -192,33 +200,31 @@ func (h *StaffingClientHandler) UpdateStaffingClient(c *gin.Context) {
 // @Produce      json
 // @Param        id   path      int  true  "ID del cliente final"
 // @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
 // @Failure      403  {object}  map[string]interface{}
 // @Failure      404  {object}  map[string]interface{}
 // @Failure      500  {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /staffing-clients/{id} [delete]
 func (h *StaffingClientHandler) DeleteStaffingClient(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
 
+	var companyID uint
 	if !authctx.IsSuperAdmin(c) {
-		client, err := h.service.GetByID(uint(id))
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Staffing client not found"})
-			return
-		}
-		companyID, ok := authctx.CompanyID(c)
+		cid, ok := authctx.CompanyID(c)
 		if !ok {
 			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
 			return
 		}
-		if client.CompanyID != companyID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			return
-		}
+		companyID = cid
 	}
 
-	if err := h.service.Delete(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.Delete(uint(id), companyID); err != nil {
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Staffing client deleted"})

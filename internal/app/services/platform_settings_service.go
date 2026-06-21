@@ -4,7 +4,7 @@ import (
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
-	"errors"
+	"dvra-api/internal/shared/apperr"
 )
 
 // PlatformSettingsService maneja la lógica de negocio de platform settings
@@ -69,13 +69,13 @@ func (s *PlatformSettingsService) applyUpdates(settings *models.PlatformSettings
 	// Branding
 	if dto.PlatformName != nil {
 		if *dto.PlatformName == "" {
-			return errors.New("platform_name cannot be empty")
+			return apperr.BadRequest("platform_name cannot be empty")
 		}
 		settings.PlatformName = *dto.PlatformName
 	}
 	if dto.PlatformShort != nil {
 		if *dto.PlatformShort == "" {
-			return errors.New("platform_short cannot be empty")
+			return apperr.BadRequest("platform_short cannot be empty")
 		}
 		settings.PlatformShort = *dto.PlatformShort
 	}
@@ -98,7 +98,7 @@ func (s *PlatformSettingsService) applyUpdates(settings *models.PlatformSettings
 	// Contact
 	if dto.SupportEmail != nil {
 		if *dto.SupportEmail == "" {
-			return errors.New("support_email cannot be empty")
+			return apperr.BadRequest("support_email cannot be empty")
 		}
 		settings.SupportEmail = *dto.SupportEmail
 	}
@@ -123,7 +123,7 @@ func (s *PlatformSettingsService) applyUpdates(settings *models.PlatformSettings
 	// Business defaults
 	if dto.DefaultTrialDays != nil {
 		if *dto.DefaultTrialDays < 0 {
-			return errors.New("default_trial_days cannot be negative")
+			return apperr.BadRequest("default_trial_days cannot be negative")
 		}
 		settings.DefaultTrialDays = *dto.DefaultTrialDays
 	}

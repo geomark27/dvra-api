@@ -6,15 +6,19 @@ import (
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
+	"dvra-api/internal/shared/apperr"
 
 	"gorm.io/gorm"
 )
 
+// Errores de dominio del módulo de planes. Son valores *apperr.AppError, de modo
+// que llevan su código HTTP y los handlers pueden usar apperr.StatusCode(err);
+// las comparaciones errors.Is/== siguen funcionando por identidad.
 var (
-	ErrPlanNotFound    = errors.New("plan not found")
-	ErrPlanSlugExists  = errors.New("plan with this slug already exists")
-	ErrPlanInUse       = errors.New("plan is currently in use by companies")
-	ErrInvalidPlanData = errors.New("invalid plan data")
+	ErrPlanNotFound    = apperr.NotFound("plan not found")
+	ErrPlanSlugExists  = apperr.Conflict("plan with this slug already exists")
+	ErrPlanInUse       = apperr.Conflict("plan is currently in use by companies")
+	ErrInvalidPlanData = apperr.BadRequest("invalid plan data")
 )
 
 // PlanService interface defines plan business logic
@@ -280,7 +284,7 @@ func (s *planService) AssignPlanToCompany(companyID uint, planSlug string) error
 	}
 
 	if !plan.IsActive {
-		return errors.New("plan is not active")
+		return apperr.BadRequest("plan is not active")
 	}
 
 	// Verify company exists

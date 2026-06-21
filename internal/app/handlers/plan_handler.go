@@ -7,6 +7,7 @@ import (
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/apperr"
 
 	"github.com/geomark27/loom-go/pkg/helpers"
 	"github.com/gin-gonic/gin"
@@ -48,12 +49,8 @@ func (h *PlanHandler) CreatePlan(c *gin.Context) {
 
 	plan, err := h.planService.CreatePlan(&dto)
 	if err != nil {
-		if err == services.ErrPlanSlugExists {
-			c.JSON(http.StatusConflict, gin.H{"error": "Plan with this slug already exists"})
-			return
-		}
 		h.logger.Error("Failed to create plan", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create plan"})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -120,12 +117,8 @@ func (h *PlanHandler) GetPlanByID(c *gin.Context) {
 
 	plan, err := h.planService.GetPlanByID(uint(id))
 	if err != nil {
-		if err == services.ErrPlanNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
-			return
-		}
 		h.logger.Error("Failed to retrieve plan", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve plan"})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -150,12 +143,8 @@ func (h *PlanHandler) GetPlanBySlug(c *gin.Context) {
 
 	plan, err := h.planService.GetPlanBySlug(slug)
 	if err != nil {
-		if err == services.ErrPlanNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
-			return
-		}
 		h.logger.Error("Failed to retrieve plan", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve plan"})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -219,12 +208,8 @@ func (h *PlanHandler) UpdatePlan(c *gin.Context) {
 
 	plan, err := h.planService.UpdatePlan(uint(id), &dto)
 	if err != nil {
-		if err == services.ErrPlanNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
-			return
-		}
 		h.logger.Error("Failed to update plan", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update plan"})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -264,12 +249,8 @@ func (h *PlanHandler) TogglePlanStatus(c *gin.Context) {
 
 	plan, err := h.planService.TogglePlanStatus(uint(id), dto.IsActive)
 	if err != nil {
-		if err == services.ErrPlanNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
-			return
-		}
 		h.logger.Error("Failed to toggle plan status", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to toggle plan status"})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -307,16 +288,8 @@ func (h *PlanHandler) DeletePlan(c *gin.Context) {
 
 	err = h.planService.DeletePlan(uint(id))
 	if err != nil {
-		if err == services.ErrPlanNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
-			return
-		}
-		if err == services.ErrPlanInUse {
-			c.JSON(http.StatusConflict, gin.H{"error": "Cannot delete plan that is in use by companies"})
-			return
-		}
 		h.logger.Error("Failed to delete plan", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete plan"})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -349,23 +322,15 @@ func (h *PlanHandler) AssignPlanToCompany(c *gin.Context) {
 	// Get plan by ID to get slug
 	plan, err := h.planService.GetPlanByID(dto.PlanID)
 	if err != nil {
-		if err == services.ErrPlanNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
-			return
-		}
 		h.logger.Error("Failed to retrieve plan", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign plan"})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
 	err = h.planService.AssignPlanToCompany(dto.CompanyID, plan.Slug)
 	if err != nil {
-		if err == services.ErrCompanyNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Company not found"})
-			return
-		}
 		h.logger.Error("Failed to assign plan to company", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign plan"})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 

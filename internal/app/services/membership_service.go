@@ -1,12 +1,12 @@
 package services
 
 import (
-	"fmt"
 	"time"
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
+	"dvra-api/internal/shared/apperr"
 )
 
 // MembershipService define el contrato del servicio de memberships
@@ -38,7 +38,7 @@ func (s *membershipService) GetMembershipByID(id uint) (*models.Membership, erro
 		return nil, err
 	}
 	if membership == nil {
-		return nil, fmt.Errorf("membership not found")
+		return nil, apperr.NotFound("membership not found")
 	}
 	return membership, nil
 }
@@ -59,7 +59,7 @@ func (s *membershipService) CreateMembership(dto dtos.CreateMembershipDTO) (*mod
 			return nil, err
 		}
 		if existing != nil {
-			return nil, fmt.Errorf("membership already exists for this user and company")
+			return nil, apperr.Conflict("membership already exists for this user and company")
 		}
 	}
 
@@ -83,7 +83,7 @@ func (s *membershipService) UpdateMembership(id uint, dto dtos.UpdateMembershipD
 		return nil, err
 	}
 	if membership == nil {
-		return nil, fmt.Errorf("membership not found")
+		return nil, apperr.NotFound("membership not found")
 	}
 
 	if dto.Role != nil {
@@ -108,7 +108,7 @@ func (s *membershipService) DeleteMembership(id uint) error {
 		return err
 	}
 	if membership == nil {
-		return fmt.Errorf("membership not found")
+		return apperr.NotFound("membership not found")
 	}
 	return s.membershipRepo.Delete(id)
 }

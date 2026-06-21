@@ -1,12 +1,12 @@
 package services
 
 import (
-	"fmt"
 	"time"
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
+	"dvra-api/internal/shared/apperr"
 )
 
 // ApplicationService define el contrato del servicio de applications
@@ -43,7 +43,7 @@ func (s *applicationService) GetApplicationByID(id uint) (*models.Application, e
 		return nil, err
 	}
 	if application == nil {
-		return nil, fmt.Errorf("application not found")
+		return nil, apperr.NotFound("application not found")
 	}
 	return application, nil
 }
@@ -85,7 +85,7 @@ func (s *applicationService) UpdateApplication(id uint, dto dtos.UpdateApplicati
 		return nil, err
 	}
 	if application == nil {
-		return nil, fmt.Errorf("application not found")
+		return nil, apperr.NotFound("application not found")
 	}
 
 	if dto.Stage != nil {
@@ -122,7 +122,7 @@ func (s *applicationService) DeleteApplication(id uint) error {
 		return err
 	}
 	if application == nil {
-		return fmt.Errorf("application not found")
+		return apperr.NotFound("application not found")
 	}
 	return s.applicationRepo.Delete(id)
 }
@@ -154,7 +154,7 @@ func (s *applicationService) MoveToStage(id uint, stage string) (*models.Applica
 		return nil, err
 	}
 	if application == nil {
-		return nil, fmt.Errorf("application not found")
+		return nil, apperr.NotFound("application not found")
 	}
 
 	application.Stage = stage
@@ -177,7 +177,7 @@ func (s *applicationService) RateApplication(id uint, rating int) (*models.Appli
 		return nil, err
 	}
 	if application == nil {
-		return nil, fmt.Errorf("application not found")
+		return nil, apperr.NotFound("application not found")
 	}
 
 	application.Rating = &rating

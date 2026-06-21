@@ -6,6 +6,7 @@ import (
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/apperr"
 	"dvra-api/internal/shared/authctx"
 
 	"github.com/gin-gonic/gin"
@@ -68,15 +69,21 @@ func (h *PlacementHandler) GetPlacements(c *gin.Context) {
 // @Produce      json
 // @Param        id   path      int  true  "ID de la colocación"
 // @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
 // @Failure      403  {object}  map[string]interface{}
 // @Failure      404  {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /placements/{id} [get]
 func (h *PlacementHandler) GetPlacement(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
 	placement, err := h.service.GetByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -105,6 +112,8 @@ func (h *PlacementHandler) GetPlacement(c *gin.Context) {
 // @Success      201        {object}  map[string]interface{}
 // @Failure      400        {object}  map[string]interface{}
 // @Failure      403        {object}  map[string]interface{}
+// @Failure      404        {object}  map[string]interface{}
+// @Failure      409        {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /placements [post]
 func (h *PlacementHandler) CreatePlacement(c *gin.Context) {
@@ -124,7 +133,7 @@ func (h *PlacementHandler) CreatePlacement(c *gin.Context) {
 
 	placement, err := h.service.Create(companyID, dto)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": dtos.ToPlacementResponse(placement)})
@@ -146,23 +155,21 @@ func (h *PlacementHandler) CreatePlacement(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /placements/{id} [put]
 func (h *PlacementHandler) UpdatePlacement(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
 
+	// companyID = 0 → SuperAdmin (el service omite la validación de tenant)
+	var companyID uint
 	if !authctx.IsSuperAdmin(c) {
-		placement, err := h.service.GetByID(uint(id))
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Placement not found"})
-			return
-		}
-		companyID, ok := authctx.CompanyID(c)
+		cid, ok := authctx.CompanyID(c)
 		if !ok {
 			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
 			return
 		}
-		if placement.CompanyID != companyID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			return
-		}
+		companyID = cid
 	}
 
 	var dto dtos.UpdatePlacementDTO
@@ -170,9 +177,10 @@ func (h *PlacementHandler) UpdatePlacement(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	updated, err := h.service.Update(uint(id), dto)
+
+	updated, err := h.service.Update(uint(id), companyID, dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": dtos.ToPlacementResponse(updated)})
@@ -186,33 +194,31 @@ func (h *PlacementHandler) UpdatePlacement(c *gin.Context) {
 // @Produce      json
 // @Param        id   path      int  true  "ID de la colocación"
 // @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
 // @Failure      403  {object}  map[string]interface{}
 // @Failure      404  {object}  map[string]interface{}
 // @Failure      500  {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /placements/{id} [delete]
 func (h *PlacementHandler) DeletePlacement(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
 
+	var companyID uint
 	if !authctx.IsSuperAdmin(c) {
-		placement, err := h.service.GetByID(uint(id))
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Placement not found"})
-			return
-		}
-		companyID, ok := authctx.CompanyID(c)
+		cid, ok := authctx.CompanyID(c)
 		if !ok {
 			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
 			return
 		}
-		if placement.CompanyID != companyID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			return
-		}
+		companyID = cid
 	}
 
-	if err := h.service.Delete(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.Delete(uint(id), companyID); err != nil {
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Placement deleted"})

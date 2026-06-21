@@ -12,6 +12,7 @@ import (
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/apperr"
 
 	"github.com/geomark27/loom-go/pkg/helpers"
 	"github.com/gin-gonic/gin"
@@ -47,9 +48,9 @@ func (h *PublicHandler) GetCompanyBySlug(c *gin.Context) {
 	company, err := h.publicService.GetCompanyBySlug(slug)
 	if err != nil {
 		h.logger.Error("Failed to get company by slug: %v", err)
-		c.JSON(http.StatusNotFound, gin.H{
+		c.JSON(apperr.StatusCode(err), gin.H{
 			"status":  "error",
-			"message": "Company not found",
+			"message": err.Error(),
 		})
 		return
 	}
@@ -76,7 +77,7 @@ func (h *PublicHandler) GetPublishedJobsByCompany(c *gin.Context) {
 	jobs, err := h.publicService.GetPublishedJobsByCompanySlug(slug)
 	if err != nil {
 		h.logger.Error("Failed to get jobs for company %s: %v", slug, err)
-		c.JSON(http.StatusNotFound, gin.H{
+		c.JSON(apperr.StatusCode(err), gin.H{
 			"status":  "error",
 			"message": err.Error(),
 		})
@@ -115,7 +116,7 @@ func (h *PublicHandler) GetPublishedJobByID(c *gin.Context) {
 	job, err := h.publicService.GetPublishedJobByID(uint(id))
 	if err != nil {
 		h.logger.Error("Failed to get published job %d: %v", id, err)
-		c.JSON(http.StatusNotFound, gin.H{
+		c.JSON(apperr.StatusCode(err), gin.H{
 			"status":  "error",
 			"message": err.Error(),
 		})
@@ -283,26 +284,16 @@ func (h *PublicHandler) ApplyToJob(c *gin.Context) {
 	if err != nil {
 		h.logger.Error("Failed to apply to job %d: %v", jobID, err)
 
-		// Check for specific error types
-		errMsg := err.Error()
-		if strings.Contains(errMsg, "already applied") {
-			c.JSON(http.StatusConflict, gin.H{
-				"status":  "error",
-				"message": errMsg,
-			})
-			return
+		// apperr clasifica el código; los errores internos (no-apperr) caen en 500
+		// con mensaje genérico para no filtrar detalles al público.
+		code := apperr.StatusCode(err)
+		message := err.Error()
+		if code == http.StatusInternalServerError {
+			message = "Failed to submit application"
 		}
-		if strings.Contains(errMsg, "not found") || strings.Contains(errMsg, "not accepting") {
-			c.JSON(http.StatusNotFound, gin.H{
-				"status":  "error",
-				"message": errMsg,
-			})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(code, gin.H{
 			"status":  "error",
-			"message": "Failed to submit application",
+			"message": message,
 		})
 		return
 	}

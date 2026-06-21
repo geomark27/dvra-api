@@ -7,6 +7,7 @@ import (
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/apperr"
 
 	"github.com/geomark27/loom-go/pkg/helpers"
 	"github.com/gin-gonic/gin"
@@ -68,10 +69,14 @@ func (h *JobHandler) GetJobs(c *gin.Context) {
 }
 
 func (h *JobHandler) GetJob(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID"})
+		return
+	}
 	job, err := h.jobService.GetJobByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -112,20 +117,24 @@ func (h *JobHandler) CreateJob(c *gin.Context) {
 
 	job, err := h.jobService.CreateJob(dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": dtos.ToJobResponse(job)})
 }
 
 func (h *JobHandler) UpdateJob(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID"})
+		return
+	}
 
 	// Validar que el job pertenece a la empresa del usuario
 	if !authctx.IsSuperAdmin(c) {
 		job, err := h.jobService.GetJobByID(uint(id))
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
+			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 			return
 		}
 		companyIDVal, exists := c.Get("company_id")
@@ -147,20 +156,24 @@ func (h *JobHandler) UpdateJob(c *gin.Context) {
 	}
 	updatedJob, err := h.jobService.UpdateJob(uint(id), dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": dtos.ToJobResponse(updatedJob)})
 }
 
 func (h *JobHandler) DeleteJob(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID"})
+		return
+	}
 
 	// Validar que el job pertenece a la empresa del usuario
 	if !authctx.IsSuperAdmin(c) {
 		job, err := h.jobService.GetJobByID(uint(id))
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
+			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 			return
 		}
 		companyIDVal, exists := c.Get("company_id")
@@ -176,7 +189,7 @@ func (h *JobHandler) DeleteJob(c *gin.Context) {
 	}
 
 	if err := h.jobService.DeleteJob(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Job deleted"})
@@ -196,13 +209,17 @@ func (h *JobHandler) DeleteJob(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /jobs/{id}/publish [patch]
 func (h *JobHandler) PublishJob(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID"})
+		return
+	}
 
 	// Validar que el job pertenece a la empresa del usuario
 	if !authctx.IsSuperAdmin(c) {
 		job, err := h.jobService.GetJobByID(uint(id))
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
+			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 			return
 		}
 		companyIDVal, exists := c.Get("company_id")
@@ -219,7 +236,7 @@ func (h *JobHandler) PublishJob(c *gin.Context) {
 
 	job, err := h.jobService.PublishJob(uint(id))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Job published", "data": dtos.ToJobResponse(job)})
@@ -239,13 +256,17 @@ func (h *JobHandler) PublishJob(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /jobs/{id}/close [patch]
 func (h *JobHandler) CloseJob(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID"})
+		return
+	}
 
 	// Validar que el job pertenece a la empresa del usuario
 	if !authctx.IsSuperAdmin(c) {
 		job, err := h.jobService.GetJobByID(uint(id))
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
+			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 			return
 		}
 		companyIDVal, exists := c.Get("company_id")
@@ -262,7 +283,7 @@ func (h *JobHandler) CloseJob(c *gin.Context) {
 
 	job, err := h.jobService.CloseJob(uint(id))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Job closed", "data": dtos.ToJobResponse(job)})

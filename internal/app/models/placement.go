@@ -10,11 +10,11 @@ import "time"
 type Placement struct {
 	BaseModel
 
-	CompanyID        uint  `gorm:"not null;index:idx_placements_company_status,priority:1" json:"company_id"` // tenant (firma staffing)
-	StaffingClientID uint  `gorm:"not null;index" json:"staffing_client_id"`                                  // cliente final
-	CandidateID      uint  `gorm:"not null;index" json:"candidate_id"`
-	JobID            *uint `gorm:"index" json:"job_id,omitempty"`         // vacante origen (copiada de la Application)
-	ApplicationID    *uint `gorm:"index" json:"application_id,omitempty"` // Application de origen
+	CompanyID        uint `gorm:"not null;index:idx_placements_company_status,priority:1" json:"company_id"` // tenant (firma staffing)
+	StaffingClientID uint `gorm:"not null;index" json:"staffing_client_id"`                                  // cliente final
+	CandidateID      uint `gorm:"not null;index" json:"candidate_id"`
+	JobID            uint `gorm:"not null;index" json:"job_id"`         // vacante origen (copiada de la Application)
+	ApplicationID    uint `gorm:"not null;index" json:"application_id"` // Application de origen (única por placement)
 
 	// Contrato
 	StartDate    *time.Time `json:"start_date,omitempty"`

@@ -1,11 +1,10 @@
 package services
 
 import (
-	"fmt"
-
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
+	"dvra-api/internal/shared/apperr"
 )
 
 // UserService define el contrato del servicio de usuarios
@@ -47,7 +46,7 @@ func (s *userService) GetUserByID(id uint) (*models.User, error) {
 		return nil, err
 	}
 	if user == nil {
-		return nil, fmt.Errorf("user not found")
+		return nil, apperr.NotFound("user not found")
 	}
 	return user, nil
 }
@@ -66,7 +65,7 @@ func (s *userService) CreateUser(dto dtos.CreateUserDTO) (*models.User, error) {
 		return nil, err
 	}
 	if existingUser != nil {
-		return nil, fmt.Errorf("email already exists")
+		return nil, apperr.Conflict("email already exists")
 	}
 
 	user := &models.User{
@@ -90,7 +89,7 @@ func (s *userService) UpdateUser(id uint, dto dtos.UpdateUserDTO) (*models.User,
 		return nil, err
 	}
 	if existingUser == nil {
-		return nil, fmt.Errorf("user not found")
+		return nil, apperr.NotFound("user not found")
 	}
 
 	// Actualizar campos si se proporcionan
@@ -119,7 +118,7 @@ func (s *userService) DeleteUser(id uint) error {
 		return err
 	}
 	if existingUser == nil {
-		return fmt.Errorf("user not found")
+		return apperr.NotFound("user not found")
 	}
 
 	return s.userRepo.Delete(id)

@@ -8,6 +8,7 @@ import (
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
+	"dvra-api/internal/shared/apperr"
 )
 
 // CompanyService define el contrato del servicio de companies
@@ -43,7 +44,7 @@ func (s *companyService) GetCompanyByID(id uint) (*models.Company, error) {
 		return nil, err
 	}
 	if company == nil {
-		return nil, fmt.Errorf("company not found")
+		return nil, apperr.NotFound("company not found")
 	}
 	return company, nil
 }
@@ -54,7 +55,7 @@ func (s *companyService) GetCompanyBySlug(slug string) (*models.Company, error) 
 		return nil, err
 	}
 	if company == nil {
-		return nil, fmt.Errorf("company not found")
+		return nil, apperr.NotFound("company not found")
 	}
 	return company, nil
 }
@@ -66,7 +67,7 @@ func (s *companyService) CreateCompany(dto dtos.CreateCompanyDTO) (*models.Compa
 		return nil, err
 	}
 	if existing != nil {
-		return nil, fmt.Errorf("company with slug '%s' already exists", dto.Slug)
+		return nil, apperr.Conflict(fmt.Sprintf("company with slug '%s' already exists", dto.Slug))
 	}
 
 	company := &models.Company{
@@ -119,7 +120,7 @@ func (s *companyService) UpdateCompany(id uint, dto dtos.UpdateCompanyDTO) (*mod
 		return nil, err
 	}
 	if company == nil {
-		return nil, fmt.Errorf("company not found")
+		return nil, apperr.NotFound("company not found")
 	}
 
 	// Actualizar solo campos proporcionados
@@ -151,7 +152,7 @@ func (s *companyService) DeleteCompany(id uint) error {
 		return err
 	}
 	if company == nil {
-		return fmt.Errorf("company not found")
+		return apperr.NotFound("company not found")
 	}
 
 	return s.companyRepo.Delete(id)

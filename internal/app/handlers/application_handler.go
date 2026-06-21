@@ -7,6 +7,7 @@ import (
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/apperr"
 
 	"github.com/geomark27/loom-go/pkg/helpers"
 	"github.com/gin-gonic/gin"
@@ -62,10 +63,14 @@ func (h *ApplicationHandler) GetApplications(c *gin.Context) {
 }
 
 func (h *ApplicationHandler) GetApplication(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		return
+	}
 	application, err := h.applicationService.GetApplicationByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -119,20 +124,24 @@ func (h *ApplicationHandler) CreateApplication(c *gin.Context) {
 
 	application, err := h.applicationService.CreateApplication(dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": application})
 }
 
 func (h *ApplicationHandler) UpdateApplication(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		return
+	}
 
 	// Validar que la application pertenece a la empresa del usuario
 	if !authctx.IsSuperAdmin(c) {
 		application, err := h.applicationService.GetApplicationByID(uint(id))
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
+			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 			return
 		}
 		companyIDVal, exists := c.Get("company_id")
@@ -154,20 +163,24 @@ func (h *ApplicationHandler) UpdateApplication(c *gin.Context) {
 	}
 	application, err := h.applicationService.UpdateApplication(uint(id), dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": application})
 }
 
 func (h *ApplicationHandler) DeleteApplication(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		return
+	}
 
 	// Validar que la application pertenece a la empresa del usuario
 	if !authctx.IsSuperAdmin(c) {
 		application, err := h.applicationService.GetApplicationByID(uint(id))
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
+			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 			return
 		}
 		companyIDVal, exists := c.Get("company_id")
@@ -183,7 +196,7 @@ func (h *ApplicationHandler) DeleteApplication(c *gin.Context) {
 	}
 
 	if err := h.applicationService.DeleteApplication(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Application deleted"})
@@ -249,13 +262,17 @@ func (h *ApplicationHandler) GetApplicationsByStage(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /applications/{id}/move [patch]
 func (h *ApplicationHandler) MoveApplication(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		return
+	}
 
 	// Validate access
 	if !authctx.IsSuperAdmin(c) {
 		application, err := h.applicationService.GetApplicationByID(uint(id))
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
+			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 			return
 		}
 		companyIDVal, exists := c.Get("company_id")
@@ -278,7 +295,7 @@ func (h *ApplicationHandler) MoveApplication(c *gin.Context) {
 
 	application, err := h.applicationService.MoveToStage(uint(id), dto.Stage)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": application})
@@ -300,13 +317,17 @@ func (h *ApplicationHandler) MoveApplication(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /applications/{id}/rate [patch]
 func (h *ApplicationHandler) RateApplication(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		return
+	}
 
 	// Validate access
 	if !authctx.IsSuperAdmin(c) {
 		application, err := h.applicationService.GetApplicationByID(uint(id))
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
+			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 			return
 		}
 		companyIDVal, exists := c.Get("company_id")
@@ -329,7 +350,7 @@ func (h *ApplicationHandler) RateApplication(c *gin.Context) {
 
 	application, err := h.applicationService.RateApplication(uint(id), dto.Rating)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": application})

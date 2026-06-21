@@ -1,11 +1,10 @@
 package services
 
 import (
-	"fmt"
-
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
+	"dvra-api/internal/shared/apperr"
 )
 
 // StaffingClientService define el contrato del servicio de clientes finales
@@ -13,8 +12,9 @@ type StaffingClientService interface {
 	GetByCompanyID(companyID uint, filters dtos.StaffingClientFilters) ([]models.StaffingClient, error)
 	GetByID(id uint) (*models.StaffingClient, error)
 	Create(dto dtos.CreateStaffingClientDTO) (*models.StaffingClient, error)
-	Update(id uint, dto dtos.UpdateStaffingClientDTO) (*models.StaffingClient, error)
-	Delete(id uint) error
+	// companyID = 0 omite la validación de tenant (SuperAdmin).
+	Update(id, companyID uint, dto dtos.UpdateStaffingClientDTO) (*models.StaffingClient, error)
+	Delete(id, companyID uint) error
 }
 
 type staffingClientService struct {
@@ -36,19 +36,18 @@ func (s *staffingClientService) GetByID(id uint) (*models.StaffingClient, error)
 		return nil, err
 	}
 	if client == nil {
-		return nil, fmt.Errorf("staffing client not found")
+		return nil, apperr.NotFound("staffing client not found")
 	}
 	return client, nil
 }
 
 func (s *staffingClientService) Create(dto dtos.CreateStaffingClientDTO) (*models.StaffingClient, error) {
-	// El slug debe ser único dentro de la empresa
 	exists, err := s.repo.ExistsBySlug(dto.CompanyID, dto.Slug, 0)
 	if err != nil {
 		return nil, err
 	}
 	if exists {
-		return nil, fmt.Errorf("a staffing client with this slug already exists")
+		return nil, apperr.Conflict("a staffing client with this slug already exists")
 	}
 
 	status := dto.Status
@@ -72,13 +71,16 @@ func (s *staffingClientService) Create(dto dtos.CreateStaffingClientDTO) (*model
 	return s.repo.Create(client)
 }
 
-func (s *staffingClientService) Update(id uint, dto dtos.UpdateStaffingClientDTO) (*models.StaffingClient, error) {
+func (s *staffingClientService) Update(id, companyID uint, dto dtos.UpdateStaffingClientDTO) (*models.StaffingClient, error) {
 	client, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
 	if client == nil {
-		return nil, fmt.Errorf("staffing client not found")
+		return nil, apperr.NotFound("staffing client not found")
+	}
+	if companyID > 0 && client.CompanyID != companyID {
+		return nil, apperr.Forbidden("access denied")
 	}
 
 	if dto.Slug != nil && *dto.Slug != client.Slug {
@@ -87,7 +89,7 @@ func (s *staffingClientService) Update(id uint, dto dtos.UpdateStaffingClientDTO
 			return nil, err
 		}
 		if exists {
-			return nil, fmt.Errorf("a staffing client with this slug already exists")
+			return nil, apperr.Conflict("a staffing client with this slug already exists")
 		}
 		client.Slug = *dto.Slug
 	}
@@ -122,13 +124,16 @@ func (s *staffingClientService) Update(id uint, dto dtos.UpdateStaffingClientDTO
 	return s.repo.Update(client)
 }
 
-func (s *staffingClientService) Delete(id uint) error {
+func (s *staffingClientService) Delete(id, companyID uint) error {
 	client, err := s.repo.GetByID(id)
 	if err != nil {
 		return err
 	}
 	if client == nil {
-		return fmt.Errorf("staffing client not found")
+		return apperr.NotFound("staffing client not found")
+	}
+	if companyID > 0 && client.CompanyID != companyID {
+		return apperr.Forbidden("access denied")
 	}
 	return s.repo.Delete(id)
 }

@@ -7,6 +7,7 @@ import (
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
+	"dvra-api/internal/shared/apperr"
 )
 
 // PublicService define el contrato del servicio público para Career Page
@@ -51,7 +52,7 @@ func (s *publicService) GetCompanyBySlug(slug string) (*models.Company, error) {
 		return nil, err
 	}
 	if company == nil {
-		return nil, fmt.Errorf("company not found")
+		return nil, apperr.NotFound("company not found")
 	}
 	return company, nil
 }
@@ -64,7 +65,7 @@ func (s *publicService) GetPublishedJobsByCompanySlug(slug string) ([]models.Job
 		return nil, err
 	}
 	if company == nil {
-		return nil, fmt.Errorf("company not found")
+		return nil, apperr.NotFound("company not found")
 	}
 
 	// Obtener jobs activos de la empresa
@@ -83,12 +84,12 @@ func (s *publicService) GetPublishedJobByID(jobID uint) (*models.Job, error) {
 		return nil, err
 	}
 	if job == nil {
-		return nil, fmt.Errorf("job not found")
+		return nil, apperr.NotFound("job not found")
 	}
 
 	// Verificar que el job esté publicado
 	if job.Status != "published" {
-		return nil, fmt.Errorf("job is not available")
+		return nil, apperr.NotFound("job is not available")
 	}
 
 	return job, nil
@@ -102,10 +103,10 @@ func (s *publicService) ApplyToJob(jobID uint, dto dtos.PublicApplicationDTO) (*
 		return nil, err
 	}
 	if job == nil {
-		return nil, fmt.Errorf("job not found")
+		return nil, apperr.NotFound("job not found")
 	}
 	if job.Status != "published" {
-		return nil, fmt.Errorf("job is not accepting applications")
+		return nil, apperr.NotFound("job is not accepting applications")
 	}
 
 	// 2. Buscar o crear candidato
@@ -164,7 +165,7 @@ func (s *publicService) ApplyToJob(jobID uint, dto dtos.PublicApplicationDTO) (*
 		return nil, err
 	}
 	if existingApp != nil {
-		return nil, fmt.Errorf("you have already applied to this job")
+		return nil, apperr.Conflict("you have already applied to this job")
 	}
 
 	// 4. Crear la aplicación

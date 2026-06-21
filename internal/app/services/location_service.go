@@ -4,7 +4,7 @@ import (
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
-	"errors"
+	"dvra-api/internal/shared/apperr"
 	"strings"
 )
 
@@ -79,7 +79,7 @@ func (s *locationService) GetRegionByID(id uint, includeSubregions bool) (*dtos.
 		return nil, err
 	}
 	if region == nil {
-		return nil, errors.New("region not found")
+		return nil, apperr.NotFound("region not found")
 	}
 
 	dto := s.regionToDTO(region, includeSubregions)
@@ -106,7 +106,7 @@ func (s *locationService) UpdateRegion(id uint, dto dtos.UpdateRegionDTO) (*dtos
 		return nil, err
 	}
 	if region == nil {
-		return nil, errors.New("region not found")
+		return nil, apperr.NotFound("region not found")
 	}
 
 	if dto.Name != nil {
@@ -149,7 +149,7 @@ func (s *locationService) GetSubregionByID(id uint, includeCountries bool) (*dto
 		return nil, err
 	}
 	if subregion == nil {
-		return nil, errors.New("subregion not found")
+		return nil, apperr.NotFound("subregion not found")
 	}
 
 	dto := s.subregionToDTO(subregion, includeCountries, true)
@@ -160,7 +160,7 @@ func (s *locationService) CreateSubregion(dto dtos.CreateSubregionDTO) (*dtos.Su
 	// Verificar que la región existe
 	region, err := s.repo.GetRegionByID(dto.RegionID, false)
 	if err != nil || region == nil {
-		return nil, errors.New("region not found")
+		return nil, apperr.NotFound("region not found")
 	}
 
 	subregion := &models.Subregion{
@@ -185,7 +185,7 @@ func (s *locationService) UpdateSubregion(id uint, dto dtos.UpdateSubregionDTO) 
 		return nil, err
 	}
 	if subregion == nil {
-		return nil, errors.New("subregion not found")
+		return nil, apperr.NotFound("subregion not found")
 	}
 
 	if dto.Name != nil {
@@ -232,7 +232,7 @@ func (s *locationService) GetCountryByID(id uint, includeStates bool) (*dtos.Cou
 		return nil, err
 	}
 	if country == nil {
-		return nil, errors.New("country not found")
+		return nil, apperr.NotFound("country not found")
 	}
 
 	dto := s.countryToDTO(country, includeStates, true)
@@ -245,7 +245,7 @@ func (s *locationService) GetCountryByISO(iso string) (*dtos.CountryDTO, error) 
 		return nil, err
 	}
 	if country == nil {
-		return nil, errors.New("country not found")
+		return nil, apperr.NotFound("country not found")
 	}
 
 	dto := s.countryToDTO(country, false, true)
@@ -279,7 +279,7 @@ func (s *locationService) UpdateCountry(id uint, dto dtos.UpdateCountryDTO) (*dt
 		return nil, err
 	}
 	if country == nil {
-		return nil, errors.New("country not found")
+		return nil, apperr.NotFound("country not found")
 	}
 
 	if dto.Name != nil {
@@ -341,7 +341,7 @@ func (s *locationService) GetStateByID(id uint, includeCities bool) (*dtos.State
 		return nil, err
 	}
 	if state == nil {
-		return nil, errors.New("state not found")
+		return nil, apperr.NotFound("state not found")
 	}
 
 	dto := s.stateToDTO(state, includeCities, true)
@@ -371,7 +371,7 @@ func (s *locationService) UpdateState(id uint, dto dtos.UpdateStateDTO) (*dtos.S
 		return nil, err
 	}
 	if state == nil {
-		return nil, errors.New("state not found")
+		return nil, apperr.NotFound("state not found")
 	}
 
 	if dto.Name != nil {
@@ -421,7 +421,7 @@ func (s *locationService) GetCityByID(id uint) (*dtos.CityDTO, error) {
 		return nil, err
 	}
 	if city == nil {
-		return nil, errors.New("city not found")
+		return nil, apperr.NotFound("city not found")
 	}
 
 	dto := s.cityToDTO(city, true)
@@ -450,7 +450,7 @@ func (s *locationService) UpdateCity(id uint, dto dtos.UpdateCityDTO) (*dtos.Cit
 		return nil, err
 	}
 	if city == nil {
-		return nil, errors.New("city not found")
+		return nil, apperr.NotFound("city not found")
 	}
 
 	if dto.Name != nil {

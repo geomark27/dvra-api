@@ -3,6 +3,7 @@ package handlers
 import (
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/apperr"
 	"net/http"
 	"strconv"
 
@@ -30,7 +31,7 @@ func (h *LocationHandler) GetAllRegions(c *gin.Context) {
 
 	regions, err := h.service.GetAllRegions(includeSubregions)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -55,7 +56,7 @@ func (h *LocationHandler) GetRegionByID(c *gin.Context) {
 
 	region, err := h.service.GetRegionByID(uint(id), includeSubregions)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -77,7 +78,7 @@ func (h *LocationHandler) CreateRegion(c *gin.Context) {
 
 	region, err := h.service.CreateRegion(dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -106,7 +107,7 @@ func (h *LocationHandler) UpdateRegion(c *gin.Context) {
 
 	region, err := h.service.UpdateRegion(uint(id), dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -127,7 +128,7 @@ func (h *LocationHandler) DeleteRegion(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteRegion(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -154,7 +155,7 @@ func (h *LocationHandler) GetAllSubregions(c *gin.Context) {
 
 	subregions, err := h.service.GetAllSubregions(regionID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -179,7 +180,7 @@ func (h *LocationHandler) GetSubregionByID(c *gin.Context) {
 
 	subregion, err := h.service.GetSubregionByID(uint(id), includeCountries)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -201,7 +202,7 @@ func (h *LocationHandler) CreateSubregion(c *gin.Context) {
 
 	subregion, err := h.service.CreateSubregion(dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -230,7 +231,7 @@ func (h *LocationHandler) UpdateSubregion(c *gin.Context) {
 
 	subregion, err := h.service.UpdateSubregion(uint(id), dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -251,7 +252,7 @@ func (h *LocationHandler) DeleteSubregion(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteSubregion(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -281,7 +282,7 @@ func (h *LocationHandler) GetAllCountries(c *gin.Context) {
 
 	countries, err := h.service.GetAllCountries(subregionID, search)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -306,7 +307,7 @@ func (h *LocationHandler) GetCountryByID(c *gin.Context) {
 
 	country, err := h.service.GetCountryByID(uint(id), includeStates)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -324,7 +325,7 @@ func (h *LocationHandler) GetCountryByISO(c *gin.Context) {
 
 	country, err := h.service.GetCountryByISO(iso)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -346,7 +347,7 @@ func (h *LocationHandler) CreateCountry(c *gin.Context) {
 
 	country, err := h.service.CreateCountry(dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -375,7 +376,7 @@ func (h *LocationHandler) UpdateCountry(c *gin.Context) {
 
 	country, err := h.service.UpdateCountry(uint(id), dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -396,7 +397,7 @@ func (h *LocationHandler) DeleteCountry(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteCountry(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -426,7 +427,7 @@ func (h *LocationHandler) GetAllStates(c *gin.Context) {
 
 	states, err := h.service.GetAllStates(countryID, search)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -451,7 +452,7 @@ func (h *LocationHandler) GetStateByID(c *gin.Context) {
 
 	state, err := h.service.GetStateByID(uint(id), includeCities)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -473,7 +474,7 @@ func (h *LocationHandler) CreateState(c *gin.Context) {
 
 	state, err := h.service.CreateState(dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -502,7 +503,7 @@ func (h *LocationHandler) UpdateState(c *gin.Context) {
 
 	state, err := h.service.UpdateState(uint(id), dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -523,7 +524,7 @@ func (h *LocationHandler) DeleteState(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteState(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -553,7 +554,7 @@ func (h *LocationHandler) GetAllCities(c *gin.Context) {
 
 	cities, err := h.service.GetAllCities(stateID, search)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -575,7 +576,7 @@ func (h *LocationHandler) GetCityByID(c *gin.Context) {
 
 	city, err := h.service.GetCityByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -597,7 +598,7 @@ func (h *LocationHandler) CreateCity(c *gin.Context) {
 
 	city, err := h.service.CreateCity(dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -626,7 +627,7 @@ func (h *LocationHandler) UpdateCity(c *gin.Context) {
 
 	city, err := h.service.UpdateCity(uint(id), dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -647,7 +648,7 @@ func (h *LocationHandler) DeleteCity(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteCity(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -671,7 +672,7 @@ func (h *LocationHandler) GetLocationHierarchy(c *gin.Context) {
 
 	country, err := h.service.GetLocationHierarchy(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -693,7 +694,7 @@ func (h *LocationHandler) SearchLocations(c *gin.Context) {
 
 	results, err := h.service.SearchLocations(search)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 

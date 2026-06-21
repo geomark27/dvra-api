@@ -6,6 +6,7 @@ import (
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
+	"dvra-api/internal/shared/apperr"
 )
 
 // CandidateService define el contrato del servicio de candidates
@@ -36,7 +37,7 @@ func (s *candidateService) GetCandidateByID(id uint) (*models.Candidate, error) 
 		return nil, err
 	}
 	if candidate == nil {
-		return nil, fmt.Errorf("candidate not found")
+		return nil, apperr.NotFound("candidate not found")
 	}
 	return candidate, nil
 }
@@ -52,7 +53,7 @@ func (s *candidateService) CreateCandidate(dto dtos.CreateCandidateDTO) (*models
 		return nil, err
 	}
 	if existing != nil {
-		return nil, fmt.Errorf("candidate with email '%s' already exists in this company", dto.Email)
+		return nil, apperr.Conflict(fmt.Sprintf("candidate with email '%s' already exists in this company", dto.Email))
 	}
 
 	candidate := &models.Candidate{
@@ -76,7 +77,7 @@ func (s *candidateService) UpdateCandidate(id uint, dto dtos.UpdateCandidateDTO)
 		return nil, err
 	}
 	if candidate == nil {
-		return nil, fmt.Errorf("candidate not found")
+		return nil, apperr.NotFound("candidate not found")
 	}
 
 	if dto.Email != nil {
@@ -113,7 +114,7 @@ func (s *candidateService) DeleteCandidate(id uint) error {
 		return err
 	}
 	if candidate == nil {
-		return fmt.Errorf("candidate not found")
+		return apperr.NotFound("candidate not found")
 	}
 	return s.candidateRepo.Delete(id)
 }

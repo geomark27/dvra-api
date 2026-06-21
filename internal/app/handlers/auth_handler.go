@@ -5,6 +5,7 @@ import (
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/apperr"
 	"dvra-api/internal/shared/authctx"
 	"dvra-api/internal/shared/permissions"
 
@@ -41,11 +42,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	response, err := h.service.Register(&dto)
 	if err != nil {
-		if err == services.ErrEmailExists {
-			c.JSON(http.StatusConflict, gin.H{"error": "Email already exists"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -72,11 +69,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	response, err := h.service.LoginWithCompanies(&dto)
 	if err != nil {
-		if err == services.ErrInvalidCredentials {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -129,7 +122,7 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 
 	response, err := h.service.GetMe(userID.(uint))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -156,11 +149,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 
 	err := h.service.ChangePassword(userID.(uint), &dto)
 	if err != nil {
-		if err == services.ErrInvalidPassword {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid old password"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -194,11 +183,7 @@ func (h *AuthHandler) RegisterCompany(c *gin.Context) {
 
 	response, err := h.service.RegisterCompany(&dto)
 	if err != nil {
-		if err == services.ErrEmailExists {
-			c.JSON(http.StatusConflict, gin.H{"error": "Email already exists"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -220,11 +205,7 @@ func (h *AuthHandler) SwitchCompany(c *gin.Context) {
 
 	response, err := h.service.SwitchCompany(userID.(uint), &dto)
 	if err != nil {
-		if err == services.ErrNoMembership {
-			c.JSON(http.StatusForbidden, gin.H{"error": "You do not belong to this company"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -240,7 +221,7 @@ func (h *AuthHandler) GetMyCompanies(c *gin.Context) {
 
 	companies, err := h.service.GetUserCompanies(userID.(uint))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 

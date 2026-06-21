@@ -4,7 +4,7 @@ import (
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
-	"errors"
+	"dvra-api/internal/shared/apperr"
 )
 
 type SystemValueService interface {
@@ -52,7 +52,7 @@ func (s *systemValueService) Create(dto dtos.CreateSystemValueDTO) (*models.Syst
 func (s *systemValueService) Update(id uint, dto dtos.UpdateSystemValueDTO) (*models.SystemValue, error) {
 	value, err := s.repo.GetByID(id)
 	if err != nil {
-		return nil, errors.New("system value not found")
+		return nil, apperr.NotFound("system value not found")
 	}
 
 	value.Label = dto.Label

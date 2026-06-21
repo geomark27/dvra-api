@@ -3,6 +3,7 @@ package handlers
 import (
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/apperr"
 	"net/http"
 	"strconv"
 
@@ -100,7 +101,7 @@ func (h *SystemValueHandler) Create(c *gin.Context) {
 
 	value, err := h.service.Create(dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -127,7 +128,7 @@ func (h *SystemValueHandler) Update(c *gin.Context) {
 
 	value, err := h.service.Update(uint(id), dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -147,7 +148,7 @@ func (h *SystemValueHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.service.Delete(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 

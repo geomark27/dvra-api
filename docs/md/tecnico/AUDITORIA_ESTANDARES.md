@@ -1,7 +1,8 @@
 # Auditoría de Estándares — Dvra API
 
 > Evaluación del estado del código frente a `ESTANDARES_DESARROLLO.md`.
-> **Fecha:** 2026-06-14 · **Base:** commit del fundamento de estándares (`b1b3a96`).
+> **Fecha original:** 2026-06-14 · **Base:** commit del fundamento de estándares (`b1b3a96`).
+> **Actualización:** 2026-06-20 — correcciones al módulo staffing/placement (ver bitácora).
 > Esta es una foto en el tiempo; los números pueden cambiar con cada release.
 
 ---
@@ -10,10 +11,11 @@
 
 | Área | Estado | Nota |
 |---|---|---|
-| Formato / análisis estático | 🟢 | `gofmt`, `vet`, `golangci-lint`, build y tests pasan (baseline verde tras esta iniciativa) |
+| Formato / análisis estático | 🟢 | `gofmt`, `vet`, `golangci-lint`, build y tests pasan |
 | Arquitectura por capas | 🟢 | Consistente: handler → service → repository con interfaces y DI manual |
-| Convenciones documentadas | 🟢 | `BaseModel`, `authctx`, matriz de permisos, bitácora |
-| **Aislamiento multi-tenant** | 🔴 | Correcto en concepto pero **manual y repetido**; alto riesgo de fuga por omisión |
+| Convenciones documentadas | 🟢 | `BaseModel`, `authctx`, `apperr`, matriz de permisos, bitácora |
+| Códigos HTTP en errores | 🟢 | Módulo staffing/placement corregido (2026-06-20); patrón `apperr` disponible para el resto |
+| **Aislamiento multi-tenant** | 🔴 | Correcto en concepto pero **manual y repetido**; alto riesgo de fuga por omisión. Módulo staffing mejorado (companyID en service), pero el resto sigue sin centralizar |
 | **Validación de entrada** | 🟠 | 47 tags `validate` en 6 DTOs **no se ejecutan**; reglas silenciosamente inactivas |
 | **Cobertura de tests** | 🟠 | 1 archivo de test para 16 services |
 | Consistencia (contexto/repos) | 🟡 | Dos patrones coexisten (acceso a contexto y a BD) |
@@ -65,10 +67,11 @@
 
 ## Lo que ya cumple bien (no tocar)
 - **Arquitectura por capas** consistente en todos los módulos, con interfaces y DI.
-- **Convenciones explícitas**: `BaseModel`, `authctx`, matriz de permisos por módulo, separación DTO/modelo.
+- **Convenciones explícitas**: `BaseModel`, `authctx`, `apperr`, matriz de permisos por módulo, separación DTO/modelo.
 - **Multi-tenant conceptualmente correcto**: el modelo de datos y el diseño son sólidos; falta *centralizar* la aplicación (C1), no rediseñar.
 - **Bitácora** de decisiones al día.
 - **Enforcement automático** recién incorporado (linter + CI + pre-commit) con baseline verde.
+- **Módulo staffing/placement** corregido (2026-06-20): errores HTTP correctos, sin doble lookup, sin código muerto en repositorios, modelos de BD con constraints reales, DTOs sin filtración de modelos crudos.
 
 ---
 

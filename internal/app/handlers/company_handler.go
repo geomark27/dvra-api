@@ -7,6 +7,7 @@ import (
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/apperr"
 
 	"github.com/geomark27/loom-go/pkg/helpers"
 	"github.com/gin-gonic/gin"
@@ -119,12 +120,8 @@ func (h *CompanyHandler) GetCompany(c *gin.Context) {
 
 	company, err := h.companyService.GetCompanyByID(uint(id))
 	if err != nil {
-		if err.Error() == "company not found" {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Company not found"})
-			return
-		}
 		h.logger.Error("Failed to get company", "error", err, "company_id", id)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve company"})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -162,7 +159,7 @@ func (h *CompanyHandler) CreateCompany(c *gin.Context) {
 	company, err := h.companyService.CreateCompany(dto)
 	if err != nil {
 		h.logger.Error("Failed to create company", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -208,12 +205,8 @@ func (h *CompanyHandler) UpdateCompany(c *gin.Context) {
 
 	company, err := h.companyService.UpdateCompany(uint(id), dto)
 	if err != nil {
-		if err.Error() == "company not found" {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Company not found"})
-			return
-		}
 		h.logger.Error("Failed to update company", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update company"})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -239,12 +232,8 @@ func (h *CompanyHandler) DeleteCompany(c *gin.Context) {
 	}
 
 	if err := h.companyService.DeleteCompany(uint(id)); err != nil {
-		if err.Error() == "company not found" {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Company not found"})
-			return
-		}
 		h.logger.Error("Failed to delete company", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete company"})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 

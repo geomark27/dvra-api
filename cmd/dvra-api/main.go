@@ -11,7 +11,7 @@ import (
 )
 
 // @title           DVRA API
-// @version         1.2.0
+// @version         1.4.0
 // @description     API para sistema de reclutamiento y gestión de candidatos
 // @termsOfService  http://swagger.io/terms/
 

@@ -9,6 +9,7 @@ import (
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/apperr"
 
 	"github.com/geomark27/loom-go/pkg/helpers"
 	"github.com/gin-gonic/gin"
@@ -55,10 +56,14 @@ func (h *CandidateHandler) GetCandidates(c *gin.Context) {
 }
 
 func (h *CandidateHandler) GetCandidate(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid candidate ID"})
+		return
+	}
 	candidate, err := h.candidateService.GetCandidateByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -100,7 +105,7 @@ func (h *CandidateHandler) CreateCandidate(c *gin.Context) {
 
 	candidate, err := h.candidateService.CreateCandidate(dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	candidateDTO := dtos.ToCandidateResponse(candidate)
@@ -108,13 +113,17 @@ func (h *CandidateHandler) CreateCandidate(c *gin.Context) {
 }
 
 func (h *CandidateHandler) UpdateCandidate(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid candidate ID"})
+		return
+	}
 
 	// Validar que el candidate pertenece a la empresa del usuario
 	if !authctx.IsSuperAdmin(c) {
 		candidate, err := h.candidateService.GetCandidateByID(uint(id))
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Candidate not found"})
+			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 			return
 		}
 		companyIDVal, exists := c.Get("company_id")
@@ -136,7 +145,7 @@ func (h *CandidateHandler) UpdateCandidate(c *gin.Context) {
 	}
 	candidate, err := h.candidateService.UpdateCandidate(uint(id), dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	candidateDTO := dtos.ToCandidateResponse(candidate)
@@ -144,13 +153,17 @@ func (h *CandidateHandler) UpdateCandidate(c *gin.Context) {
 }
 
 func (h *CandidateHandler) DeleteCandidate(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid candidate ID"})
+		return
+	}
 
 	// Validar que el candidate pertenece a la empresa del usuario
 	if !authctx.IsSuperAdmin(c) {
 		candidate, err := h.candidateService.GetCandidateByID(uint(id))
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Candidate not found"})
+			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 			return
 		}
 		companyIDVal, exists := c.Get("company_id")
@@ -166,7 +179,7 @@ func (h *CandidateHandler) DeleteCandidate(c *gin.Context) {
 	}
 
 	if err := h.candidateService.DeleteCandidate(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Candidate deleted"})
@@ -188,13 +201,17 @@ func (h *CandidateHandler) DeleteCandidate(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /candidates/{id}/upload-resume [post]
 func (h *CandidateHandler) UploadResume(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid candidate ID"})
+		return
+	}
 
 	// Validate access
 	if !authctx.IsSuperAdmin(c) {
 		candidate, err := h.candidateService.GetCandidateByID(uint(id))
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Candidate not found"})
+			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 			return
 		}
 		companyIDVal, exists := c.Get("company_id")
