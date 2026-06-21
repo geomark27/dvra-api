@@ -6,6 +6,37 @@
 
 ---
 
+## 2026-06-20 — Piloto monolito modular + hexagonal-lite: módulo `staffing`
+
+**Contexto:** primer paso del ADR-001. Se migró `staffing` de la organización por capa técnica (`internal/app/{models,dtos,...}`) a un módulo autocontenido en `internal/modules/staffing/`, como piloto para validar el patrón antes de replicarlo.
+
+**Estructura resultante:**
+- `domain/ports.go` — interfaces (StaffingClientRepository, PlacementRepository) + el puerto cross-módulo `ApplicationFinder`/`HiredApplication`. No importa gin ni gorm.
+- `service/` — casos de uso (StaffingClientService, PlacementService). Dependen solo de `domain`, `models`, `apperr`.
+- `repository/` — adaptadores GORM con `*gorm.DB` **inyectado** (ya no usan el global `database.DB` → testeables).
+- `transport/` — handlers HTTP + `routes.go` (adaptador de entrada).
+- `module.go` — wiring del módulo + `RegisterRoutes`.
+
+**Decisiones clave (del ADR-001):**
+- **Modelos compartidos.** `models.StaffingClient`/`Placement` y los DTOs **se quedaron** en `internal/app/{models,dtos}`. Separarlos provocaría ciclos de importación por las relaciones GORM mutuas (`StaffingClient↔Job`, `Placement↔Application`). Es la 1ª pasada pragmática.
+- **Puertos definidos por el consumidor para romper ciclos cross-módulo:**
+  - `staffing` necesita datos de `Application` (recruitment) → define `domain.ApplicationFinder`; el composition root (`platform/server/wiring_adapters.go`) inyecta un adaptador sobre `ApplicationRepository`.
+  - `recruitment` (job_service) necesita validar un cliente final → ahora depende de una interfaz local `staffingClientReader`; el composition root le pasa `staffingModule.ClientRepo`.
+  - Resultado: **ningún módulo importa al otro**. Grafo acíclico verificado por `go build`. El único consumidor de `internal/modules/staffing` es el composition root.
+- **Acople aceptado:** el módulo importa `app/services` solo por el *tipo* `PlanService` (entitlement, para `RequireFeature`). Podría convertirse en otro puerto del consumidor más adelante.
+
+**Archivos eliminados** (reemplazados por el módulo): `services/{staffing_client,placement}_service.go`, `repositories/{staffing_client,placement}_repository.go`, `handlers/{staffing_client,placement}_handler.go`.
+
+**Verificado:** `go build ./...`, `go vet ./...`, `gofmt -l` (limpio), `go test ./...` y build de ambos binarios pasan. Sin cambio de comportamiento ni de contrato de API (mismas rutas, mismos códigos).
+
+**Pendientes / siguiente paso (del ADR-001):**
+- [ ] Tests del módulo `staffing` (ya es trivial: repos con `db` inyectado + services mockeables vía puertos).
+- [ ] Replicar el patrón al resto de dominios (recruitment, iam, billing, platform), uno por uno con build/tests verdes.
+
+**Referencia vigente:** `docs/md/tecnico/ADR-001-arquitectura-modular.md`, `internal/modules/staffing/`
+
+---
+
 ## 2026-06-20 — Unificación de `auth` y `plan` a `apperr`
 
 **Contexto:** en la pasada anterior se dejaron `auth` y `plan` fuera porque ya mapeaban códigos correctamente vía errores centinela + ladders `if err == services.ErrX`. Para uniformar el manejo de errores en TODO el dominio, ahora también usan `apperr`.

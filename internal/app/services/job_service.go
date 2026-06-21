@@ -22,12 +22,19 @@ type JobService interface {
 	DeleteJob(id uint) error
 }
 
-type jobService struct {
-	jobRepo      repositories.JobRepository
-	staffingRepo repositories.StaffingClientRepository
+// staffingClientReader es lo que job necesita de staffing: validar que un cliente
+// final exista. Puerto definido por el consumidor — el composition root inyecta la
+// implementación del módulo staffing, así recruitment no importa staffing (evita ciclo).
+type staffingClientReader interface {
+	GetByID(id uint) (*models.StaffingClient, error)
 }
 
-func NewJobService(jobRepo repositories.JobRepository, staffingRepo repositories.StaffingClientRepository) JobService {
+type jobService struct {
+	jobRepo      repositories.JobRepository
+	staffingRepo staffingClientReader
+}
+
+func NewJobService(jobRepo repositories.JobRepository, staffingRepo staffingClientReader) JobService {
 	return &jobService{jobRepo: jobRepo, staffingRepo: staffingRepo}
 }
 

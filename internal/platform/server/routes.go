@@ -3,6 +3,7 @@ package server
 import (
 	"dvra-api/internal/app/handlers"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/modules/staffing"
 	"dvra-api/internal/platform/config"
 	"dvra-api/internal/shared/middleware"
 	"dvra-api/internal/shared/permissions"
@@ -25,8 +26,7 @@ func registerRoutes(
 	candidateHandler *handlers.CandidateHandler,
 	applicationHandler *handlers.ApplicationHandler,
 	jobHandler *handlers.JobHandler,
-	staffingClientHandler *handlers.StaffingClientHandler,
-	placementHandler *handlers.PlacementHandler,
+	staffingModule *staffing.Module,
 	planHandler *handlers.PlanHandler,
 	planService services.PlanService,
 	systemValueHandler *handlers.SystemValueHandler,
@@ -142,27 +142,9 @@ func registerRoutes(
 				jobs.PATCH("/:id/close", middleware.RequirePermission(permissions.JobsClose), jobHandler.CloseJob)
 			}
 
-			// Staffing client routes (gateado por plan vía RequireFeature)
-			staffingClients := protected.Group("/staffing-clients")
-			staffingClients.Use(middleware.RequireFeature(planService, "staffing"))
-			{
-				staffingClients.GET("", middleware.RequirePermission(permissions.StaffingClientsView), staffingClientHandler.GetStaffingClients)
-				staffingClients.POST("", middleware.RequirePermission(permissions.StaffingClientsCreate), staffingClientHandler.CreateStaffingClient)
-				staffingClients.GET("/:id", middleware.RequirePermission(permissions.StaffingClientsView), staffingClientHandler.GetStaffingClient)
-				staffingClients.PUT("/:id", middleware.RequirePermission(permissions.StaffingClientsUpdate), staffingClientHandler.UpdateStaffingClient)
-				staffingClients.DELETE("/:id", middleware.RequirePermission(permissions.StaffingClientsDelete), staffingClientHandler.DeleteStaffingClient)
-			}
-
-			// Placement routes (gateado por plan vía RequireFeature)
-			placements := protected.Group("/placements")
-			placements.Use(middleware.RequireFeature(planService, "staffing"))
-			{
-				placements.GET("", middleware.RequirePermission(permissions.PlacementsView), placementHandler.GetPlacements)
-				placements.POST("", middleware.RequirePermission(permissions.PlacementsCreate), placementHandler.CreatePlacement)
-				placements.GET("/:id", middleware.RequirePermission(permissions.PlacementsView), placementHandler.GetPlacement)
-				placements.PUT("/:id", middleware.RequirePermission(permissions.PlacementsUpdate), placementHandler.UpdatePlacement)
-				placements.DELETE("/:id", middleware.RequirePermission(permissions.PlacementsDelete), placementHandler.DeletePlacement)
-			}
+			// Módulo staffing (monolito modular, ver ADR-001): registra sus propias
+			// rutas (/staffing-clients y /placements), gateadas por plan internamente.
+			staffingModule.RegisterRoutes(protected, planService)
 
 			// Candidate routes
 			candidates := protected.Group("/candidates")

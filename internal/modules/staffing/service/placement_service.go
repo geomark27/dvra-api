@@ -1,48 +1,34 @@
-package services
+package service
 
 import (
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
-	"dvra-api/internal/app/repositories"
+	"dvra-api/internal/modules/staffing/domain"
 	"dvra-api/internal/shared/apperr"
 )
 
-// PlacementService define el contrato del servicio de colocaciones
-type PlacementService interface {
-	GetByCompanyID(companyID uint, filters dtos.PlacementFilters) ([]models.Placement, error)
-	GetByID(id uint) (*models.Placement, error)
-	Create(companyID uint, dto dtos.CreatePlacementDTO) (*models.Placement, error)
-	// companyID = 0 omite la validación de tenant (SuperAdmin).
-	Update(id, companyID uint, dto dtos.UpdatePlacementDTO) (*models.Placement, error)
-	Delete(id, companyID uint) error
+// PlacementService orquesta la colocación de candidatos en clientes finales.
+// Depende de tres puertos: el repo de colocaciones, el de clientes finales, y
+// ApplicationFinder (puerto cross-módulo hacia recruitment).
+type PlacementService struct {
+	repo    domain.PlacementRepository
+	clients domain.StaffingClientRepository
+	apps    domain.ApplicationFinder
 }
 
-type placementService struct {
-	repo            repositories.PlacementRepository
-	applicationRepo repositories.ApplicationRepository
-	staffingRepo    repositories.StaffingClientRepository
-}
-
-// NewPlacementService crea una nueva instancia de PlacementService.
-// Recibe los repos de application y staffing client para validar la integridad
-// cruzada (mismo tenant) al crear una colocación.
 func NewPlacementService(
-	repo repositories.PlacementRepository,
-	applicationRepo repositories.ApplicationRepository,
-	staffingRepo repositories.StaffingClientRepository,
-) PlacementService {
-	return &placementService{
-		repo:            repo,
-		applicationRepo: applicationRepo,
-		staffingRepo:    staffingRepo,
-	}
+	repo domain.PlacementRepository,
+	clients domain.StaffingClientRepository,
+	apps domain.ApplicationFinder,
+) *PlacementService {
+	return &PlacementService{repo: repo, clients: clients, apps: apps}
 }
 
-func (s *placementService) GetByCompanyID(companyID uint, filters dtos.PlacementFilters) ([]models.Placement, error) {
+func (s *PlacementService) GetByCompanyID(companyID uint, filters dtos.PlacementFilters) ([]models.Placement, error) {
 	return s.repo.GetByCompanyID(companyID, filters)
 }
 
-func (s *placementService) GetByID(id uint) (*models.Placement, error) {
+func (s *PlacementService) GetByID(id uint) (*models.Placement, error) {
 	placement, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -60,9 +46,8 @@ func (s *placementService) GetByID(id uint) (*models.Placement, error) {
 //  4. no existe ya un placement para esa application.
 //
 // CandidateID y JobID se copian de la application (no se confía en el body).
-func (s *placementService) Create(companyID uint, dto dtos.CreatePlacementDTO) (*models.Placement, error) {
-	// 1. Cliente final del mismo tenant
-	client, err := s.staffingRepo.GetByID(dto.StaffingClientID)
+func (s *PlacementService) Create(companyID uint, dto dtos.CreatePlacementDTO) (*models.Placement, error) {
+	client, err := s.clients.GetByID(dto.StaffingClientID)
 	if err != nil {
 		return nil, err
 	}
@@ -73,24 +58,20 @@ func (s *placementService) Create(companyID uint, dto dtos.CreatePlacementDTO) (
 		return nil, apperr.Forbidden("staffing client does not belong to your company")
 	}
 
-	// 2. Application del mismo tenant
-	application, err := s.applicationRepo.GetByID(dto.ApplicationID)
+	app, err := s.apps.FindByID(dto.ApplicationID)
 	if err != nil {
 		return nil, err
 	}
-	if application == nil {
+	if app == nil {
 		return nil, apperr.NotFound("application not found")
 	}
-	if application.CompanyID != companyID {
+	if app.CompanyID != companyID {
 		return nil, apperr.Forbidden("application does not belong to your company")
 	}
-
-	// 3. Solo se coloca a candidatos contratados
-	if application.Stage != "hired" {
+	if app.Stage != "hired" {
 		return nil, apperr.BadRequest("application must be in 'hired' stage to create a placement")
 	}
 
-	// 4. Evitar placements duplicados para la misma application
 	exists, err := s.repo.ExistsByApplicationID(dto.ApplicationID)
 	if err != nil {
 		return nil, err
@@ -107,9 +88,9 @@ func (s *placementService) Create(companyID uint, dto dtos.CreatePlacementDTO) (
 	placement := &models.Placement{
 		CompanyID:        companyID,
 		StaffingClientID: dto.StaffingClientID,
-		CandidateID:      application.CandidateID,
-		JobID:            application.JobID,
-		ApplicationID:    application.ID,
+		CandidateID:      app.CandidateID,
+		JobID:            app.JobID,
+		ApplicationID:    app.ID,
 		StartDate:        dto.StartDate,
 		EndDate:          dto.EndDate,
 		ContractType:     dto.ContractType,
@@ -124,7 +105,8 @@ func (s *placementService) Create(companyID uint, dto dtos.CreatePlacementDTO) (
 	return s.repo.Create(placement)
 }
 
-func (s *placementService) Update(id, companyID uint, dto dtos.UpdatePlacementDTO) (*models.Placement, error) {
+// companyID = 0 omite la validación de tenant (SuperAdmin).
+func (s *PlacementService) Update(id, companyID uint, dto dtos.UpdatePlacementDTO) (*models.Placement, error) {
 	placement, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -170,7 +152,7 @@ func (s *placementService) Update(id, companyID uint, dto dtos.UpdatePlacementDT
 	return s.repo.Update(placement)
 }
 
-func (s *placementService) Delete(id, companyID uint) error {
+func (s *PlacementService) Delete(id, companyID uint) error {
 	placement, err := s.repo.GetByID(id)
 	if err != nil {
 		return err

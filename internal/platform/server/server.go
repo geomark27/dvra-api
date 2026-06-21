@@ -8,6 +8,7 @@ import (
 	"dvra-api/internal/app/handlers"
 	"dvra-api/internal/app/repositories"
 	"dvra-api/internal/app/services"
+	"dvra-api/internal/modules/staffing"
 	"dvra-api/internal/platform/config"
 
 	_ "dvra-api/docs" // Importar documentación generada por Swagger
@@ -41,8 +42,6 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	candidateRepo := repositories.NewCandidateRepository()
 	applicationRepo := repositories.NewApplicationRepository()
 	jobRepo := repositories.NewJobRepository()
-	staffingClientRepo := repositories.NewStaffingClientRepository()
-	placementRepo := repositories.NewPlacementRepository()
 	planRepo := repositories.NewPlanRepository(db)
 	systemValueRepo := repositories.NewSystemValueRepository(db)
 	locationRepo := repositories.NewLocationRepository()
@@ -56,9 +55,11 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	membershipService := services.NewMembershipService(membershipRepo)
 	candidateService := services.NewCandidateService(candidateRepo)
 	applicationService := services.NewApplicationService(applicationRepo)
-	jobService := services.NewJobService(jobRepo, staffingClientRepo)
-	staffingClientService := services.NewStaffingClientService(staffingClientRepo)
-	placementService := services.NewPlacementService(placementRepo, applicationRepo, staffingClientRepo)
+	// Módulo staffing (monolito modular + hexagonal-lite, ver ADR-001). Se cablea
+	// con db + un adaptador del repo de applications hacia su puerto ApplicationFinder.
+	staffingModule := staffing.New(db, staffingAppFinder{repo: applicationRepo})
+
+	jobService := services.NewJobService(jobRepo, staffingModule.ClientRepo)
 	planService := services.NewPlanService(planRepo, companyRepo, db)
 	systemValueService := services.NewSystemValueService(systemValueRepo)
 	locationService := services.NewLocationService(locationRepo)
@@ -75,8 +76,6 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	candidateHandler := handlers.NewCandidateHandler(candidateService)
 	applicationHandler := handlers.NewApplicationHandler(applicationService)
 	jobHandler := handlers.NewJobHandler(jobService)
-	staffingClientHandler := handlers.NewStaffingClientHandler(staffingClientService)
-	placementHandler := handlers.NewPlacementHandler(placementService)
 	planHandler := handlers.NewPlanHandler(planService)
 	systemValueHandler := handlers.NewSystemValueHandler(systemValueService)
 	locationHandler := handlers.NewLocationHandler(locationService)
@@ -91,7 +90,7 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 	router.Use(corsMiddleware(cfg.CorsAllowedOrigins))
 
 	// Register routes (passing config for dynamic Swagger host)
-	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, staffingClientHandler, placementHandler, planHandler, planService, systemValueHandler, locationHandler, dashboardHandler, publicHandler, platformSettingsHandler, jwtService, cfg)
+	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, staffingModule, planHandler, planService, systemValueHandler, locationHandler, dashboardHandler, publicHandler, platformSettingsHandler, jwtService, cfg)
 
 	// Configure HTTP server
 	httpServer := &http.Server{

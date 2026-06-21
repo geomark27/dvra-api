@@ -1,36 +1,28 @@
-package services
+// Package service contiene los casos de uso del módulo staffing.
+// Depende solo de domain (puertos), models y apperr — nunca de gin ni gorm.
+package service
 
 import (
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
-	"dvra-api/internal/app/repositories"
+	"dvra-api/internal/modules/staffing/domain"
 	"dvra-api/internal/shared/apperr"
 )
 
-// StaffingClientService define el contrato del servicio de clientes finales
-type StaffingClientService interface {
-	GetByCompanyID(companyID uint, filters dtos.StaffingClientFilters) ([]models.StaffingClient, error)
-	GetByID(id uint) (*models.StaffingClient, error)
-	Create(dto dtos.CreateStaffingClientDTO) (*models.StaffingClient, error)
-	// companyID = 0 omite la validación de tenant (SuperAdmin).
-	Update(id, companyID uint, dto dtos.UpdateStaffingClientDTO) (*models.StaffingClient, error)
-	Delete(id, companyID uint) error
+// StaffingClientService orquesta la lógica de clientes finales.
+type StaffingClientService struct {
+	repo domain.StaffingClientRepository
 }
 
-type staffingClientService struct {
-	repo repositories.StaffingClientRepository
+func NewStaffingClientService(repo domain.StaffingClientRepository) *StaffingClientService {
+	return &StaffingClientService{repo: repo}
 }
 
-// NewStaffingClientService crea una nueva instancia de StaffingClientService
-func NewStaffingClientService(repo repositories.StaffingClientRepository) StaffingClientService {
-	return &staffingClientService{repo: repo}
-}
-
-func (s *staffingClientService) GetByCompanyID(companyID uint, filters dtos.StaffingClientFilters) ([]models.StaffingClient, error) {
+func (s *StaffingClientService) GetByCompanyID(companyID uint, filters dtos.StaffingClientFilters) ([]models.StaffingClient, error) {
 	return s.repo.GetByCompanyID(companyID, filters.Status)
 }
 
-func (s *staffingClientService) GetByID(id uint) (*models.StaffingClient, error) {
+func (s *StaffingClientService) GetByID(id uint) (*models.StaffingClient, error) {
 	client, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -41,7 +33,7 @@ func (s *staffingClientService) GetByID(id uint) (*models.StaffingClient, error)
 	return client, nil
 }
 
-func (s *staffingClientService) Create(dto dtos.CreateStaffingClientDTO) (*models.StaffingClient, error) {
+func (s *StaffingClientService) Create(dto dtos.CreateStaffingClientDTO) (*models.StaffingClient, error) {
 	exists, err := s.repo.ExistsBySlug(dto.CompanyID, dto.Slug, 0)
 	if err != nil {
 		return nil, err
@@ -71,7 +63,8 @@ func (s *staffingClientService) Create(dto dtos.CreateStaffingClientDTO) (*model
 	return s.repo.Create(client)
 }
 
-func (s *staffingClientService) Update(id, companyID uint, dto dtos.UpdateStaffingClientDTO) (*models.StaffingClient, error) {
+// companyID = 0 omite la validación de tenant (SuperAdmin).
+func (s *StaffingClientService) Update(id, companyID uint, dto dtos.UpdateStaffingClientDTO) (*models.StaffingClient, error) {
 	client, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -124,7 +117,7 @@ func (s *staffingClientService) Update(id, companyID uint, dto dtos.UpdateStaffi
 	return s.repo.Update(client)
 }
 
-func (s *staffingClientService) Delete(id, companyID uint) error {
+func (s *StaffingClientService) Delete(id, companyID uint) error {
 	client, err := s.repo.GetByID(id)
 	if err != nil {
 		return err

@@ -1,34 +1,25 @@
-package repositories
+package repository
 
 import (
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
-	"dvra-api/internal/database"
+	"dvra-api/internal/modules/staffing/domain"
 
 	"gorm.io/gorm"
 )
 
-// PlacementRepository define el contrato del repositorio de colocaciones
-type PlacementRepository interface {
-	GetByCompanyID(companyID uint, filters dtos.PlacementFilters) ([]models.Placement, error)
-	GetByID(id uint) (*models.Placement, error)
-	ExistsByApplicationID(applicationID uint) (bool, error)
-	Create(placement *models.Placement) (*models.Placement, error)
-	Update(placement *models.Placement) (*models.Placement, error)
-	Delete(id uint) error
+type placementRepository struct {
+	db *gorm.DB
 }
 
-// placementRepository es la implementación con GORM
-type placementRepository struct{}
-
-// NewPlacementRepository crea una nueva instancia de PlacementRepository
-func NewPlacementRepository() PlacementRepository {
-	return &placementRepository{}
+// NewPlacementRepository devuelve la implementación del puerto.
+func NewPlacementRepository(db *gorm.DB) domain.PlacementRepository {
+	return &placementRepository{db: db}
 }
 
 func (r *placementRepository) GetByCompanyID(companyID uint, filters dtos.PlacementFilters) ([]models.Placement, error) {
 	var placements []models.Placement
-	query := database.DB.
+	query := r.db.
 		Preload("StaffingClient").
 		Preload("Candidate").
 		Where("company_id = ?", companyID)
@@ -51,7 +42,7 @@ func (r *placementRepository) GetByCompanyID(companyID uint, filters dtos.Placem
 
 func (r *placementRepository) GetByID(id uint) (*models.Placement, error) {
 	var placement models.Placement
-	if err := database.DB.
+	if err := r.db.
 		Preload("StaffingClient").
 		Preload("Candidate").
 		Preload("Job").
@@ -67,7 +58,7 @@ func (r *placementRepository) GetByID(id uint) (*models.Placement, error) {
 
 func (r *placementRepository) ExistsByApplicationID(applicationID uint) (bool, error) {
 	var count int64
-	if err := database.DB.Model(&models.Placement{}).
+	if err := r.db.Model(&models.Placement{}).
 		Where("application_id = ?", applicationID).
 		Count(&count).Error; err != nil {
 		return false, err
@@ -76,19 +67,19 @@ func (r *placementRepository) ExistsByApplicationID(applicationID uint) (bool, e
 }
 
 func (r *placementRepository) Create(placement *models.Placement) (*models.Placement, error) {
-	if err := database.DB.Create(placement).Error; err != nil {
+	if err := r.db.Create(placement).Error; err != nil {
 		return nil, err
 	}
 	return placement, nil
 }
 
 func (r *placementRepository) Update(placement *models.Placement) (*models.Placement, error) {
-	if err := database.DB.Save(placement).Error; err != nil {
+	if err := r.db.Save(placement).Error; err != nil {
 		return nil, err
 	}
 	return placement, nil
 }
 
 func (r *placementRepository) Delete(id uint) error {
-	return database.DB.Delete(&models.Placement{}, id).Error
+	return r.db.Delete(&models.Placement{}, id).Error
 }

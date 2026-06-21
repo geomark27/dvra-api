@@ -1,11 +1,13 @@
-package handlers
+// Package transport es el adaptador de entrada HTTP del módulo staffing:
+// handlers Gin + registro de rutas. Mapea HTTP <-> casos de uso (service).
+package transport
 
 import (
 	"net/http"
 	"strconv"
 
 	"dvra-api/internal/app/dtos"
-	"dvra-api/internal/app/services"
+	"dvra-api/internal/modules/staffing/service"
 	"dvra-api/internal/shared/apperr"
 	"dvra-api/internal/shared/authctx"
 
@@ -13,23 +15,20 @@ import (
 )
 
 type StaffingClientHandler struct {
-	service services.StaffingClientService
+	svc *service.StaffingClientService
 }
 
-func NewStaffingClientHandler(service services.StaffingClientService) *StaffingClientHandler {
-	return &StaffingClientHandler{service: service}
+func NewStaffingClientHandler(svc *service.StaffingClientService) *StaffingClientHandler {
+	return &StaffingClientHandler{svc: svc}
 }
 
 // GetStaffingClients godoc
 // @Summary      Listar clientes finales (staffing)
 // @Description  Lista los clientes finales de la empresa del token. Requiere un plan con el módulo staffing habilitado.
 // @Tags         StaffingClients
-// @Accept       json
 // @Produce      json
 // @Param        status  query     string  false  "Filtrar por estado (active, inactive, prospect)"
 // @Success      200     {object}  map[string]interface{}
-// @Failure      403     {object}  map[string]interface{}
-// @Failure      500     {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /staffing-clients [get]
 func (h *StaffingClientHandler) GetStaffingClients(c *gin.Context) {
@@ -39,14 +38,13 @@ func (h *StaffingClientHandler) GetStaffingClients(c *gin.Context) {
 		return
 	}
 
-	// SuperAdmin no tiene empresa propia: este listado es por tenant.
 	companyID, ok := authctx.CompanyID(c)
 	if !ok {
 		c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
 		return
 	}
 
-	clients, err := h.service.GetByCompanyID(companyID, filters)
+	clients, err := h.svc.GetByCompanyID(companyID, filters)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve staffing clients"})
 		return
@@ -62,15 +60,10 @@ func (h *StaffingClientHandler) GetStaffingClients(c *gin.Context) {
 
 // GetStaffingClient godoc
 // @Summary      Obtener cliente final
-// @Description  Obtiene un cliente final por ID (validado contra la empresa del token)
 // @Tags         StaffingClients
-// @Accept       json
 // @Produce      json
 // @Param        id   path      int  true  "ID del cliente final"
 // @Success      200  {object}  map[string]interface{}
-// @Failure      400  {object}  map[string]interface{}
-// @Failure      403  {object}  map[string]interface{}
-// @Failure      404  {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /staffing-clients/{id} [get]
 func (h *StaffingClientHandler) GetStaffingClient(c *gin.Context) {
@@ -80,7 +73,7 @@ func (h *StaffingClientHandler) GetStaffingClient(c *gin.Context) {
 		return
 	}
 
-	client, err := h.service.GetByID(uint(id))
+	client, err := h.svc.GetByID(uint(id))
 	if err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
@@ -103,16 +96,11 @@ func (h *StaffingClientHandler) GetStaffingClient(c *gin.Context) {
 
 // CreateStaffingClient godoc
 // @Summary      Crear cliente final
-// @Description  Crea un cliente final dentro de la empresa del token (company_id se fuerza del token). Requiere plan con módulo staffing.
 // @Tags         StaffingClients
 // @Accept       json
 // @Produce      json
 // @Param        staffing_client  body      dtos.CreateStaffingClientDTO  true  "Datos del cliente final"
 // @Success      201              {object}  map[string]interface{}
-// @Failure      400              {object}  map[string]interface{}
-// @Failure      403              {object}  map[string]interface{}
-// @Failure      409              {object}  map[string]interface{}
-// @Failure      500              {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /staffing-clients [post]
 func (h *StaffingClientHandler) CreateStaffingClient(c *gin.Context) {
@@ -122,7 +110,6 @@ func (h *StaffingClientHandler) CreateStaffingClient(c *gin.Context) {
 		return
 	}
 
-	// Forzar company_id del token para usuarios normales (evita escalada cross-tenant)
 	if !authctx.IsSuperAdmin(c) {
 		companyID, ok := authctx.CompanyID(c)
 		if !ok {
@@ -136,7 +123,7 @@ func (h *StaffingClientHandler) CreateStaffingClient(c *gin.Context) {
 		return
 	}
 
-	client, err := h.service.Create(dto)
+	client, err := h.svc.Create(dto)
 	if err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
@@ -146,18 +133,12 @@ func (h *StaffingClientHandler) CreateStaffingClient(c *gin.Context) {
 
 // UpdateStaffingClient godoc
 // @Summary      Actualizar cliente final
-// @Description  Actualiza parcialmente un cliente final (validado contra la empresa del token)
 // @Tags         StaffingClients
 // @Accept       json
 // @Produce      json
 // @Param        id               path      int                           true  "ID del cliente final"
 // @Param        staffing_client  body      dtos.UpdateStaffingClientDTO  true  "Campos a actualizar"
 // @Success      200              {object}  map[string]interface{}
-// @Failure      400              {object}  map[string]interface{}
-// @Failure      403              {object}  map[string]interface{}
-// @Failure      404              {object}  map[string]interface{}
-// @Failure      409              {object}  map[string]interface{}
-// @Failure      500              {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /staffing-clients/{id} [put]
 func (h *StaffingClientHandler) UpdateStaffingClient(c *gin.Context) {
@@ -167,7 +148,6 @@ func (h *StaffingClientHandler) UpdateStaffingClient(c *gin.Context) {
 		return
 	}
 
-	// companyID = 0 → SuperAdmin (el service omite la validación de tenant)
 	var companyID uint
 	if !authctx.IsSuperAdmin(c) {
 		cid, ok := authctx.CompanyID(c)
@@ -184,7 +164,7 @@ func (h *StaffingClientHandler) UpdateStaffingClient(c *gin.Context) {
 		return
 	}
 
-	updated, err := h.service.Update(uint(id), companyID, dto)
+	updated, err := h.svc.Update(uint(id), companyID, dto)
 	if err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
@@ -194,16 +174,10 @@ func (h *StaffingClientHandler) UpdateStaffingClient(c *gin.Context) {
 
 // DeleteStaffingClient godoc
 // @Summary      Eliminar cliente final
-// @Description  Elimina (soft delete) un cliente final (validado contra la empresa del token)
 // @Tags         StaffingClients
-// @Accept       json
 // @Produce      json
 // @Param        id   path      int  true  "ID del cliente final"
 // @Success      200  {object}  map[string]interface{}
-// @Failure      400  {object}  map[string]interface{}
-// @Failure      403  {object}  map[string]interface{}
-// @Failure      404  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /staffing-clients/{id} [delete]
 func (h *StaffingClientHandler) DeleteStaffingClient(c *gin.Context) {
@@ -223,7 +197,7 @@ func (h *StaffingClientHandler) DeleteStaffingClient(c *gin.Context) {
 		companyID = cid
 	}
 
-	if err := h.service.Delete(uint(id), companyID); err != nil {
+	if err := h.svc.Delete(uint(id), companyID); err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
