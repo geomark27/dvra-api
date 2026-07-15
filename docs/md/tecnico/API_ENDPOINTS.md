@@ -1,5 +1,11 @@
 # API Endpoints - Dvra ATS
 
+> **Documento histórico:** conserva ejemplos del contrato v1.3.0 y no debe
+> usarse como especificación del API actual. La fuente vigente es Swagger en
+> `/swagger/index.html`; la separación landlord/tenant se describe en
+> [ADR-002](ADR-002-contextos-landlord-tenant.md) y el flujo landlord en
+> [FLUJO_SUPERADMIN.md](FLUJO_SUPERADMIN.md).
+
 > **Versión:** v1.3.0  
 > **Base URL:** `http://localhost:8001/api/v1`  
 > **Última Actualización:** 21 de Diciembre, 2025

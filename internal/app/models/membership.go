@@ -8,8 +8,8 @@ import (
 type Membership struct {
 	BaseModel
 
-	UserID    uint       `gorm:"not null;index:idx_user_company,priority:1" json:"user_id"`
-	CompanyID *uint      `gorm:"index:idx_user_company,priority:2" json:"company_id,omitempty"` // Nullable para SuperAdmin
+	UserID    uint       `gorm:"not null;uniqueIndex:idx_user_company,priority:1,where:deleted_at IS NULL" json:"user_id"`
+	CompanyID uint       `gorm:"not null;uniqueIndex:idx_user_company,priority:2,where:deleted_at IS NULL" json:"company_id"`
 	Role      string     `gorm:"type:varchar(50);not null" json:"role"`
 	Status    string     `gorm:"type:varchar(50);default:'active'" json:"status"`
 	IsDefault bool       `gorm:"default:false" json:"is_default"`

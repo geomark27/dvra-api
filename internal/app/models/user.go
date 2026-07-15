@@ -8,15 +8,16 @@ import (
 type User struct {
 	BaseModel
 
-	Email         string       `gorm:"type:varchar(255);uniqueIndex;not null" json:"email"`
-	PasswordHash  string       `gorm:"type:varchar(255);not null" json:"-"`
-	FirstName     string       `gorm:"type:varchar(100)" json:"first_name"`
-	LastName      string       `gorm:"type:varchar(100)" json:"last_name"`
-	AvatarURL     string       `gorm:"type:text" json:"avatar_url,omitempty"`
-	EmailVerified bool         `gorm:"default:false" json:"email_verified"`
-	LastLoginAt   *time.Time   `gorm:"type:timestamp" json:"last_login_at,omitempty"`
-	IsActive      bool         `gorm:"not null;default:true" json:"is_active"`
-	Memberships   []Membership `gorm:"foreignKey:UserID" json:"memberships,omitempty"`
+	Email              string              `gorm:"type:varchar(255);uniqueIndex;not null" json:"email"`
+	PasswordHash       string              `gorm:"type:varchar(255);not null" json:"-"`
+	FirstName          string              `gorm:"type:varchar(100)" json:"first_name"`
+	LastName           string              `gorm:"type:varchar(100)" json:"last_name"`
+	AvatarURL          string              `gorm:"type:text" json:"avatar_url,omitempty"`
+	EmailVerified      bool                `gorm:"default:false" json:"email_verified"`
+	LastLoginAt        *time.Time          `gorm:"type:timestamp" json:"last_login_at,omitempty"`
+	IsActive           bool                `gorm:"not null;default:true" json:"is_active"`
+	Memberships        []Membership        `gorm:"foreignKey:UserID" json:"memberships,omitempty"`
+	PlatformMembership *PlatformMembership `gorm:"foreignKey:UserID" json:"platform_membership,omitempty"`
 }
 
 // TableName specifies the table name for User model

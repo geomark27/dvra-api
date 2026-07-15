@@ -12,8 +12,6 @@ const (
 func init() {
 	grant(RoleAdmin, CandidatesView, CandidatesCreate, CandidatesUpdate, CandidatesDelete, CandidatesUploadResume)
 	grant(RoleRecruiter, CandidatesView, CandidatesCreate, CandidatesUpdate, CandidatesUploadResume)
-	// hiring_manager y user ven candidatos solo de sus jobs (matriz 3.2) —
-	// el filtrado por job asignado es a nivel de recurso, pendiente (RN-MEMB-007).
+	// El repositorio limita al hiring_manager a candidatos vinculados con sus jobs.
 	grant(RoleHiringManager, CandidatesView)
-	grant(RoleUser, CandidatesView)
 }

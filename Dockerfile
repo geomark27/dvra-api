@@ -33,6 +33,9 @@ COPY --from=builder /app/dvra-api .
 # Copiar archivos necesarios
 COPY --from=builder /app/docs ./docs
 
+# Directorio persistente para la implementación filesystem de storage
+RUN mkdir -p /app/uploads && chown -R appuser:appuser /app/uploads
+
 # Cambiar al usuario no-root
 USER appuser
 

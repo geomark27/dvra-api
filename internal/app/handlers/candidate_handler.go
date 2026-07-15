@@ -2,10 +2,9 @@ package handlers
 
 import (
 	"dvra-api/internal/shared/authctx"
-	"fmt"
+	"mime"
 	"net/http"
 	"strconv"
-	"time"
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
@@ -26,27 +25,14 @@ func NewCandidateHandler(candidateService services.CandidateService) *CandidateH
 
 func (h *CandidateHandler) GetCandidates(c *gin.Context) {
 
-	// SuperAdmin puede ver todos los candidates
-	if authctx.IsSuperAdmin(c) {
-		candidates, err := h.candidateService.GetAllCandidates()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve candidates"})
-			return
-		}
-		candidatesDTO := dtos.ToCandidateResponseList(candidates)
-		c.JSON(http.StatusOK, gin.H{"status": "success", "data": gin.H{"candidates": candidatesDTO, "count": len(candidatesDTO)}})
-		return
-	}
-
-	// Usuarios normales solo ven candidates de su empresa
-	companyIDVal, exists := c.Get("company_id")
-	if !exists {
+	// Tenant users only see candidates allowed by their active membership.
+	scope, ok := authctx.TenantScope(c)
+	if !ok {
 		c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
 		return
 	}
 
-	companyID := companyIDVal.(uint)
-	candidates, err := h.candidateService.GetCandidatesByCompanyID(companyID)
+	candidates, err := h.candidateService.GetCandidatesWithScope(scope)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve candidates"})
 		return
@@ -61,24 +47,11 @@ func (h *CandidateHandler) GetCandidate(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid candidate ID"})
 		return
 	}
-	candidate, err := h.candidateService.GetCandidateByID(uint(id))
+	scope, _ := authctx.TenantScope(c)
+	candidate, err := h.candidateService.GetCandidateByID(uint(id), scope)
 	if err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
-	}
-
-	// Validar acceso: SuperAdmin o miembro de la misma empresa
-	if !authctx.IsSuperAdmin(c) {
-		companyIDVal, exists := c.Get("company_id")
-		if !exists {
-			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
-			return
-		}
-		companyID := companyIDVal.(uint)
-		if candidate.CompanyID != companyID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			return
-		}
 	}
 
 	candidateDTO := dtos.ToCandidateResponse(candidate)
@@ -92,16 +65,12 @@ func (h *CandidateHandler) CreateCandidate(c *gin.Context) {
 		return
 	}
 
-	// Forzar company_id del token para usuarios normales
-	if !authctx.IsSuperAdmin(c) {
-		companyIDVal, exists := c.Get("company_id")
-		if !exists {
-			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
-			return
-		}
-		companyID := companyIDVal.(uint)
-		dto.CompanyID = companyID
+	companyID, ok := authctx.CompanyID(c)
+	if !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+		return
 	}
+	dto.CompanyID = companyID
 
 	candidate, err := h.candidateService.CreateCandidate(dto)
 	if err != nil {
@@ -118,32 +87,14 @@ func (h *CandidateHandler) UpdateCandidate(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid candidate ID"})
 		return
 	}
-
-	// Validar que el candidate pertenece a la empresa del usuario
-	if !authctx.IsSuperAdmin(c) {
-		candidate, err := h.candidateService.GetCandidateByID(uint(id))
-		if err != nil {
-			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
-			return
-		}
-		companyIDVal, exists := c.Get("company_id")
-		if !exists {
-			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
-			return
-		}
-		companyID := companyIDVal.(uint)
-		if candidate.CompanyID != companyID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			return
-		}
-	}
+	scope, _ := authctx.TenantScope(c)
 
 	var dto dtos.UpdateCandidateDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	candidate, err := h.candidateService.UpdateCandidate(uint(id), dto)
+	candidate, err := h.candidateService.UpdateCandidate(uint(id), scope, dto)
 	if err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
@@ -158,27 +109,9 @@ func (h *CandidateHandler) DeleteCandidate(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid candidate ID"})
 		return
 	}
+	scope, _ := authctx.TenantScope(c)
 
-	// Validar que el candidate pertenece a la empresa del usuario
-	if !authctx.IsSuperAdmin(c) {
-		candidate, err := h.candidateService.GetCandidateByID(uint(id))
-		if err != nil {
-			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
-			return
-		}
-		companyIDVal, exists := c.Get("company_id")
-		if !exists {
-			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
-			return
-		}
-		companyID := companyIDVal.(uint)
-		if candidate.CompanyID != companyID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			return
-		}
-	}
-
-	if err := h.candidateService.DeleteCandidate(uint(id)); err != nil {
+	if err := h.candidateService.DeleteCandidate(uint(id), scope); err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
@@ -206,71 +139,57 @@ func (h *CandidateHandler) UploadResume(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid candidate ID"})
 		return
 	}
-
-	// Validate access
-	if !authctx.IsSuperAdmin(c) {
-		candidate, err := h.candidateService.GetCandidateByID(uint(id))
-		if err != nil {
-			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
-			return
-		}
-		companyIDVal, exists := c.Get("company_id")
-		if !exists {
-			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
-			return
-		}
-		companyID := companyIDVal.(uint)
-		if candidate.CompanyID != companyID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			return
-		}
-	}
-
-	// Get file from form
-	file, err := c.FormFile("resume")
+	scope, _ := authctx.TenantScope(c)
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 12*1024*1024)
+	header, err := c.FormFile("resume")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Resume file is required"})
 		return
 	}
-
-	// Validate file type (PDF, DOC, DOCX)
-	allowedTypes := map[string]bool{
-		"application/pdf":    true,
-		"application/msword": true,
-		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": true,
-	}
-
-	if !allowedTypes[file.Header.Get("Content-Type")] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Allowed: PDF, DOC, DOCX"})
-		return
-	}
-
-	// For now, we'll generate a simple file path/URL
-	// In production, you would upload to S3, GCS, or similar
-	filename := fmt.Sprintf("resumes/%d_%d_%s", id, time.Now().Unix(), file.Filename)
-
-	// Save file locally (in production use cloud storage)
-	if err := c.SaveUploadedFile(file, "./uploads/"+filename); err != nil {
-		h.logger.Error("Failed to save resume", map[string]interface{}{"error": err.Error()})
-		// Even if local save fails, we'll update the URL for demo purposes
-	}
-
-	// Generate URL (in production this would be a cloud storage URL)
-	resumeURL := "/uploads/" + filename
-
-	// Update candidate with resume URL
-	updateDTO := dtos.UpdateCandidateDTO{
-		ResumeURL: &resumeURL,
-	}
-
-	_, err = h.candidateService.UpdateCandidate(uint(id), updateDTO)
+	src, err := header.Open()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update candidate with resume URL"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resume file"})
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"status":     "success",
-		"resume_url": resumeURL,
+	defer src.Close()
+	stored, err := h.candidateService.StoreResume(uint(id), scope, services.ResumeUpload{
+		Reader: src, OriginalName: header.Filename, Size: header.Size,
 	})
+	if err != nil {
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   gin.H{"resume_url": "/api/v1/candidates/" + strconv.FormatUint(id, 10) + "/resume", "size_bytes": stored.SizeBytes},
+	})
+}
+
+// DownloadResume godoc
+// @Summary      Download candidate resume
+// @Description  Descarga privada del CV de un candidato del tenant activo
+// @Tags         Candidates
+// @Produce      application/octet-stream
+// @Param        id  path  int  true  "Candidate ID"
+// @Success      200 {file} binary
+// @Failure      403 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Security     BearerAuth
+// @Router       /candidates/{id}/resume [get]
+func (h *CandidateHandler) DownloadResume(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid candidate ID"})
+		return
+	}
+	scope, _ := authctx.TenantScope(c)
+	stored, reader, err := h.candidateService.OpenResume(uint(id), scope)
+	if err != nil {
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
+		return
+	}
+	defer reader.Close()
+	disposition := mime.FormatMediaType("attachment", map[string]string{"filename": stored.OriginalName})
+	c.Header("Content-Disposition", disposition)
+	c.DataFromReader(http.StatusOK, stored.SizeBytes, stored.ContentType, reader, nil)
 }

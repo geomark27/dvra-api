@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"dvra-api/internal/app/models"
-	"dvra-api/internal/database"
 
 	"gorm.io/gorm"
 )
@@ -20,16 +19,16 @@ type MembershipRepository interface {
 }
 
 // membershipRepository es la implementación con GORM
-type membershipRepository struct{}
+type membershipRepository struct{ db *gorm.DB }
 
 // NewMembershipRepository crea una nueva instancia de MembershipRepository
-func NewMembershipRepository() MembershipRepository {
-	return &membershipRepository{}
+func NewMembershipRepository(db *gorm.DB) MembershipRepository {
+	return &membershipRepository{db: db}
 }
 
 func (r *membershipRepository) GetAll() ([]models.Membership, error) {
 	var memberships []models.Membership
-	if err := database.DB.Preload("User").Preload("Company").Find(&memberships).Error; err != nil {
+	if err := r.db.Preload("User").Preload("Company").Find(&memberships).Error; err != nil {
 		return nil, err
 	}
 	return memberships, nil
@@ -37,7 +36,7 @@ func (r *membershipRepository) GetAll() ([]models.Membership, error) {
 
 func (r *membershipRepository) GetByID(id uint) (*models.Membership, error) {
 	var membership models.Membership
-	if err := database.DB.Preload("User").Preload("Company").First(&membership, id).Error; err != nil {
+	if err := r.db.Preload("User").Preload("Company").First(&membership, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
@@ -48,7 +47,7 @@ func (r *membershipRepository) GetByID(id uint) (*models.Membership, error) {
 
 func (r *membershipRepository) GetByUserID(userID uint) ([]models.Membership, error) {
 	var memberships []models.Membership
-	if err := database.DB.Where("user_id = ?", userID).Preload("Company").Find(&memberships).Error; err != nil {
+	if err := r.db.Where("user_id = ?", userID).Preload("Company").Find(&memberships).Error; err != nil {
 		return nil, err
 	}
 	return memberships, nil
@@ -56,7 +55,7 @@ func (r *membershipRepository) GetByUserID(userID uint) ([]models.Membership, er
 
 func (r *membershipRepository) GetByCompanyID(companyID uint) ([]models.Membership, error) {
 	var memberships []models.Membership
-	if err := database.DB.Where("company_id = ?", companyID).Preload("User").Find(&memberships).Error; err != nil {
+	if err := r.db.Where("company_id = ?", companyID).Preload("User").Find(&memberships).Error; err != nil {
 		return nil, err
 	}
 	return memberships, nil
@@ -64,7 +63,7 @@ func (r *membershipRepository) GetByCompanyID(companyID uint) ([]models.Membersh
 
 func (r *membershipRepository) GetByUserAndCompany(userID uint, companyID uint) (*models.Membership, error) {
 	var membership models.Membership
-	if err := database.DB.Where("user_id = ? AND company_id = ?", userID, companyID).First(&membership).Error; err != nil {
+	if err := r.db.Where("user_id = ? AND company_id = ?", userID, companyID).First(&membership).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
@@ -74,19 +73,19 @@ func (r *membershipRepository) GetByUserAndCompany(userID uint, companyID uint) 
 }
 
 func (r *membershipRepository) Create(membership *models.Membership) (*models.Membership, error) {
-	if err := database.DB.Create(membership).Error; err != nil {
+	if err := r.db.Create(membership).Error; err != nil {
 		return nil, err
 	}
 	return membership, nil
 }
 
 func (r *membershipRepository) Update(membership *models.Membership) (*models.Membership, error) {
-	if err := database.DB.Save(membership).Error; err != nil {
+	if err := r.db.Save(membership).Error; err != nil {
 		return nil, err
 	}
 	return membership, nil
 }
 
 func (r *membershipRepository) Delete(id uint) error {
-	return database.DB.Delete(&models.Membership{}, id).Error
+	return r.db.Delete(&models.Membership{}, id).Error
 }

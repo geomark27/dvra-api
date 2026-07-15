@@ -10,6 +10,17 @@ definitions:
     - company_id
     - plan_id
     type: object
+  dtos.AuthContextResponse:
+    properties:
+      company_id:
+        type: integer
+      membership_id:
+        type: integer
+      role:
+        type: string
+      type:
+        type: string
+    type: object
   dtos.CityDTO:
     properties:
       id:
@@ -22,6 +33,21 @@ definitions:
         $ref: '#/definitions/dtos.StateDTO'
       state_id:
         type: integer
+    type: object
+  dtos.CompanyResponse:
+    properties:
+      id:
+        type: integer
+      membership_id:
+        type: integer
+      name:
+        type: string
+      plan_tier:
+        type: string
+      role:
+        type: string
+      slug:
+        type: string
     type: object
   dtos.CountryDTO:
     properties:
@@ -56,7 +82,6 @@ definitions:
         minimum: 1
         type: integer
       company_id:
-        minimum: 1
         type: integer
       job_id:
         minimum: 1
@@ -72,13 +97,13 @@ definitions:
         - applied
         - screening
         - technical
+        - interview
         - offer
         - hired
         - rejected
         type: string
     required:
     - candidate_id
-    - company_id
     - job_id
     - stage
     type: object
@@ -103,10 +128,6 @@ definitions:
         minLength: 2
         type: string
       plan_tier:
-        enum:
-        - free
-        - premium
-        - enterprise
         type: string
       slug:
         maxLength: 100
@@ -150,7 +171,7 @@ definitions:
   dtos.CreateMembershipDTO:
     properties:
       company_id:
-        description: Nullable para SuperAdmin
+        description: Pointer allows reporting a missing required field.
         type: integer
       invited_by:
         type: integer
@@ -158,9 +179,9 @@ definitions:
         type: boolean
       role:
         enum:
-        - superadmin
         - admin
         - recruiter
+        - hiring_manager
         - user
         type: string
       status:
@@ -168,6 +189,8 @@ definitions:
         - active
         - inactive
         - pending
+        - suspended
+        - removed
         type: string
       user_id:
         minimum: 1
@@ -318,10 +341,22 @@ definitions:
         type: string
       last_name:
         type: string
+      password:
+        minLength: 8
+        type: string
+      role:
+        enum:
+        - admin
+        - recruiter
+        - hiring_manager
+        - user
+        type: string
     required:
     - email
     - first_name
     - last_name
+    - password
+    - role
     type: object
   dtos.LocationSearchDTO:
     properties:
@@ -355,6 +390,7 @@ definitions:
         - applied
         - screening
         - technical
+        - interview
         - offer
         - hired
         - rejected
@@ -675,6 +711,31 @@ definitions:
       region_id:
         type: integer
     type: object
+  dtos.SwitchCompanyDTO:
+    properties:
+      company_id:
+        type: integer
+    required:
+    - company_id
+    type: object
+  dtos.SwitchCompanyResponseDTO:
+    properties:
+      access_token:
+        type: string
+      company:
+        $ref: '#/definitions/dtos.CompanyResponse'
+      refresh_token:
+        type: string
+    type: object
+  dtos.SwitchPlatformResponseDTO:
+    properties:
+      access_token:
+        type: string
+      active_context:
+        $ref: '#/definitions/dtos.AuthContextResponse'
+      refresh_token:
+        type: string
+    type: object
   dtos.TogglePlanStatusDTO:
     properties:
       is_active:
@@ -690,6 +751,25 @@ definitions:
         type: string
       state_id:
         type: integer
+    type: object
+  dtos.UpdateCompanyDTO:
+    properties:
+      logo_url:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      plan_tier:
+        type: string
+      slug:
+        maxLength: 100
+        minLength: 2
+        type: string
+      timezone:
+        type: string
+      trial_ends_at:
+        type: string
     type: object
   dtos.UpdateCountryDTO:
     properties:
@@ -710,6 +790,28 @@ definitions:
       subregion_id:
         type: integer
       timezones:
+        type: string
+    type: object
+  dtos.UpdateMembershipDTO:
+    properties:
+      is_default:
+        type: boolean
+      joined_at:
+        type: string
+      role:
+        enum:
+        - admin
+        - recruiter
+        - hiring_manager
+        - user
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        - pending
+        - suspended
+        - removed
         type: string
     type: object
   dtos.UpdatePlacementDTO:
@@ -920,8 +1022,10 @@ definitions:
       email:
         type: string
       first_name:
+        minLength: 1
         type: string
       last_name:
+        minLength: 1
         type: string
     type: object
 host: localhost:8001
@@ -935,328 +1039,8 @@ info:
     url: https://opensource.org/licenses/MIT
   termsOfService: http://swagger.io/terms/
   title: DVRA API
-  version: 1.2.0
+  version: 1.4.0
 paths:
-  /admin/memberships:
-    post:
-      consumes:
-      - application/json
-      description: Asigna un usuario a una empresa (solo SuperAdmin)
-      parameters:
-      - description: Datos de la membresía
-        in: body
-        name: membership
-        required: true
-        schema:
-          $ref: '#/definitions/dtos.CreateMembershipDTO'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Crear membresía
-      tags:
-      - Memberships
-  /admin/plans:
-    get:
-      description: Get all plans (SuperAdmin sees all, others see only public active
-        plans)
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get all plans
-      tags:
-      - plans
-    post:
-      consumes:
-      - application/json
-      description: Create a new subscription plan (SuperAdmin only)
-      parameters:
-      - description: Plan data
-        in: body
-        name: plan
-        required: true
-        schema:
-          $ref: '#/definitions/dtos.PlanDTO'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/dtos.PlanResponse'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Conflict
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Create plan
-      tags:
-      - plans
-  /admin/plans/{id}:
-    delete:
-      description: Soft delete a plan (SuperAdmin only)
-      parameters:
-      - description: Plan ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Conflict
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Delete plan
-      tags:
-      - plans
-    get:
-      description: Get a specific plan by ID
-      parameters:
-      - description: Plan ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dtos.PlanResponse'
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get plan by ID
-      tags:
-      - plans
-    put:
-      consumes:
-      - application/json
-      description: Update an existing plan (SuperAdmin only)
-      parameters:
-      - description: Plan ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Plan data
-        in: body
-        name: plan
-        required: true
-        schema:
-          $ref: '#/definitions/dtos.UpdatePlanDTO'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dtos.PlanResponse'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update plan
-      tags:
-      - plans
-  /admin/plans/{id}/toggle:
-    patch:
-      consumes:
-      - application/json
-      description: Enable or disable a plan (SuperAdmin only)
-      parameters:
-      - description: Plan ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Plan status
-        in: body
-        name: status
-        required: true
-        schema:
-          $ref: '#/definitions/dtos.TogglePlanStatusDTO'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dtos.PlanResponse'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Toggle plan status
-      tags:
-      - plans
-  /admin/plans/assign:
-    post:
-      consumes:
-      - application/json
-      description: Assign a subscription plan to a company (SuperAdmin only)
-      parameters:
-      - description: Plan assignment
-        in: body
-        name: assignment
-        required: true
-        schema:
-          $ref: '#/definitions/dtos.AssignPlanToCompanyDTO'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Assign plan to company
-      tags:
-      - plans
   /admin/system-values:
     get:
       consumes:
@@ -1665,6 +1449,76 @@ paths:
       summary: Registrar empresa con admin
       tags:
       - Authentication
+  /auth/switch-company:
+    post:
+      consumes:
+      - application/json
+      description: Issues new access and refresh tokens for an active tenant membership
+      parameters:
+      - description: Tenant context
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.SwitchCompanyDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.SwitchCompanyResponseDTO'
+      security:
+      - BearerAuth: []
+      summary: Switch active tenant
+      tags:
+      - Authentication
+  /auth/switch-platform:
+    post:
+      description: Issues new access and refresh tokens for an active platform membership
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.SwitchPlatformResponseDTO'
+      security:
+      - BearerAuth: []
+      summary: Switch to landlord context
+      tags:
+      - Authentication
+  /candidates/{id}/resume:
+    get:
+      description: Descarga privada del CV de un candidato del tenant activo
+      parameters:
+      - description: Candidate ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Download candidate resume
+      tags:
+      - Candidates
   /candidates/{id}/upload-resume:
     post:
       consumes:
@@ -1743,40 +1597,6 @@ paths:
       summary: Listar empresas
       tags:
       - Companies
-    post:
-      consumes:
-      - application/json
-      description: Crea una nueva empresa
-      parameters:
-      - description: Datos de la empresa
-        in: body
-        name: company
-        required: true
-        schema:
-          $ref: '#/definitions/dtos.CreateCompanyDTO'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Crear empresa
-      tags:
-      - Companies
   /companies/{id}:
     get:
       consumes:
@@ -1814,6 +1634,35 @@ paths:
       security:
       - BearerAuth: []
       summary: Obtener empresa por ID
+      tags:
+      - Companies
+    put:
+      consumes:
+      - application/json
+      description: Actualiza la empresa del tenant o una empresa desde plataforma
+      parameters:
+      - description: ID de la empresa
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cambios de la empresa
+        in: body
+        name: company
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdateCompanyDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Actualizar empresa
       tags:
       - Companies
   /dashboard/stats:
@@ -1887,7 +1736,7 @@ paths:
     patch:
       consumes:
       - application/json
-      description: Cambia el estado del job a 'active'
+      description: Cambia el estado del job a 'published'
       parameters:
       - description: Job ID
         in: path
@@ -2417,8 +2266,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Obtiene membresías (todas si es SuperAdmin, de la empresa si es
-        usuario normal)
+      description: Obtiene las membresías autorizadas por el contexto activo
       produces:
       - application/json
       responses:
@@ -2442,12 +2290,77 @@ paths:
       summary: Listar membresías
       tags:
       - Memberships
-  /placements:
+  /memberships/{id}:
+    delete:
+      parameters:
+      - description: ID de la membresía
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Eliminar una membresía
+      tags:
+      - Memberships
     get:
+      parameters:
+      - description: ID de la membresía
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Obtener membresía
+      tags:
+      - Memberships
+    put:
       consumes:
       - application/json
-      description: Lista las colocaciones de la empresa del token. Requiere un plan
-        con el módulo staffing habilitado.
+      parameters:
+      - description: ID de la membresía
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cambios
+        in: body
+        name: membership
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdateMembershipDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Actualizar rol o estado de una membresía
+      tags:
+      - Memberships
+  /placements:
+    get:
       parameters:
       - description: Filtrar por estado (active, ended, suspended)
         in: query
@@ -2469,16 +2382,6 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
       security:
       - BearerAuth: []
       summary: Listar colocaciones (placements)
@@ -2488,10 +2391,9 @@ paths:
       consumes:
       - application/json
       description: Coloca a un candidato en un cliente final a partir de una Application
-        en etapa 'hired'. Valida que la application y el cliente pertenezcan a la
-        empresa del token. candidate_id/job_id se copian de la application.
+        en etapa 'hired'.
       parameters:
-      - description: Datos de la colocación (staffing_client_id + application_id requeridos)
+      - description: Datos de la colocación
         in: body
         name: placement
         required: true
@@ -2505,16 +2407,6 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
       security:
       - BearerAuth: []
       summary: Crear colocación
@@ -2522,10 +2414,6 @@ paths:
       - Placements
   /placements/{id}:
     delete:
-      consumes:
-      - application/json
-      description: Elimina (soft delete) una colocación (validada contra la empresa
-        del token)
       parameters:
       - description: ID de la colocación
         in: path
@@ -2537,21 +2425,6 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
           schema:
             additionalProperties: true
             type: object
@@ -2561,9 +2434,6 @@ paths:
       tags:
       - Placements
     get:
-      consumes:
-      - application/json
-      description: Obtiene una colocación por ID (validada contra la empresa del token)
       parameters:
       - description: ID de la colocación
         in: path
@@ -2575,16 +2445,6 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
           schema:
             additionalProperties: true
             type: object
@@ -2596,9 +2456,6 @@ paths:
     put:
       consumes:
       - application/json
-      description: Actualiza datos de contrato, billing y estado de una colocación
-        (el origen application/candidate/cliente es inmutable). Validada contra la
-        empresa del token.
       parameters:
       - description: ID de la colocación
         in: path
@@ -2616,26 +2473,6 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
           schema:
             additionalProperties: true
             type: object
@@ -2695,6 +2532,656 @@ paths:
       summary: Get plan by slug
       tags:
       - plans
+  /platform/companies:
+    get:
+      consumes:
+      - application/json
+      description: Obtiene empresas (todas si es SuperAdmin, solo la actual si es
+        usuario normal)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar empresas
+      tags:
+      - Companies
+    post:
+      consumes:
+      - application/json
+      description: Crea una nueva empresa
+      parameters:
+      - description: Datos de la empresa
+        in: body
+        name: company
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateCompanyDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Crear empresa
+      tags:
+      - Companies
+  /platform/companies/{id}:
+    delete:
+      parameters:
+      - description: ID de la empresa
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Eliminar empresa desde plataforma
+      tags:
+      - Companies
+    get:
+      consumes:
+      - application/json
+      description: Retorna información de una empresa específica
+      parameters:
+      - description: ID de la empresa
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Obtener empresa por ID
+      tags:
+      - Companies
+    put:
+      consumes:
+      - application/json
+      description: Actualiza la empresa del tenant o una empresa desde plataforma
+      parameters:
+      - description: ID de la empresa
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cambios de la empresa
+        in: body
+        name: company
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdateCompanyDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Actualizar empresa
+      tags:
+      - Companies
+  /platform/memberships:
+    get:
+      consumes:
+      - application/json
+      description: Obtiene las membresías autorizadas por el contexto activo
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar membresías
+      tags:
+      - Memberships
+    post:
+      consumes:
+      - application/json
+      description: Asigna un usuario a una empresa desde el contexto landlord
+      parameters:
+      - description: Datos de la membresía
+        in: body
+        name: membership
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateMembershipDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Crear membresía
+      tags:
+      - Memberships
+  /platform/memberships/{id}:
+    delete:
+      parameters:
+      - description: ID de la membresía
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Eliminar una membresía
+      tags:
+      - Memberships
+    get:
+      parameters:
+      - description: ID de la membresía
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Obtener membresía
+      tags:
+      - Memberships
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID de la membresía
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cambios
+        in: body
+        name: membership
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdateMembershipDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Actualizar rol o estado de una membresía
+      tags:
+      - Memberships
+  /platform/plans:
+    get:
+      description: Get all plans (SuperAdmin sees all, others see only public active
+        plans)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all plans
+      tags:
+      - plans
+    post:
+      consumes:
+      - application/json
+      description: Create a new subscription plan (SuperAdmin only)
+      parameters:
+      - description: Plan data
+        in: body
+        name: plan
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.PlanDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dtos.PlanResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create plan
+      tags:
+      - plans
+  /platform/plans/{id}:
+    delete:
+      description: Soft delete a plan (SuperAdmin only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete plan
+      tags:
+      - plans
+    get:
+      description: Get a specific plan by ID
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.PlanResponse'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get plan by ID
+      tags:
+      - plans
+    put:
+      consumes:
+      - application/json
+      description: Update an existing plan (SuperAdmin only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Plan data
+        in: body
+        name: plan
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdatePlanDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.PlanResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update plan
+      tags:
+      - plans
+  /platform/plans/{id}/toggle:
+    patch:
+      consumes:
+      - application/json
+      description: Enable or disable a plan (SuperAdmin only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Plan status
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.TogglePlanStatusDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.PlanResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Toggle plan status
+      tags:
+      - plans
+  /platform/plans/assign:
+    post:
+      consumes:
+      - application/json
+      description: Assign a subscription plan to a company (SuperAdmin only)
+      parameters:
+      - description: Plan assignment
+        in: body
+        name: assignment
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.AssignPlanToCompanyDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Assign plan to company
+      tags:
+      - plans
+  /platform/settings:
+    get:
+      consumes:
+      - application/json
+      description: Returns complete platform configuration including business defaults
+        and legal info
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.PlatformSettingsFullDTO'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get full platform settings (SuperAdmin only)
+      tags:
+      - superadmin
+    put:
+      consumes:
+      - application/json
+      description: Updates platform configuration (partial update supported)
+      parameters:
+      - description: Settings to update
+        in: body
+        name: settings
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdatePlatformSettingsDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.PlatformSettingsFullDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update platform settings (SuperAdmin only)
+      tags:
+      - superadmin
   /public/companies/{slug}:
     get:
       consumes:
@@ -2871,8 +3358,6 @@ paths:
       - public
   /staffing-clients:
     get:
-      consumes:
-      - application/json
       description: Lista los clientes finales de la empresa del token. Requiere un
         plan con el módulo staffing habilitado.
       parameters:
@@ -2888,16 +3373,6 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
       security:
       - BearerAuth: []
       summary: Listar clientes finales (staffing)
@@ -2906,8 +3381,6 @@ paths:
     post:
       consumes:
       - application/json
-      description: Crea un cliente final dentro de la empresa del token (company_id
-        se fuerza del token). Requiere plan con módulo staffing.
       parameters:
       - description: Datos del cliente final
         in: body
@@ -2923,21 +3396,6 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
       security:
       - BearerAuth: []
       summary: Crear cliente final
@@ -2945,10 +3403,6 @@ paths:
       - StaffingClients
   /staffing-clients/{id}:
     delete:
-      consumes:
-      - application/json
-      description: Elimina (soft delete) un cliente final (validado contra la empresa
-        del token)
       parameters:
       - description: ID del cliente final
         in: path
@@ -2960,21 +3414,6 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
           schema:
             additionalProperties: true
             type: object
@@ -2984,10 +3423,6 @@ paths:
       tags:
       - StaffingClients
     get:
-      consumes:
-      - application/json
-      description: Obtiene un cliente final por ID (validado contra la empresa del
-        token)
       parameters:
       - description: ID del cliente final
         in: path
@@ -2999,16 +3434,6 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
           schema:
             additionalProperties: true
             type: object
@@ -3020,8 +3445,6 @@ paths:
     put:
       consumes:
       - application/json
-      description: Actualiza parcialmente un cliente final (validado contra la empresa
-        del token)
       parameters:
       - description: ID del cliente final
         in: path
@@ -3042,114 +3465,11 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
       security:
       - BearerAuth: []
       summary: Actualizar cliente final
       tags:
       - StaffingClients
-  /superadmin/platform-settings:
-    get:
-      consumes:
-      - application/json
-      description: Returns complete platform configuration including business defaults
-        and legal info
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dtos.PlatformSettingsFullDTO'
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get full platform settings (SuperAdmin only)
-      tags:
-      - superadmin
-    put:
-      consumes:
-      - application/json
-      description: Updates platform configuration (partial update supported)
-      parameters:
-      - description: Settings to update
-        in: body
-        name: settings
-        required: true
-        schema:
-          $ref: '#/definitions/dtos.UpdatePlatformSettingsDTO'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dtos.PlatformSettingsFullDTO'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update platform settings (SuperAdmin only)
-      tags:
-      - superadmin
   /system-values/{category}:
     get:
       consumes:
@@ -3315,50 +3635,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Obtener usuario por ID
-      tags:
-      - Users
-    put:
-      consumes:
-      - application/json
-      description: Actualiza los datos de un usuario existente
-      parameters:
-      - description: ID del usuario
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Datos a actualizar
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/dtos.UpdateUserDTO'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Actualizar usuario
       tags:
       - Users
 schemes:

@@ -10,6 +10,7 @@ import (
 	"dvra-api/internal/app/services"
 	"dvra-api/internal/modules/staffing"
 	"dvra-api/internal/platform/config"
+	storagepkg "dvra-api/internal/platform/storage"
 
 	_ "dvra-api/docs" // Importar documentación generada por Swagger
 
@@ -26,7 +27,7 @@ type Server struct {
 }
 
 // New creates a new server instance with all dependencies injected
-func New(cfg *config.Config, db *gorm.DB) *Server {
+func New(cfg *config.Config, db *gorm.DB) (*Server, error) {
 	// Set Gin mode based on environment
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -34,14 +35,18 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 
 	// Create JWT service
 	jwtService := services.NewJWTService(cfg.JWTSecret, cfg.JWTRefreshSecret)
+	fileStorage, err := storagepkg.NewFilesystem(cfg.StorageRoot)
+	if err != nil {
+		return nil, err
+	}
 
 	// Create repositories (injecting DB connection)
-	userRepo := repositories.NewUserRepository()
-	companyRepo := repositories.NewCompanyRepository()
-	membershipRepo := repositories.NewMembershipRepository()
-	candidateRepo := repositories.NewCandidateRepository()
-	applicationRepo := repositories.NewApplicationRepository()
-	jobRepo := repositories.NewJobRepository()
+	userRepo := repositories.NewUserRepository(db)
+	companyRepo := repositories.NewCompanyRepository(db)
+	membershipRepo := repositories.NewMembershipRepository(db)
+	candidateRepo := repositories.NewCandidateRepository(db)
+	applicationRepo := repositories.NewApplicationRepository(db)
+	jobRepo := repositories.NewJobRepository(db)
 	planRepo := repositories.NewPlanRepository(db)
 	systemValueRepo := repositories.NewSystemValueRepository(db)
 	locationRepo := repositories.NewLocationRepository()
@@ -50,25 +55,25 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 
 	// Create services (injecting repositories)
 	authService := services.NewAuthService(userRepo, planRepo, jwtService, db)
-	userService := services.NewUserService(userRepo)
+	userService := services.NewUserService(userRepo, db)
 	companyService := services.NewCompanyService(companyRepo)
 	membershipService := services.NewMembershipService(membershipRepo)
-	candidateService := services.NewCandidateService(candidateRepo)
-	applicationService := services.NewApplicationService(applicationRepo)
+	candidateService := services.NewCandidateService(candidateRepo, planRepo, db, fileStorage)
+	applicationService := services.NewApplicationService(applicationRepo, jobRepo, candidateRepo)
 	// Módulo staffing (monolito modular + hexagonal-lite, ver ADR-001). Se cablea
 	// con db + un adaptador del repo de applications hacia su puerto ApplicationFinder.
 	staffingModule := staffing.New(db, staffingAppFinder{repo: applicationRepo})
 
-	jobService := services.NewJobService(jobRepo, staffingModule.ClientRepo)
 	planService := services.NewPlanService(planRepo, companyRepo, db)
+	jobService := services.NewJobService(jobRepo, staffingModule.ClientRepo, planService)
 	systemValueService := services.NewSystemValueService(systemValueRepo)
 	locationService := services.NewLocationService(locationRepo)
 	dashboardService := services.NewDashboardService(dashboardRepo)
-	publicService := services.NewPublicService(companyRepo, jobRepo, candidateRepo, applicationRepo)
+	publicService := services.NewPublicService(companyRepo, jobRepo, candidateRepo, applicationRepo, candidateService)
 	platformSettingsService := services.NewPlatformSettingsService(platformSettingsRepo)
 
 	// Create handlers (injecting services)
-	healthHandler := handlers.NewHealthHandler()
+	healthHandler := handlers.NewHealthHandler(db)
 	authHandler := handlers.NewAuthHandler(authService)
 	userHandler := handlers.NewUserHandler(userService)
 	companyHandler := handlers.NewCompanyHandler(companyService)
@@ -106,7 +111,7 @@ func New(cfg *config.Config, db *gorm.DB) *Server {
 		router:     router,
 		httpServer: httpServer,
 		db:         db,
-	}
+	}, nil
 }
 
 // Start starts the HTTP server

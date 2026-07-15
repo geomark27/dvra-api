@@ -92,6 +92,7 @@ func registerRoutes(
 				authProtected.POST("/change-password", authHandler.ChangePassword)
 				authProtected.POST("/logout", authHandler.Logout)
 				authProtected.POST("/switch-company", authHandler.SwitchCompany)
+				authProtected.POST("/switch-platform", authHandler.SwitchToPlatform)
 				authProtected.GET("/my-companies", authHandler.GetMyCompanies)
 			}
 		}
@@ -106,7 +107,6 @@ func registerRoutes(
 				users.GET("", middleware.RequirePermission(permissions.UsersView), userHandler.GetUsers)
 				users.POST("", middleware.RequirePermission(permissions.UsersCreate), userHandler.CreateUser)
 				users.GET("/:id", middleware.RequirePermission(permissions.UsersView), userHandler.GetUser)
-				users.PUT("/:id", middleware.RequirePermission(permissions.UsersUpdate), userHandler.UpdateUser)
 				users.DELETE("/:id", middleware.RequirePermission(permissions.UsersDelete), userHandler.DeleteUser)
 			}
 
@@ -114,17 +114,14 @@ func registerRoutes(
 			companies := protected.Group("/companies")
 			{
 				companies.GET("", middleware.RequirePermission(permissions.CompaniesView), companyHandler.GetCompanies)
-				companies.POST("", middleware.RequirePermission(permissions.CompaniesCreate), companyHandler.CreateCompany)
 				companies.GET("/:id", middleware.RequirePermission(permissions.CompaniesView), companyHandler.GetCompany)
 				companies.PUT("/:id", middleware.RequirePermission(permissions.CompaniesUpdate), companyHandler.UpdateCompany)
-				companies.DELETE("/:id", middleware.RequirePermission(permissions.CompaniesDelete), companyHandler.DeleteCompany)
 			}
 
 			// Membership routes
 			memberships := protected.Group("/memberships")
 			{
 				memberships.GET("", middleware.RequirePermission(permissions.MembershipsView), membershipHandler.GetMemberships)
-				memberships.POST("", middleware.RequirePermission(permissions.MembershipsCreate), membershipHandler.CreateMembership)
 				memberships.GET("/:id", middleware.RequirePermission(permissions.MembershipsView), membershipHandler.GetMembership)
 				memberships.PUT("/:id", middleware.RequirePermission(permissions.MembershipsUpdate), membershipHandler.UpdateMembership)
 				memberships.DELETE("/:id", middleware.RequirePermission(permissions.MembershipsDelete), membershipHandler.DeleteMembership)
@@ -155,6 +152,7 @@ func registerRoutes(
 				candidates.PUT("/:id", middleware.RequirePermission(permissions.CandidatesUpdate), candidateHandler.UpdateCandidate)
 				candidates.DELETE("/:id", middleware.RequirePermission(permissions.CandidatesDelete), candidateHandler.DeleteCandidate)
 				candidates.POST("/:id/upload-resume", middleware.RequirePermission(permissions.CandidatesUploadResume), candidateHandler.UploadResume)
+				candidates.GET("/:id/resume", middleware.RequirePermission(permissions.CandidatesView), candidateHandler.DownloadResume)
 			}
 
 			// Application routes
@@ -181,6 +179,38 @@ func registerRoutes(
 			{
 				systemValues.GET("/:category", systemValueHandler.GetByCategory)
 			}
+		}
+
+		// Landlord routes use an explicit platform context and a permission matrix
+		// separate from tenant roles.
+		platform := api.Group("/platform")
+		platform.Use(middleware.AuthMiddleware(jwtService))
+		{
+			platform.GET("/companies", middleware.RequirePlatformPermission(permissions.PlatformCompaniesView), companyHandler.GetCompanies)
+			platform.POST("/companies", middleware.RequirePlatformPermission(permissions.PlatformCompaniesManage), companyHandler.CreateCompany)
+			platform.GET("/companies/:id", middleware.RequirePlatformPermission(permissions.PlatformCompaniesView), companyHandler.GetCompany)
+			platform.PUT("/companies/:id", middleware.RequirePlatformPermission(permissions.PlatformCompaniesManage), companyHandler.UpdateCompany)
+			platform.DELETE("/companies/:id", middleware.RequirePlatformPermission(permissions.PlatformCompaniesManage), companyHandler.DeleteCompany)
+
+			platform.GET("/users", middleware.RequirePlatformPermission(permissions.PlatformUsersView), userHandler.GetUsers)
+			platform.GET("/users/:id", middleware.RequirePlatformPermission(permissions.PlatformUsersView), userHandler.GetUser)
+
+			platform.GET("/memberships", middleware.RequirePlatformPermission(permissions.PlatformMembershipsView), membershipHandler.GetMemberships)
+			platform.POST("/memberships", middleware.RequirePlatformPermission(permissions.PlatformMembershipsManage), membershipHandler.CreateMembership)
+			platform.GET("/memberships/:id", middleware.RequirePlatformPermission(permissions.PlatformMembershipsView), membershipHandler.GetMembership)
+			platform.PUT("/memberships/:id", middleware.RequirePlatformPermission(permissions.PlatformMembershipsManage), membershipHandler.UpdateMembership)
+			platform.DELETE("/memberships/:id", middleware.RequirePlatformPermission(permissions.PlatformMembershipsManage), membershipHandler.DeleteMembership)
+
+			platform.GET("/plans", middleware.RequirePlatformPermission(permissions.PlatformPlansManage), planHandler.GetPlans)
+			platform.POST("/plans", middleware.RequirePlatformPermission(permissions.PlatformPlansManage), planHandler.CreatePlan)
+			platform.GET("/plans/:id", middleware.RequirePlatformPermission(permissions.PlatformPlansManage), planHandler.GetPlanByID)
+			platform.PUT("/plans/:id", middleware.RequirePlatformPermission(permissions.PlatformPlansManage), planHandler.UpdatePlan)
+			platform.PATCH("/plans/:id/toggle", middleware.RequirePlatformPermission(permissions.PlatformPlansManage), planHandler.TogglePlanStatus)
+			platform.DELETE("/plans/:id", middleware.RequirePlatformPermission(permissions.PlatformPlansManage), planHandler.DeletePlan)
+			platform.POST("/plans/assign", middleware.RequirePlatformPermission(permissions.PlatformPlansManage), planHandler.AssignPlanToCompany)
+
+			platform.GET("/settings", middleware.RequirePlatformPermission(permissions.PlatformSettingsManage), platformSettingsHandler.GetFullSettings)
+			platform.PUT("/settings", middleware.RequirePlatformPermission(permissions.PlatformSettingsManage), platformSettingsHandler.UpdateSettings)
 		}
 
 		// Public Plans routes (no auth required)

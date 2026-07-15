@@ -2,7 +2,10 @@ package services
 
 import (
 	"errors"
+	"strconv"
 	"time"
+
+	"dvra-api/internal/shared/identity"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -14,18 +17,31 @@ var (
 
 // JWTClaims represents the claims stored in JWT
 type JWTClaims struct {
-	UserID    uint   `json:"user_id"`
-	CompanyID *uint  `json:"company_id"` // nil for SuperAdmin
-	Email     string `json:"email"`
-	Role      string `json:"role"`
+	UserID       uint   `json:"user_id"`
+	CompanyID    *uint  `json:"company_id"` // Present only in tenant context.
+	Email        string `json:"email"`
+	Role         string `json:"role"`
+	ContextType  string `json:"context_type"`
+	MembershipID *uint  `json:"membership_id,omitempty"`
+	TokenType    string `json:"token_type,omitempty"`
+	jwt.RegisteredClaims
+}
+
+type RefreshClaims struct {
+	UserID       uint   `json:"user_id"`
+	TokenType    string `json:"token_type"`
+	ContextType  string `json:"context_type"`
+	CompanyID    *uint  `json:"company_id,omitempty"`
+	MembershipID *uint  `json:"membership_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
 // JWTService handles JWT token operations
 type JWTService interface {
-	GenerateAccessToken(userID uint, companyID *uint, email, role string) (string, error)
-	GenerateRefreshToken(userID uint) (string, error)
-	ValidateToken(tokenString string) (*JWTClaims, error)
+	GenerateAccessToken(userID uint, email string, context identity.Context) (string, error)
+	GenerateRefreshToken(userID uint, context identity.Context) (string, error)
+	ValidateAccessToken(tokenString string) (*JWTClaims, error)
+	ValidateRefreshToken(tokenString string) (*RefreshClaims, error)
 }
 
 type jwtService struct {
@@ -46,12 +62,15 @@ func NewJWTService(accessSecret, refreshSecret string) JWTService {
 }
 
 // GenerateAccessToken generates a new access token
-func (s *jwtService) GenerateAccessToken(userID uint, companyID *uint, email, role string) (string, error) {
+func (s *jwtService) GenerateAccessToken(userID uint, email string, context identity.Context) (string, error) {
 	claims := JWTClaims{
-		UserID:    userID,
-		CompanyID: companyID,
-		Email:     email,
-		Role:      role,
+		UserID:       userID,
+		CompanyID:    context.CompanyID,
+		Email:        email,
+		Role:         context.Role,
+		ContextType:  context.Type,
+		MembershipID: context.MembershipID,
+		TokenType:    "access",
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.accessTTL)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -64,21 +83,30 @@ func (s *jwtService) GenerateAccessToken(userID uint, companyID *uint, email, ro
 }
 
 // GenerateRefreshToken generates a new refresh token
-func (s *jwtService) GenerateRefreshToken(userID uint) (string, error) {
-	claims := jwt.RegisteredClaims{
-		Subject:   string(rune(userID)),
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.refreshTTL)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
+func (s *jwtService) GenerateRefreshToken(userID uint, context identity.Context) (string, error) {
+	claims := RefreshClaims{
+		UserID:       userID,
+		TokenType:    "refresh",
+		ContextType:  context.Type,
+		CompanyID:    context.CompanyID,
+		MembershipID: context.MembershipID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   strconv.FormatUint(uint64(userID), 10),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.refreshTTL)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(s.refreshSecret))
 }
 
-// ValidateToken validates and parses a JWT token
-func (s *jwtService) ValidateToken(tokenString string) (*JWTClaims, error) {
+// ValidateAccessToken validates a context-aware access token. Legacy tokens
+// without token_type/context_type are intentionally rejected.
+func (s *jwtService) ValidateAccessToken(tokenString string) (*JWTClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
 			return nil, ErrInvalidToken
 		}
 		return []byte(s.accessSecret), nil
@@ -91,9 +119,61 @@ func (s *jwtService) ValidateToken(tokenString string) (*JWTClaims, error) {
 		return nil, ErrInvalidToken
 	}
 
-	if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
+	if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid && claims.TokenType == "access" && claims.UserID > 0 {
+		if !validTokenContext(claims.ContextType, claims.CompanyID, claims.MembershipID, claims.Role) {
+			return nil, ErrInvalidToken
+		}
 		return claims, nil
 	}
 
 	return nil, ErrInvalidToken
+}
+
+// ValidateRefreshToken only accepts refresh tokens signed with the refresh
+// secret. Access tokens can never be exchanged at the refresh endpoint.
+func (s *jwtService) ValidateRefreshToken(tokenString string) (*RefreshClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &RefreshClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, ErrInvalidToken
+		}
+		return []byte(s.refreshSecret), nil
+	})
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return nil, ErrExpiredToken
+		}
+		return nil, ErrInvalidToken
+	}
+	claims, ok := token.Claims.(*RefreshClaims)
+	if !ok || !token.Valid || claims.TokenType != "refresh" || claims.UserID == 0 ||
+		!validRefreshContext(claims.ContextType, claims.CompanyID, claims.MembershipID) {
+		return nil, ErrInvalidToken
+	}
+	return claims, nil
+}
+
+func validTokenContext(contextType string, companyID, membershipID *uint, role string) bool {
+	switch contextType {
+	case identity.ContextPlatform:
+		return companyID == nil && membershipID != nil && *membershipID > 0 && role != ""
+	case identity.ContextTenant:
+		return companyID != nil && *companyID > 0 && membershipID != nil && *membershipID > 0 && role != ""
+	case identity.ContextIdentity:
+		return companyID == nil && membershipID == nil && role == ""
+	default:
+		return false
+	}
+}
+
+func validRefreshContext(contextType string, companyID, membershipID *uint) bool {
+	switch contextType {
+	case identity.ContextPlatform:
+		return companyID == nil && membershipID != nil && *membershipID > 0
+	case identity.ContextTenant:
+		return companyID != nil && *companyID > 0 && membershipID != nil && *membershipID > 0
+	case identity.ContextIdentity:
+		return companyID == nil && membershipID == nil
+	default:
+		return false
+	}
 }

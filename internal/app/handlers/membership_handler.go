@@ -27,7 +27,7 @@ func NewMembershipHandler(membershipService services.MembershipService) *Members
 
 // GetMemberships godoc
 // @Summary      Listar membresías
-// @Description  Obtiene membresías (todas si es SuperAdmin, de la empresa si es usuario normal)
+// @Description  Obtiene las membresías autorizadas por el contexto activo
 // @Tags         Memberships
 // @Accept       json
 // @Produce      json
@@ -36,6 +36,7 @@ func NewMembershipHandler(membershipService services.MembershipService) *Members
 // @Failure      500  {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /memberships [get]
+// @Router       /platform/memberships [get]
 func (h *MembershipHandler) GetMemberships(c *gin.Context) {
 
 	// SuperAdmin puede ver todas las memberships
@@ -67,6 +68,15 @@ func (h *MembershipHandler) GetMemberships(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": gin.H{"memberships": memberships, "count": len(memberships)}})
 }
 
+// GetMembership godoc
+// @Summary      Obtener membresía
+// @Tags         Memberships
+// @Produce      json
+// @Param        id path int true "ID de la membresía"
+// @Success      200 {object} map[string]interface{}
+// @Security     BearerAuth
+// @Router       /memberships/{id} [get]
+// @Router       /platform/memberships/{id} [get]
 func (h *MembershipHandler) GetMembership(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -88,7 +98,7 @@ func (h *MembershipHandler) GetMembership(c *gin.Context) {
 			return
 		}
 		companyID := companyIDVal.(uint)
-		if membership.CompanyID == nil || *membership.CompanyID != companyID {
+		if membership.CompanyID != companyID {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 			return
 		}
@@ -99,7 +109,7 @@ func (h *MembershipHandler) GetMembership(c *gin.Context) {
 
 // CreateMembership godoc
 // @Summary      Crear membresía
-// @Description  Asigna un usuario a una empresa (solo SuperAdmin)
+// @Description  Asigna un usuario a una empresa desde el contexto landlord
 // @Tags         Memberships
 // @Accept       json
 // @Produce      json
@@ -109,7 +119,7 @@ func (h *MembershipHandler) GetMembership(c *gin.Context) {
 // @Failure      403         {object}  map[string]interface{}
 // @Failure      500         {object}  map[string]interface{}
 // @Security     BearerAuth
-// @Router       /admin/memberships [post]
+// @Router       /platform/memberships [post]
 func (h *MembershipHandler) CreateMembership(c *gin.Context) {
 	// SOLO SuperAdmin puede crear memberships (MVP)
 	// Los clientes crean usuarios que automáticamente se agregan a su empresa
@@ -141,6 +151,17 @@ func (h *MembershipHandler) CreateMembership(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": membership})
 }
 
+// UpdateMembership godoc
+// @Summary      Actualizar rol o estado de una membresía
+// @Tags         Memberships
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "ID de la membresía"
+// @Param        membership body dtos.UpdateMembershipDTO true "Cambios"
+// @Success      200 {object} map[string]interface{}
+// @Security     BearerAuth
+// @Router       /memberships/{id} [put]
+// @Router       /platform/memberships/{id} [put]
 func (h *MembershipHandler) UpdateMembership(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -148,24 +169,17 @@ func (h *MembershipHandler) UpdateMembership(c *gin.Context) {
 		return
 	}
 
-	// Validar que el membership pertenece a la empresa del usuario
-	if !authctx.IsSuperAdmin(c) {
-		membership, err := h.membershipService.GetMembershipByID(uint(id))
-		if err != nil {
-			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
-			return
-		}
-		companyIDVal, exists := c.Get("company_id")
-		if !exists {
+	global := authctx.IsSuperAdmin(c)
+	var actorCompanyID uint
+	if !global {
+		var ok bool
+		actorCompanyID, ok = authctx.CompanyID(c)
+		if !ok {
 			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
 			return
 		}
-		companyID := companyIDVal.(uint)
-		if membership.CompanyID == nil || *membership.CompanyID != companyID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			return
-		}
 	}
+	actorUserID, _ := authctx.UserID(c)
 
 	var dto dtos.UpdateMembershipDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
@@ -173,7 +187,7 @@ func (h *MembershipHandler) UpdateMembership(c *gin.Context) {
 		return
 	}
 
-	membership, err := h.membershipService.UpdateMembership(uint(id), dto)
+	membership, err := h.membershipService.UpdateMembership(uint(id), actorUserID, actorCompanyID, global, dto)
 	if err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
@@ -182,6 +196,15 @@ func (h *MembershipHandler) UpdateMembership(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": membership})
 }
 
+// DeleteMembership godoc
+// @Summary      Eliminar una membresía
+// @Tags         Memberships
+// @Produce      json
+// @Param        id path int true "ID de la membresía"
+// @Success      200 {object} map[string]interface{}
+// @Security     BearerAuth
+// @Router       /memberships/{id} [delete]
+// @Router       /platform/memberships/{id} [delete]
 func (h *MembershipHandler) DeleteMembership(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -202,7 +225,7 @@ func (h *MembershipHandler) DeleteMembership(c *gin.Context) {
 			return
 		}
 		companyID := companyIDVal.(uint)
-		if membership.CompanyID == nil || *membership.CompanyID != companyID {
+		if membership.CompanyID != companyID {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 			return
 		}

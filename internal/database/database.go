@@ -1,8 +1,10 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"dvra-api/internal/platform/config"
 
@@ -18,9 +20,11 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 	dsn := cfg.GetDBConnectionString()
 
 	// Configure GORM logger
-	gormConfig := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+	logMode := logger.Warn
+	if cfg.IsDevelopment() {
+		logMode = logger.Info
 	}
+	gormConfig := &gorm.Config{Logger: logger.Default.LogMode(logMode)}
 
 	// Open connection
 	db, err := gorm.Open(postgres.Open(dsn), gormConfig)
@@ -37,6 +41,12 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 	// Connection pool settings
 	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetConnMaxLifetime(time.Hour)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := sqlDB.PingContext(ctx); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
 
 	DB = db
 	log.Println("✅ Database connection established successfully")

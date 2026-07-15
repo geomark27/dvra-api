@@ -34,26 +34,14 @@ func (h *JobHandler) GetJobs(c *gin.Context) {
 	// Debug: log filtros recibidos
 	h.logger.Info("Filters received: Status=%s, LocationType=%s, CityID=%v", filters.Status, filters.LocationType, filters.CityID)
 
-	// SuperAdmin puede ver todos los jobs
-	if authctx.IsSuperAdmin(c) {
-		jobs, err := h.jobService.GetAllJobsWithFilters(filters)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve jobs"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"status": "success", "data": gin.H{"jobs": dtos.ToJobResponseList(jobs), "count": len(jobs)}})
-		return
-	}
-
-	// Usuarios normales solo ven jobs de su empresa
-	companyIDVal, exists := c.Get("company_id")
-	if !exists {
+	// Tenant users only see jobs allowed by their active membership.
+	scope, ok := authctx.TenantScope(c)
+	if !ok {
 		c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
 		return
 	}
 
-	companyID := companyIDVal.(uint)
-	jobs, err := h.jobService.GetJobsByCompanyIDWithFilters(companyID, filters)
+	jobs, err := h.jobService.GetJobsWithScope(scope, filters)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve jobs"})
 		return
@@ -74,24 +62,11 @@ func (h *JobHandler) GetJob(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID"})
 		return
 	}
-	job, err := h.jobService.GetJobByID(uint(id))
+	scope, _ := authctx.TenantScope(c)
+	job, err := h.jobService.GetJobByID(uint(id), scope)
 	if err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
-	}
-
-	// Validar acceso: SuperAdmin o miembro de la misma empresa
-	if !authctx.IsSuperAdmin(c) {
-		companyIDVal, exists := c.Get("company_id")
-		if !exists {
-			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
-			return
-		}
-		companyID := companyIDVal.(uint)
-		if job.CompanyID != companyID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			return
-		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": dtos.ToJobResponse(job)})
@@ -104,16 +79,12 @@ func (h *JobHandler) CreateJob(c *gin.Context) {
 		return
 	}
 
-	// Forzar company_id del token para usuarios normales
-	if !authctx.IsSuperAdmin(c) {
-		companyIDVal, exists := c.Get("company_id")
-		if !exists {
-			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
-			return
-		}
-		companyID := companyIDVal.(uint)
-		dto.CompanyID = companyID // Forzar company del token, ignorar el enviado
+	companyID, ok := authctx.CompanyID(c)
+	if !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+		return
 	}
+	dto.CompanyID = companyID
 
 	job, err := h.jobService.CreateJob(dto)
 	if err != nil {
@@ -129,32 +100,14 @@ func (h *JobHandler) UpdateJob(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID"})
 		return
 	}
-
-	// Validar que el job pertenece a la empresa del usuario
-	if !authctx.IsSuperAdmin(c) {
-		job, err := h.jobService.GetJobByID(uint(id))
-		if err != nil {
-			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
-			return
-		}
-		companyIDVal, exists := c.Get("company_id")
-		if !exists {
-			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
-			return
-		}
-		companyID := companyIDVal.(uint)
-		if job.CompanyID != companyID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			return
-		}
-	}
+	scope, _ := authctx.TenantScope(c)
 
 	var dto dtos.UpdateJobDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	updatedJob, err := h.jobService.UpdateJob(uint(id), dto)
+	updatedJob, err := h.jobService.UpdateJob(uint(id), scope, dto)
 	if err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
@@ -168,27 +121,9 @@ func (h *JobHandler) DeleteJob(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID"})
 		return
 	}
+	scope, _ := authctx.TenantScope(c)
 
-	// Validar que el job pertenece a la empresa del usuario
-	if !authctx.IsSuperAdmin(c) {
-		job, err := h.jobService.GetJobByID(uint(id))
-		if err != nil {
-			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
-			return
-		}
-		companyIDVal, exists := c.Get("company_id")
-		if !exists {
-			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
-			return
-		}
-		companyID := companyIDVal.(uint)
-		if job.CompanyID != companyID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			return
-		}
-	}
-
-	if err := h.jobService.DeleteJob(uint(id)); err != nil {
+	if err := h.jobService.DeleteJob(uint(id), scope); err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
@@ -197,7 +132,7 @@ func (h *JobHandler) DeleteJob(c *gin.Context) {
 
 // PublishJob godoc
 // @Summary      Publicar empleo
-// @Description  Cambia el estado del job a 'active'
+// @Description  Cambia el estado del job a 'published'
 // @Tags         Jobs
 // @Accept       json
 // @Produce      json
@@ -214,27 +149,9 @@ func (h *JobHandler) PublishJob(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID"})
 		return
 	}
+	scope, _ := authctx.TenantScope(c)
 
-	// Validar que el job pertenece a la empresa del usuario
-	if !authctx.IsSuperAdmin(c) {
-		job, err := h.jobService.GetJobByID(uint(id))
-		if err != nil {
-			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
-			return
-		}
-		companyIDVal, exists := c.Get("company_id")
-		if !exists {
-			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
-			return
-		}
-		companyID := companyIDVal.(uint)
-		if job.CompanyID != companyID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			return
-		}
-	}
-
-	job, err := h.jobService.PublishJob(uint(id))
+	job, err := h.jobService.PublishJob(uint(id), scope)
 	if err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
@@ -261,27 +178,9 @@ func (h *JobHandler) CloseJob(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID"})
 		return
 	}
+	scope, _ := authctx.TenantScope(c)
 
-	// Validar que el job pertenece a la empresa del usuario
-	if !authctx.IsSuperAdmin(c) {
-		job, err := h.jobService.GetJobByID(uint(id))
-		if err != nil {
-			c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
-			return
-		}
-		companyIDVal, exists := c.Get("company_id")
-		if !exists {
-			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
-			return
-		}
-		companyID := companyIDVal.(uint)
-		if job.CompanyID != companyID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			return
-		}
-	}
-
-	job, err := h.jobService.CloseJob(uint(id))
+	job, err := h.jobService.CloseJob(uint(id), scope)
 	if err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return

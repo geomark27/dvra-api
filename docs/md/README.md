@@ -13,6 +13,7 @@ docs/md/
 │   └── PLAN_DE_NEGOCIO_ANO1.md
 ├── tecnico/                           ← Detalles técnicos y desarrollo
 │   ├── ARQUITECTURA.md
+│   ├── ADR-002-contextos-landlord-tenant.md
 │   ├── API_ENDPOINTS.md
 │   ├── FLUJO_CLIENTE.md
 │   ├── FLUJO_SUPERADMIN.md
@@ -34,6 +35,7 @@ docs/md/
 | Documento | Contenido | Úsalo para |
 |-----------|-----------|------------|
 | [ARQUITECTURA.md](tecnico/ARQUITECTURA.md) | Tech stack (Go/Gin/GORM/PostgreSQL), arquitectura de capas, multi-tenancy, modelos de datos, seguridad JWT, infraestructura AWS | Entender la estructura del sistema antes de tocar código |
+| [ADR-002-contextos-landlord-tenant.md](tecnico/ADR-002-contextos-landlord-tenant.md) | Separación de identidad, landlord, memberships tenant, JWT y permisos | Entender y extender la autorización multitenant |
 | [API_ENDPOINTS.md](tecnico/API_ENDPOINTS.md) | **Referencia completa de todos los endpoints** con requests/responses de ejemplo | Consulta diaria durante el desarrollo e integración frontend |
 | [FLUJO_CLIENTE.md](tecnico/FLUJO_CLIENTE.md) | Flujo completo del cliente (admin de empresa): registro, multi-empresa, permisos por rol, aislamiento multi-tenant, casos de uso | Entender el recorrido y permisos de un usuario de empresa |
 | [FLUJO_SUPERADMIN.md](tecnico/FLUJO_SUPERADMIN.md) | Flujo completo del SuperAdmin: autenticación global, gestión de empresas/planes/memberships, analytics, restricciones | Entender la operación administrativa de la plataforma |

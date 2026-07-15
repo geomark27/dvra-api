@@ -11,8 +11,10 @@ services:
     env_file:
       - .env
     environment:
+      - PORT=8080
       - DB_HOST=postgres
       - DB_PORT=5432
+      - STORAGE_ROOT=/app/uploads
     ports:
       - "${PORT:-8080}:8080"
     depends_on:
@@ -20,6 +22,8 @@ services:
         condition: service_healthy
     networks:
       - dvra-network
+    volumes:
+      - uploads_data:/app/uploads
 
   # PostgreSQL Database
   postgres:
@@ -53,4 +57,6 @@ networks:
 
 volumes:
   postgres_data:
+    driver: local
+  uploads_data:
     driver: local

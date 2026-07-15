@@ -9,7 +9,7 @@ const (
 )
 
 func init() {
-	grant(RoleAdmin, UsersView, UsersCreate, UsersUpdate, UsersDelete)
+	grant(RoleAdmin, UsersView, UsersCreate, UsersDelete)
 	// Ver team members es para todos los roles (matriz 3.2)
 	grant(RoleRecruiter, UsersView)
 	grant(RoleHiringManager, UsersView)

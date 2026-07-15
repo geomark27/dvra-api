@@ -126,10 +126,21 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 		return
 	}
 
-	// Rol y permisos de la empresa activa del token, para la UI
 	role := authctx.Role(c)
 	response.Role = role
-	response.Permissions = permissions.For(role)
+	context := &dtos.AuthContextResponse{Type: authctx.ContextType(c), Role: role}
+	if companyID, ok := authctx.CompanyID(c); ok {
+		context.CompanyID = &companyID
+	}
+	if membershipID, ok := authctx.MembershipID(c); ok {
+		context.MembershipID = &membershipID
+	}
+	response.ActiveContext = context
+	if authctx.IsPlatformContext(c) {
+		response.Permissions = permissions.ForPlatform(role)
+	} else if authctx.IsTenantContext(c) {
+		response.Permissions = permissions.For(role)
+	}
 
 	c.JSON(http.StatusOK, response)
 }
@@ -190,6 +201,16 @@ func (h *AuthHandler) RegisterCompany(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
+// SwitchCompany godoc
+// @Summary      Switch active tenant
+// @Description  Issues new access and refresh tokens for an active tenant membership
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        body body dtos.SwitchCompanyDTO true "Tenant context"
+// @Success      200 {object} dtos.SwitchCompanyResponseDTO
+// @Security     BearerAuth
+// @Router       /auth/switch-company [post]
 func (h *AuthHandler) SwitchCompany(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -209,6 +230,28 @@ func (h *AuthHandler) SwitchCompany(c *gin.Context) {
 		return
 	}
 
+	c.JSON(http.StatusOK, response)
+}
+
+// SwitchToPlatform godoc
+// @Summary      Switch to landlord context
+// @Description  Issues new access and refresh tokens for an active platform membership
+// @Tags         Authentication
+// @Produce      json
+// @Success      200 {object} dtos.SwitchPlatformResponseDTO
+// @Security     BearerAuth
+// @Router       /auth/switch-platform [post]
+func (h *AuthHandler) SwitchToPlatform(c *gin.Context) {
+	userID, ok := authctx.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	response, err := h.service.SwitchToPlatform(userID)
+	if err != nil {
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, response)
 }
 

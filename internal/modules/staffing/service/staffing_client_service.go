@@ -7,6 +7,7 @@ import (
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/modules/staffing/domain"
 	"dvra-api/internal/shared/apperr"
+	"dvra-api/internal/shared/tenant"
 )
 
 // StaffingClientService orquesta la lógica de clientes finales.
@@ -22,13 +23,16 @@ func (s *StaffingClientService) GetByCompanyID(companyID uint, filters dtos.Staf
 	return s.repo.GetByCompanyID(companyID, filters.Status)
 }
 
-func (s *StaffingClientService) GetByID(id uint) (*models.StaffingClient, error) {
+func (s *StaffingClientService) GetByID(id uint, scope tenant.Scope) (*models.StaffingClient, error) {
 	client, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
 	if client == nil {
 		return nil, apperr.NotFound("staffing client not found")
+	}
+	if !scope.Allows(client.CompanyID) {
+		return nil, apperr.Forbidden("access denied")
 	}
 	return client, nil
 }
@@ -63,8 +67,7 @@ func (s *StaffingClientService) Create(dto dtos.CreateStaffingClientDTO) (*model
 	return s.repo.Create(client)
 }
 
-// companyID = 0 omite la validación de tenant (SuperAdmin).
-func (s *StaffingClientService) Update(id, companyID uint, dto dtos.UpdateStaffingClientDTO) (*models.StaffingClient, error) {
+func (s *StaffingClientService) Update(id uint, scope tenant.Scope, dto dtos.UpdateStaffingClientDTO) (*models.StaffingClient, error) {
 	client, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -72,7 +75,7 @@ func (s *StaffingClientService) Update(id, companyID uint, dto dtos.UpdateStaffi
 	if client == nil {
 		return nil, apperr.NotFound("staffing client not found")
 	}
-	if companyID > 0 && client.CompanyID != companyID {
+	if !scope.Allows(client.CompanyID) {
 		return nil, apperr.Forbidden("access denied")
 	}
 
@@ -117,7 +120,7 @@ func (s *StaffingClientService) Update(id, companyID uint, dto dtos.UpdateStaffi
 	return s.repo.Update(client)
 }
 
-func (s *StaffingClientService) Delete(id, companyID uint) error {
+func (s *StaffingClientService) Delete(id uint, scope tenant.Scope) error {
 	client, err := s.repo.GetByID(id)
 	if err != nil {
 		return err
@@ -125,7 +128,7 @@ func (s *StaffingClientService) Delete(id, companyID uint) error {
 	if client == nil {
 		return apperr.NotFound("staffing client not found")
 	}
-	if companyID > 0 && client.CompanyID != companyID {
+	if !scope.Allows(client.CompanyID) {
 		return apperr.Forbidden("access denied")
 	}
 	return s.repo.Delete(id)

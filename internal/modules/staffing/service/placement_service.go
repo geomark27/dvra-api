@@ -5,6 +5,7 @@ import (
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/modules/staffing/domain"
 	"dvra-api/internal/shared/apperr"
+	"dvra-api/internal/shared/tenant"
 )
 
 // PlacementService orquesta la colocación de candidatos en clientes finales.
@@ -28,13 +29,16 @@ func (s *PlacementService) GetByCompanyID(companyID uint, filters dtos.Placement
 	return s.repo.GetByCompanyID(companyID, filters)
 }
 
-func (s *PlacementService) GetByID(id uint) (*models.Placement, error) {
+func (s *PlacementService) GetByID(id uint, scope tenant.Scope) (*models.Placement, error) {
 	placement, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
 	if placement == nil {
 		return nil, apperr.NotFound("placement not found")
+	}
+	if !scope.Allows(placement.CompanyID) {
+		return nil, apperr.Forbidden("access denied")
 	}
 	return placement, nil
 }
@@ -105,8 +109,7 @@ func (s *PlacementService) Create(companyID uint, dto dtos.CreatePlacementDTO) (
 	return s.repo.Create(placement)
 }
 
-// companyID = 0 omite la validación de tenant (SuperAdmin).
-func (s *PlacementService) Update(id, companyID uint, dto dtos.UpdatePlacementDTO) (*models.Placement, error) {
+func (s *PlacementService) Update(id uint, scope tenant.Scope, dto dtos.UpdatePlacementDTO) (*models.Placement, error) {
 	placement, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -114,7 +117,7 @@ func (s *PlacementService) Update(id, companyID uint, dto dtos.UpdatePlacementDT
 	if placement == nil {
 		return nil, apperr.NotFound("placement not found")
 	}
-	if companyID > 0 && placement.CompanyID != companyID {
+	if !scope.Allows(placement.CompanyID) {
 		return nil, apperr.Forbidden("access denied")
 	}
 
@@ -152,7 +155,7 @@ func (s *PlacementService) Update(id, companyID uint, dto dtos.UpdatePlacementDT
 	return s.repo.Update(placement)
 }
 
-func (s *PlacementService) Delete(id, companyID uint) error {
+func (s *PlacementService) Delete(id uint, scope tenant.Scope) error {
 	placement, err := s.repo.GetByID(id)
 	if err != nil {
 		return err
@@ -160,7 +163,7 @@ func (s *PlacementService) Delete(id, companyID uint) error {
 	if placement == nil {
 		return apperr.NotFound("placement not found")
 	}
-	if companyID > 0 && placement.CompanyID != companyID {
+	if !scope.Allows(placement.CompanyID) {
 		return apperr.Forbidden("access denied")
 	}
 	return s.repo.Delete(id)

@@ -9,9 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RequirePermission autoriza la acción solo si el rol del token tiene el
-// permiso indicado (ver internal/shared/permissions). SuperAdmin pasa siempre.
-// Debe aplicarse después de AuthMiddleware:
+// RequirePermission autoriza una acción tenant solo si el contexto y rol del
+// token tienen el permiso indicado. Debe aplicarse después de AuthMiddleware:
 //
 //	jobs.POST("", middleware.RequirePermission(permissions.JobsCreate), h.CreateJob)
 func RequirePermission(permission string) gin.HandlerFunc {
@@ -23,12 +22,24 @@ func RequirePermission(permission string) gin.HandlerFunc {
 			return
 		}
 
-		if !permissions.Can(role, permission) {
+		if !authctx.IsTenantContext(c) || !permissions.Can(role, permission) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
 			c.Abort()
 			return
 		}
 
+		c.Next()
+	}
+}
+
+func RequirePlatformPermission(permission string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role := authctx.Role(c)
+		if !authctx.IsPlatformContext(c) || !permissions.PlatformCan(role, permission) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient platform permissions"})
+			c.Abort()
+			return
+		}
 		c.Next()
 	}
 }

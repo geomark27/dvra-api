@@ -1,14 +1,9 @@
 package handlers
 
 import (
-	"fmt"
-	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
@@ -161,7 +156,7 @@ func (h *PublicHandler) ApplyToJob(c *gin.Context) {
 	}
 
 	// Get job first to validate and get company slug for file organization
-	job, err := h.publicService.GetPublishedJobByID(uint(jobID))
+	_, err = h.publicService.GetPublishedJobByID(uint(jobID))
 	if err != nil {
 		h.logger.Error("Failed to get job %d: %v", jobID, err)
 		c.JSON(http.StatusNotFound, gin.H{
@@ -170,20 +165,7 @@ func (h *PublicHandler) ApplyToJob(c *gin.Context) {
 		})
 		return
 	}
-
-	// Get company slug for directory structure
-	companySlug := ""
-	if job.Company != nil {
-		companySlug = job.Company.Slug
-	}
-	if companySlug == "" {
-		h.logger.Error("Job %d has no company slug", jobID)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "error",
-			"message": "Invalid job configuration",
-		})
-		return
-	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 12*1024*1024)
 
 	// Parse form data
 	var dto dtos.PublicApplicationDTO
@@ -204,83 +186,18 @@ func (h *PublicHandler) ApplyToJob(c *gin.Context) {
 		return
 	}
 
-	// Handle resume file upload (optional)
+	var upload *services.ResumeUpload
 	file, header, err := c.Request.FormFile("resume")
 	if err == nil {
 		defer file.Close()
-
-		// Validate file type
-		allowedExtensions := map[string]bool{
-			".pdf":  true,
-			".doc":  true,
-			".docx": true,
-		}
-		ext := strings.ToLower(filepath.Ext(header.Filename))
-		if !allowedExtensions[ext] {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"status":  "error",
-				"message": "Resume must be PDF, DOC, or DOCX format",
-			})
-			return
-		}
-
-		// Validate file size (max 10MB)
-		if header.Size > 10*1024*1024 {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"status":  "error",
-				"message": "Resume file must be less than 10MB",
-			})
-			return
-		}
-
-		// Create company-specific uploads directory
-		// Structure: uploads/companies/{company-slug}/resumes/
-		uploadDir := filepath.Join("uploads", "companies", companySlug, "resumes")
-		if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
-			h.logger.Error("Failed to create upload directory: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "error",
-				"message": "Failed to process resume",
-			})
-			return
-		}
-
-		// Generate unique filename
-		filename := fmt.Sprintf("%d_%s_%s%s",
-			time.Now().Unix(),
-			sanitizeFilename(dto.Email),
-			sanitizeFilename(dto.LastName),
-			ext,
-		)
-		filePath := filepath.Join(uploadDir, filename)
-
-		// Save file
-		out, err := os.Create(filePath)
-		if err != nil {
-			h.logger.Error("Failed to create resume file: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "error",
-				"message": "Failed to save resume",
-			})
-			return
-		}
-		defer out.Close()
-
-		if _, err := io.Copy(out, file); err != nil {
-			h.logger.Error("Failed to write resume file: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "error",
-				"message": "Failed to save resume",
-			})
-			return
-		}
-
-		// Set resume URL (relative path for now, could be S3 URL in production)
-		dto.ResumeURL = "/" + filePath
+		upload = &services.ResumeUpload{Reader: file, OriginalName: header.Filename, Size: header.Size}
+	} else if err != http.ErrMissingFile {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Invalid multipart request"})
+		return
 	}
 
 	// Process application
-	application, err := h.publicService.ApplyToJob(uint(jobID), dto)
+	application, err := h.publicService.ApplyToJob(uint(jobID), dto, upload)
 	if err != nil {
 		h.logger.Error("Failed to apply to job %d: %v", jobID, err)
 
@@ -317,18 +234,4 @@ func (h *PublicHandler) ApplyToJob(c *gin.Context) {
 		"status": "success",
 		"data":   response,
 	})
-}
-
-// sanitizeFilename removes special characters from filename
-func sanitizeFilename(s string) string {
-	// Keep only alphanumeric characters and replace others with underscore
-	var result strings.Builder
-	for _, r := range s {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
-			result.WriteRune(r)
-		} else {
-			result.WriteRune('_')
-		}
-	}
-	return result.String()
 }

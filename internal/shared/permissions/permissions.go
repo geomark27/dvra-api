@@ -38,12 +38,9 @@ func grant(role string, perms ...string) {
 	}
 }
 
-// Can reporta si el rol tiene el permiso indicado.
-// SuperAdmin tiene acceso total por definición (RN-MEMB-003).
+// Can reports tenant permissions only. Platform roles are resolved through
+// PlatformCan so landlord and tenant authorization cannot be mixed.
 func Can(role, permission string) bool {
-	if role == RoleSuperAdmin {
-		return true
-	}
 	return rolePermissions[role][permission]
 }
 
@@ -51,15 +48,6 @@ func Can(role, permission string) bool {
 // Pensado para exponerse al frontend (GET /auth/me) y que la UI
 // muestre/oculte acciones sin duplicar la matriz.
 func For(role string) []string {
-	if role == RoleSuperAdmin {
-		all := make(map[string]bool)
-		for _, set := range rolePermissions {
-			for p := range set {
-				all[p] = true
-			}
-		}
-		return sortedKeys(all)
-	}
 	return sortedKeys(rolePermissions[role])
 }
 

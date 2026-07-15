@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"dvra-api/internal/app/models"
-	"dvra-api/internal/database"
 
 	"gorm.io/gorm"
 )
@@ -15,6 +14,7 @@ type UserRepository interface {
 	Create(user *models.User) (*models.User, error)
 	Update(user *models.User) (*models.User, error)
 	Delete(id uint) error
+	RemoveFromCompany(userID, companyID uint) error
 	GetByEmail(email string) (*models.User, error)
 	GetUserWithMemberships(userID uint) (*models.User, error)
 	FindByEmail(email string) (*models.User, error)
@@ -23,18 +23,19 @@ type UserRepository interface {
 	UpdatePassword(userID uint, hashedPassword string) error
 }
 
-// userRepository es la implementación con GORM
-type userRepository struct{}
+type userRepository struct {
+	db *gorm.DB
+}
 
-// NewUserRepository crea una nueva instancia de UserRepository
-func NewUserRepository() UserRepository {
-	return &userRepository{}
+// NewUserRepository crea una nueva instancia de UserRepository.
+func NewUserRepository(db *gorm.DB) UserRepository {
+	return &userRepository{db: db}
 }
 
 // GetAll obtiene todos los usuarios
 func (r *userRepository) GetAll() ([]models.User, error) {
 	var users []models.User
-	if err := database.DB.Find(&users).Error; err != nil {
+	if err := r.db.Find(&users).Error; err != nil {
 		return nil, err
 	}
 	return users, nil
@@ -43,7 +44,7 @@ func (r *userRepository) GetAll() ([]models.User, error) {
 // GetByID obtiene un usuario por su ID
 func (r *userRepository) GetByID(id uint) (*models.User, error) {
 	var user models.User
-	if err := database.DB.Preload("Memberships").First(&user, id).Error; err != nil {
+	if err := r.db.Preload("Memberships").First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
@@ -55,7 +56,7 @@ func (r *userRepository) GetByID(id uint) (*models.User, error) {
 // GetByCompanyID obtiene usuarios de una empresa específica
 func (r *userRepository) GetByCompanyID(companyID uint) ([]models.User, error) {
 	var users []models.User
-	err := database.DB.
+	err := r.db.
 		Joins("JOIN memberships ON memberships.user_id = users.id").
 		Where("memberships.company_id = ?", companyID).
 		Find(&users).Error
@@ -68,7 +69,7 @@ func (r *userRepository) GetByCompanyID(companyID uint) ([]models.User, error) {
 // GetByEmail obtiene un usuario por su email
 func (r *userRepository) GetByEmail(email string) (*models.User, error) {
 	var user models.User
-	if err := database.DB.Where("email = ?", email).First(&user).Error; err != nil {
+	if err := r.db.Where("email = ?", email).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
@@ -79,7 +80,7 @@ func (r *userRepository) GetByEmail(email string) (*models.User, error) {
 
 // Create crea un nuevo usuario
 func (r *userRepository) Create(user *models.User) (*models.User, error) {
-	if err := database.DB.Create(user).Error; err != nil {
+	if err := r.db.Create(user).Error; err != nil {
 		return nil, err
 	}
 	return user, nil
@@ -87,7 +88,7 @@ func (r *userRepository) Create(user *models.User) (*models.User, error) {
 
 // Update actualiza un usuario existente
 func (r *userRepository) Update(user *models.User) (*models.User, error) {
-	if err := database.DB.Save(user).Error; err != nil {
+	if err := r.db.Save(user).Error; err != nil {
 		return nil, err
 	}
 	return user, nil
@@ -95,13 +96,24 @@ func (r *userRepository) Update(user *models.User) (*models.User, error) {
 
 // Delete elimina un usuario (soft delete)
 func (r *userRepository) Delete(id uint) error {
-	return database.DB.Delete(&models.User{}, id).Error
+	return r.db.Delete(&models.User{}, id).Error
+}
+
+func (r *userRepository) RemoveFromCompany(userID, companyID uint) error {
+	result := r.db.Where("user_id = ? AND company_id = ?", userID, companyID).Delete(&models.Membership{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 // GetUserWithMemberships obtiene un usuario con sus memberships
 func (r *userRepository) GetUserWithMemberships(userID uint) (*models.User, error) {
 	var user models.User
-	if err := database.DB.Preload("Memberships").Preload("Memberships.Company").First(&user, userID).Error; err != nil {
+	if err := r.db.Preload("Memberships").Preload("Memberships.Company").First(&user, userID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
@@ -122,14 +134,14 @@ func (r *userRepository) FindByID(id int) (*models.User, error) {
 
 // UpdateLastLogin updates the last login timestamp
 func (r *userRepository) UpdateLastLogin(userID uint) error {
-	return database.DB.Model(&models.User{}).
+	return r.db.Model(&models.User{}).
 		Where("id = ?", userID).
 		Update("last_login_at", gorm.Expr("NOW()")).Error
 }
 
 // UpdatePassword updates user password
 func (r *userRepository) UpdatePassword(userID uint, hashedPassword string) error {
-	return database.DB.Model(&models.User{}).
+	return r.db.Model(&models.User{}).
 		Where("id = ?", userID).
 		Update("password_hash", hashedPassword).Error
 }

@@ -38,6 +38,7 @@ func NewCompanyHandler(companyService services.CompanyService) *CompanyHandler {
 // @Failure      500  {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /companies [get]
+// @Router       /platform/companies [get]
 func (h *CompanyHandler) GetCompanies(c *gin.Context) {
 
 	// SuperAdmin puede ver todas las empresas
@@ -97,6 +98,7 @@ func (h *CompanyHandler) GetCompanies(c *gin.Context) {
 // @Failure      404  {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /companies/{id} [get]
+// @Router       /platform/companies/{id} [get]
 func (h *CompanyHandler) GetCompany(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -143,7 +145,7 @@ func (h *CompanyHandler) GetCompany(c *gin.Context) {
 // @Failure      400      {object}  map[string]interface{}
 // @Failure      500      {object}  map[string]interface{}
 // @Security     BearerAuth
-// @Router       /companies [post]
+// @Router       /platform/companies [post]
 func (h *CompanyHandler) CreateCompany(c *gin.Context) {
 	var dto dtos.CreateCompanyDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
@@ -170,7 +172,18 @@ func (h *CompanyHandler) CreateCompany(c *gin.Context) {
 	})
 }
 
-// UpdateCompany updates an existing company
+// UpdateCompany godoc
+// @Summary      Actualizar empresa
+// @Description  Actualiza la empresa del tenant o una empresa desde plataforma
+// @Tags         Companies
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "ID de la empresa"
+// @Param        company body dtos.UpdateCompanyDTO true "Cambios de la empresa"
+// @Success      200 {object} map[string]interface{}
+// @Security     BearerAuth
+// @Router       /companies/{id} [put]
+// @Router       /platform/companies/{id} [put]
 func (h *CompanyHandler) UpdateCompany(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -217,7 +230,14 @@ func (h *CompanyHandler) UpdateCompany(c *gin.Context) {
 	})
 }
 
-// DeleteCompany deletes a company
+// DeleteCompany godoc
+// @Summary      Eliminar empresa desde plataforma
+// @Tags         Companies
+// @Produce      json
+// @Param        id path int true "ID de la empresa"
+// @Success      200 {object} map[string]interface{}
+// @Security     BearerAuth
+// @Router       /platform/companies/{id} [delete]
 func (h *CompanyHandler) DeleteCompany(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {

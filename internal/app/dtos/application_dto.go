@@ -23,18 +23,18 @@ type ApplicationResponseDTO struct {
 
 // CreateApplicationDTO represents the data needed to create an application
 type CreateApplicationDTO struct {
-	JobID       uint   `json:"job_id" validate:"required,min=1"`
-	CandidateID uint   `json:"candidate_id" validate:"required,min=1"`
-	CompanyID   uint   `json:"company_id" validate:"required,min=1"`
-	Stage       string `json:"stage" validate:"required,oneof=applied screening technical offer hired rejected"`
-	Rating      *int   `json:"rating,omitempty" validate:"omitempty,min=1,max=5"`
+	JobID       uint   `json:"job_id" binding:"required,min=1"`
+	CandidateID uint   `json:"candidate_id" binding:"required,min=1"`
+	CompanyID   uint   `json:"company_id"`
+	Stage       string `json:"stage" binding:"required,oneof=applied screening technical interview offer hired rejected"`
+	Rating      *int   `json:"rating,omitempty" binding:"omitempty,min=1,max=5"`
 	Notes       string `json:"notes,omitempty"`
 }
 
 // UpdateApplicationDTO represents the data needed to update an application
 type UpdateApplicationDTO struct {
-	Stage      *string    `json:"stage,omitempty" validate:"omitempty,oneof=applied screening technical offer hired rejected"`
-	Rating     *int       `json:"rating,omitempty" validate:"omitempty,min=1,max=5"`
+	Stage      *string    `json:"stage,omitempty" binding:"omitempty,oneof=applied screening technical interview offer hired rejected"`
+	Rating     *int       `json:"rating,omitempty" binding:"omitempty,min=1,max=5"`
 	Notes      *string    `json:"notes,omitempty"`
 	RejectedAt *time.Time `json:"rejected_at,omitempty"`
 	HiredAt    *time.Time `json:"hired_at,omitempty"`
@@ -42,12 +42,12 @@ type UpdateApplicationDTO struct {
 
 // MoveApplicationDTO represents the data needed to move an application to a stage
 type MoveApplicationDTO struct {
-	Stage string `json:"stage" validate:"required,oneof=applied screening technical offer hired rejected"`
+	Stage string `json:"stage" binding:"required,oneof=applied screening technical interview offer hired rejected"`
 }
 
 // RateApplicationDTO represents the data needed to rate an application
 type RateApplicationDTO struct {
-	Rating int `json:"rating" validate:"required,min=1,max=5"`
+	Rating int `json:"rating" binding:"required,min=1,max=5"`
 }
 
 // ToApplicationResponse converts an Application model to ApplicationResponseDTO

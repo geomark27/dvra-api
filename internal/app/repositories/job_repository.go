@@ -3,7 +3,8 @@ package repositories
 import (
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
-	"dvra-api/internal/database"
+	"dvra-api/internal/shared/permissions"
+	"dvra-api/internal/shared/tenant"
 
 	"gorm.io/gorm"
 )
@@ -12,9 +13,10 @@ import (
 type JobRepository interface {
 	GetAll() ([]models.Job, error)
 	GetAllWithFilters(filters dtos.JobFilters) ([]models.Job, error)
-	GetByID(id uint) (*models.Job, error)
+	GetByID(id uint, scope tenant.Scope) (*models.Job, error)
 	GetByCompanyID(companyID uint) ([]models.Job, error)
 	GetByCompanyIDWithFilters(companyID uint, filters dtos.JobFilters) ([]models.Job, error)
+	GetByScopeWithFilters(scope tenant.Scope, filters dtos.JobFilters) ([]models.Job, error)
 	GetByStatus(status string, companyID uint) ([]models.Job, error)
 	GetPublishedByCompanyID(companyID uint) ([]models.Job, error)
 	Create(job *models.Job) (*models.Job, error)
@@ -23,16 +25,16 @@ type JobRepository interface {
 }
 
 // jobRepository es la implementación con GORM
-type jobRepository struct{}
+type jobRepository struct{ db *gorm.DB }
 
 // NewJobRepository crea una nueva instancia de JobRepository
-func NewJobRepository() JobRepository {
-	return &jobRepository{}
+func NewJobRepository(db *gorm.DB) JobRepository {
+	return &jobRepository{db: db}
 }
 
 func (r *jobRepository) GetAll() ([]models.Job, error) {
 	var jobs []models.Job
-	if err := database.DB.Preload("Company").Find(&jobs).Error; err != nil {
+	if err := r.db.Preload("Company").Find(&jobs).Error; err != nil {
 		return nil, err
 	}
 	return jobs, nil
@@ -40,7 +42,7 @@ func (r *jobRepository) GetAll() ([]models.Job, error) {
 
 func (r *jobRepository) GetAllWithFilters(filters dtos.JobFilters) ([]models.Job, error) {
 	var jobs []models.Job
-	query := database.DB.Preload("Company").Preload("City.State.Country")
+	query := r.db.Preload("Company").Preload("City.State.Country")
 
 	// Aplicar filtros
 	if filters.Status != "" {
@@ -62,9 +64,11 @@ func (r *jobRepository) GetAllWithFilters(filters dtos.JobFilters) ([]models.Job
 	return jobs, nil
 }
 
-func (r *jobRepository) GetByID(id uint) (*models.Job, error) {
+func (r *jobRepository) GetByID(id uint, scope tenant.Scope) (*models.Job, error) {
 	var job models.Job
-	if err := database.DB.Preload("Company").Preload("City.State.Country").Preload("Applications").First(&job, id).Error; err != nil {
+	query := tenant.Apply(r.db, scope, "jobs.company_id")
+	query = applyJobActorScope(query, scope)
+	if err := query.Preload("Company").Preload("City.State.Country").Preload("Applications").Where("jobs.id = ?", id).First(&job).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
@@ -73,9 +77,20 @@ func (r *jobRepository) GetByID(id uint) (*models.Job, error) {
 	return &job, nil
 }
 
+func (r *jobRepository) GetByScopeWithFilters(scope tenant.Scope, filters dtos.JobFilters) ([]models.Job, error) {
+	var jobs []models.Job
+	query := tenant.Apply(r.db.Preload("City.State.Country"), scope, "jobs.company_id")
+	query = applyJobActorScope(query, scope)
+	query = applyJobFilters(query, filters)
+	if err := query.Find(&jobs).Error; err != nil {
+		return nil, err
+	}
+	return jobs, nil
+}
+
 func (r *jobRepository) GetByCompanyID(companyID uint) ([]models.Job, error) {
 	var jobs []models.Job
-	if err := database.DB.Where("company_id = ?", companyID).Find(&jobs).Error; err != nil {
+	if err := r.db.Where("company_id = ?", companyID).Find(&jobs).Error; err != nil {
 		return nil, err
 	}
 	return jobs, nil
@@ -83,9 +98,16 @@ func (r *jobRepository) GetByCompanyID(companyID uint) ([]models.Job, error) {
 
 func (r *jobRepository) GetByCompanyIDWithFilters(companyID uint, filters dtos.JobFilters) ([]models.Job, error) {
 	var jobs []models.Job
-	query := database.DB.Preload("City.State.Country").Where("company_id = ?", companyID)
+	query := r.db.Preload("City.State.Country").Where("company_id = ?", companyID)
+	query = applyJobFilters(query, filters)
 
-	// Aplicar filtros
+	if err := query.Find(&jobs).Error; err != nil {
+		return nil, err
+	}
+	return jobs, nil
+}
+
+func applyJobFilters(query *gorm.DB, filters dtos.JobFilters) *gorm.DB {
 	if filters.Status != "" {
 		query = query.Where("status = ?", filters.Status)
 	}
@@ -98,16 +120,19 @@ func (r *jobRepository) GetByCompanyIDWithFilters(companyID uint, filters dtos.J
 	if filters.StaffingClientID != nil {
 		query = query.Where("staffing_client_id = ?", *filters.StaffingClientID)
 	}
+	return query
+}
 
-	if err := query.Find(&jobs).Error; err != nil {
-		return nil, err
+func applyJobActorScope(query *gorm.DB, scope tenant.Scope) *gorm.DB {
+	if scope.Role == permissions.RoleHiringManager {
+		return query.Where("jobs.hiring_manager = ?", scope.UserID)
 	}
-	return jobs, nil
+	return query
 }
 
 func (r *jobRepository) GetByStatus(status string, companyID uint) ([]models.Job, error) {
 	var jobs []models.Job
-	if err := database.DB.Where("status = ? AND company_id = ?", status, companyID).Find(&jobs).Error; err != nil {
+	if err := r.db.Where("status = ? AND company_id = ?", status, companyID).Find(&jobs).Error; err != nil {
 		return nil, err
 	}
 	return jobs, nil
@@ -116,7 +141,7 @@ func (r *jobRepository) GetByStatus(status string, companyID uint) ([]models.Job
 // GetPublishedByCompanyID returns all published jobs for a company - for public career page
 func (r *jobRepository) GetPublishedByCompanyID(companyID uint) ([]models.Job, error) {
 	var jobs []models.Job
-	if err := database.DB.
+	if err := r.db.
 		Where("company_id = ? AND status = ?", companyID, "published").
 		Preload("Company").
 		Preload("City.State.Country").
@@ -128,19 +153,19 @@ func (r *jobRepository) GetPublishedByCompanyID(companyID uint) ([]models.Job, e
 }
 
 func (r *jobRepository) Create(job *models.Job) (*models.Job, error) {
-	if err := database.DB.Create(job).Error; err != nil {
+	if err := r.db.Create(job).Error; err != nil {
 		return nil, err
 	}
 	return job, nil
 }
 
 func (r *jobRepository) Update(job *models.Job) (*models.Job, error) {
-	if err := database.DB.Save(job).Error; err != nil {
+	if err := r.db.Save(job).Error; err != nil {
 		return nil, err
 	}
 	return job, nil
 }
 
 func (r *jobRepository) Delete(id uint) error {
-	return database.DB.Delete(&models.Job{}, id).Error
+	return r.db.Delete(&models.Job{}, id).Error
 }

@@ -9,6 +9,7 @@ import (
 	"dvra-api/internal/shared/apperr"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // Errores de dominio del módulo de planes. Son valores *apperr.AppError, de modo
@@ -34,6 +35,7 @@ type PlanService interface {
 	DeletePlan(id uint) error
 	AssignPlanToCompany(companyID uint, planSlug string) error
 	CompanyHasFeature(companyID uint, feature string) (bool, error)
+	PublishJobWithinLimit(job *models.Job) error
 }
 
 type planService struct {
@@ -320,6 +322,46 @@ func (s *planService) CompanyHasFeature(companyID uint, feature string) (bool, e
 	}
 
 	return plan.HasFeature(feature), nil
+}
+
+func (s *planService) PublishJobWithinLimit(job *models.Job) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		var company models.Company
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&company, job.CompanyID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrCompanyNotFound
+			}
+			return err
+		}
+		var plan models.Plan
+		if err := tx.Where("slug = ?", company.PlanTier).First(&plan).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrPlanNotFound
+			}
+			return err
+		}
+		if plan.MaxJobs >= 0 {
+			var count int64
+			if err := tx.Model(&models.Job{}).
+				Where("company_id = ? AND status = ?", company.ID, "published").
+				Count(&count).Error; err != nil {
+				return err
+			}
+			if count >= int64(plan.MaxJobs) {
+				return apperr.Conflict("job limit reached: upgrade your plan or close a published job")
+			}
+		}
+		result := tx.Model(&models.Job{}).
+			Where("id = ? AND company_id = ? AND status <> ?", job.ID, job.CompanyID, "published").
+			Update("status", "published")
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return apperr.Conflict("job was modified concurrently")
+		}
+		return nil
+	})
 }
 
 // Helper functions

@@ -75,7 +75,7 @@ dvra-api/
 
 1. `godotenv.Load()` → carga `.env`.
 2. `config.Load()` → struct `Config`.
-3. `database.InitDB(cfg)` → conexión GORM + AutoMigrate de `AllModels` + pool (10 idle / 100 max open / 1h lifetime). Expone singleton `database.DB`.
+3. `database.InitDB(cfg)` → conexión GORM, ping y pool (10 idle / 100 max open / 1h lifetime). Las migraciones se ejecutan explícitamente con `console migrate`.
 4. `server.New(cfg, db)` → **inyección de dependencias manual**: instancia repositorios → services → handlers y los pasa a `registerRoutes()`.
 5. `srv.Start()` → escucha en `:PORT`.
 
@@ -91,7 +91,9 @@ Todos usan `gorm.Model` (ID, CreatedAt, UpdatedAt, DeletedAt → **soft delete g
 
 ### 3.1 Identidad y multi-tenancy
 
-**`users`** — `Email` (unique, not null), `PasswordHash` (bcrypt), `FirstName`, `LastName`, `AvatarURL`, `EmailVerified` (default false), `LastLoginAt`, `IsActive` (default true). Relación: `Memberships` 1:N.
+**`users`** — identidad global: `Email` (unique, not null), `PasswordHash` (bcrypt), `FirstName`, `LastName`, `AvatarURL`, `EmailVerified`, `LastLoginAt`, `IsActive`. Relaciones: memberships tenant 1:N y platform membership opcional.
+
+**`platform_memberships`** — acceso landlord separado: `UserID` único, `Role` (`superadmin`), `Status`. Nunca contiene `company_id`.
 
 **`companies`** (tenant) — `Name`, `Slug` (unique), `LogoURL`, `PlanTier` (default `'free'`, referencia el slug del plan), `TrialEndsAt`, `Timezone` (default `'America/Bogota'`). Método `IsTrialActive()`. Relación: `Memberships` 1:N.
 
@@ -100,13 +102,13 @@ Todos usan `gorm.Model` (ID, CreatedAt, UpdatedAt, DeletedAt → **soft delete g
 | Campo | Detalle |
 |---|---|
 | `UserID` | FK not null (índice compuesto con CompanyID) |
-| `CompanyID` | FK **nullable** → `NULL` = SuperAdmin |
-| `Role` | `admin` / `recruiter` / `hiring_manager` / `user` (/ `superadmin`) |
+| `CompanyID` | FK **not null**; índice único activo con UserID |
+| `Role` | `admin` / `recruiter` / `hiring_manager` / `user` |
 | `Status` | default `active` (pending/suspended/removed previstos) |
 | `IsDefault` | empresa usada al hacer login |
 | `InvitedBy`, `InvitedAt`, `JoinedAt` | tracking de invitación |
 
-**`roles`** — catálogo: `Name`, `Slug` (unique), `Level` (admin=50, recruiter=30, user=10), `IsSystem` (no eliminables). Constantes en `models/role.go`.
+Los roles tenant son perfiles de producto definidos en `internal/shared/permissions`. No existe un catálogo parcialmente conectado; roles personalizados requieren el modelo completo descrito en ADR-002.
 
 ### 3.2 Core ATS
 
@@ -148,36 +150,36 @@ Relaciones GORM bidireccionales (`belongs-to` + `has-many`) → permiten preload
 
 ```go
 type JWTClaims struct {
-    UserID    uint
-    CompanyID *uint   // nil = sin contexto de empresa (SuperAdmin)
-    Email     string
-    Role      string
+    UserID       uint
+    ContextType  string // identity | tenant | platform
+    CompanyID    *uint
+    MembershipID *uint
+    Email        string
+    Role         string
     jwt.RegisteredClaims
 }
 ```
 
 - **Access token:** 1 hora · **Refresh token:** 30 días.
 - Firmas HS256 con `JWT_SECRET` / `JWT_REFRESH_SECRET`.
-- `JWTService`: `GenerateAccessToken(userID, companyID, email, role)`, `GenerateRefreshToken(userID)`, `ValidateToken(token)`.
-- El token **lleva el contexto completo**: cambiar de empresa = emitir token nuevo (`/auth/switch-company`), nunca mutar el actual.
+- Access y refresh token llevan el contexto seleccionado. `switch-company` y `switch-platform` rotan ambos tokens.
+- El refresh valida nuevamente que la platform membership o tenant membership siga activa y toma el rol vigente de BD.
 
 ### 4.2 Middleware (`internal/shared/middleware/auth_middleware.go`)
 
 | Middleware | Función |
 |---|---|
-| `AuthMiddleware(jwtService)` | Valida `Authorization: Bearer <token>`; inyecta en el contexto Gin: `user_id`, `email`, `role`, `company_id` (si existe). 401 si inválido/expirado |
-| `RequireRole(minLevel)` | Jerarquía: admin=50, recruiter=30, hiring_manager=20, user=10. 403 si insuficiente |
+| `AuthMiddleware(jwtService)` | Valida `Authorization: Bearer <token>` e inyecta `user_id`, `context_type`, `membership_id`, `role` y `company_id` cuando corresponde |
+| `RequirePermission(permission)` | Exige contexto tenant y permiso del perfil tenant |
+| `RequirePlatformPermission(permission)` | Exige contexto platform y permiso landlord |
 | `RequireCompany()` | Exige `company_id` en contexto. 403 si falta |
 | `OptionalAuth(jwtService)` | Valida token si está presente; continúa sin él (rutas públicas con contexto opcional) |
 
-### 4.3 Roles
+### 4.3 Perfiles y contextos
 
-Jerarquía completa (`getRoleLevel`): `superadmin`=100 > `admin`=50 > `recruiter`=30 > `hiring_manager`=20 > `user`=10.
-
-> ⚠️ **Separación del SuperAdmin (commit `e04aafd`):** este API **ya no expone** `/auth/superadmin/login` ni el grupo `/api/v1/admin/*` (handlers `admin/superadmin_companies_handler.go`, service `admin/superadmin_companies_service.go` y `superadmin_dto.go` fueron **eliminados**; el panel vive en un servicio aparte). Lo que **permanece** en este API:
-> - `Membership.CompanyID` nullable y `JWTClaims.CompanyID *uint` (soporte de tokens sin empresa).
-> - Checks `if role == "superadmin"` en los handlers: un token superadmin válido obtiene lectura global (sin filtro por empresa) y es el único que puede `POST /memberships`.
-> - El seeder aún crea el usuario `superadmin@dvra.com` / `SuperAdmin123!` (⚠️ cambiar en producción).
+Los perfiles tenant son `admin`, `recruiter`, `hiring_manager` y `user`. El rol
+`superadmin` existe únicamente en `platform_memberships`. Las rutas landlord
+viven bajo `/api/v1/platform/*`; no heredan permisos tenant. Ver ADR-002.
 
 ---
 
@@ -204,21 +206,27 @@ Jerarquía completa (`getRoleLevel`): `superadmin`=100 > `admin`=50 > `recruiter
 | POST | `/auth/change-password` | JWT | Valida password anterior, re-hashea |
 | POST | `/auth/logout` | JWT | Stateless: el cliente descarta los tokens |
 | POST | `/auth/switch-company` | JWT | Valida membresía activa; emite token con nuevo `company_id` + rol de esa empresa |
+| POST | `/auth/switch-platform` | JWT | Cambia al perfil landlord activo y rota ambos tokens |
 | GET | `/auth/my-companies` | JWT | Empresas del usuario (selector multi-empresa) |
 
 ### 5.3 Recursos protegidos (JWT + scope de empresa)
 
 | Recurso | Endpoints |
 |---|---|
-| **Users** | `GET /users` · `POST /users` (crea User + Membership en la empresa del token) · `GET/PUT/DELETE /users/:id` |
+| **Users** | `GET /users` · `POST /users` (crea User + Membership en la empresa del token) · `GET /users/:id` · `DELETE /users/:id` (remueve solo la membership activa) |
 | **Companies** | `GET /companies` (cliente: solo la suya) · `POST /companies` · `GET/PUT/DELETE /companies/:id` |
-| **Memberships** | `GET /memberships` · `POST /memberships` (**403 salvo superadmin**) · `GET/PUT/DELETE /memberships/:id` |
+| **Memberships** | `GET /memberships` · `GET/PUT/DELETE /memberships/:id`; crear usuarios nuevos genera su membership tenant en transacción |
 | **Jobs** | `GET /jobs` · `POST /jobs` (nace `draft`) · `GET/PUT/DELETE /jobs/:id` · `PATCH /jobs/:id/publish` · `PATCH /jobs/:id/close` |
 | **Candidates** | `GET /candidates` · `POST /candidates` (email único por empresa) · `GET/PUT/DELETE /candidates/:id` · `POST /candidates/:id/upload-resume` (multipart) |
 | **Applications** | `GET /applications` · `GET /applications/by-stage` (agrupado para Kanban) · `POST /applications` · `GET/PUT/DELETE /applications/:id` · `PATCH /applications/:id/move` (cambia stage + timestamps automáticos) · `PATCH /applications/:id/rate` (1–5) |
 | **Dashboard** | `GET /dashboard/stats` (estadísticas completas de la empresa, ver §7.7) |
 
-### 5.4 Rutas públicas (sin autenticación)
+### 5.4 Landlord (`/platform`, JWT con contexto `platform`)
+
+Incluye gestión de companies, users globales, memberships tenant, planes y
+platform settings. Cada ruta exige un permiso `platform.*` explícito.
+
+### 5.5 Rutas públicas (sin autenticación)
 
 | Grupo | Endpoints |
 |---|---|
@@ -247,30 +255,29 @@ Paginación (donde aplica): `page` (default 1), `limit` (default 20, max 100).
 
 **Modelo:** base de datos compartida con aislamiento por fila (`company_id` scoping). Índices compuestos en `jobs(company_id, status)`, `candidates(company_id, email)`, `applications(company_id, stage)`.
 
-### 6.1 Las 4 garantías (auditadas)
+### 6.1 Garantías de aislamiento
 
-**1. Listados filtrados por el token:**
+**1. El middleware rechaza contextos cruzados:**
 ```go
-role, _ := c.Get("role")
-if role == "superadmin" {
-    return h.service.GetAll()                       // lectura global
-}
-companyID, _ := c.Get("company_id")
-return h.service.GetByCompanyID(companyID.(uint))    // WHERE company_id = ?
+RequirePermission(...)         // exige context_type = tenant
+RequirePlatformPermission(...) // exige context_type = platform
 ```
 
-**2. CREATE fuerza el company_id del token** (anti-manipulación):
+**2. Los repositorios reciben un scope derivado del token:**
 ```go
-companyID, _ := c.Get("company_id")
-dto.CompanyID = companyID.(uint)   // ignora cualquier company_id del body
+scope := authctx.TenantScope(c)
+// company_id, user_id y role provienen del JWT validado
 ```
 
-**3. GET/PUT/DELETE individual valida pertenencia:**
+**3. CREATE fuerza el `company_id` del contexto** y GET/PUT/DELETE validan la
+pertenencia antes de mutar el recurso:
 ```go
-if resource.CompanyID != tokenCompanyID { return 403 }
+dto.CompanyID = scope.CompanyID
+if resource.CompanyID != scope.CompanyID { return 403 }
 ```
 
-**4. Switch de contexto = token nuevo** — imposible mezclar empresas en una sesión.
+**4. Cada cambio de contexto rota access y refresh token.** `hiring_manager`
+añade además un filtro por `jobs.hiring_manager = scope.UserID` en repositorio.
 
 ### 6.2 Cobertura por handler (resultado de la auditoría de seguridad)
 
@@ -279,9 +286,9 @@ if resource.CompanyID != tokenCompanyID { return 403 }
 | Jobs | ✅ | ✅ | ✅ |
 | Candidates | ✅ | ✅ | ✅ |
 | Applications | ✅ | ✅ | ✅ |
-| Memberships | ✅ | ✅ (POST solo superadmin) | ✅ |
-| Companies | ✅ (cliente solo la suya; GET /:id valida id == token) | POST abierta a autenticados | DELETE restringido |
-| Users | ✅ (JOIN memberships) | ✅ | ⚠️ PUT/DELETE `/users/:id` pendiente de validar membership |
+| Memberships | ✅ | Plataforma o permiso tenant explícito | ✅ |
+| Companies | ✅ (tenant solo la suya; platform usa rutas propias) | Según matriz de permisos | ✅ |
+| Users | ✅ (JOIN memberships) | ✅ | DELETE elimina solo la membership del tenant |
 
 ---
 
@@ -289,9 +296,9 @@ if resource.CompanyID != tokenCompanyID { return 403 }
 
 ### 7.1 AuthService
 - **`RegisterCompany`** — transacción: valida email único → valida plan `free` activo (`FindActiveBySlug`, sin strings a ciegas) → crea Company (trial +1 mes) → User (bcrypt) → Membership (admin, default) → tokens. Rollback total ante error.
-- **`Login` / `LoginWithCompanies`** — bcrypt compare → membresía default → token con `company_id` → lista de empresas → actualiza `LastLoginAt`.
-- **`SwitchCompany`** — valida membresía activa en la empresa destino → token nuevo con el rol de esa membresía. Errores tipados: `ErrCompanyNotFound`, `ErrNoMembership`.
-- **`RefreshToken`**, **`ChangePassword`** (valida la anterior), **`GetMe`**, **`GetUserCompanies`** (memberships activas con Preload de Company).
+- **`Login`** — bcrypt compare → selecciona un contexto activo (`platform`, `tenant` o `identity`) → emite access y refresh con ese mismo contexto → actualiza `LastLoginAt`.
+- **`SwitchCompany` / `SwitchToPlatform`** — revalidan el perfil activo y rotan ambos tokens con el rol vigente.
+- **`RefreshToken`** — revalida la membership o perfil platform en base de datos antes de renovar; **`GetMe`** expone contexto y permisos efectivos.
 
 ### 7.2 JobService
 - `CreateJob` (status default `draft`), `GetJobsByCompanyID`, `GetJobsByStatus`, `UpdateJob`, `DeleteJob` (soft).
@@ -300,7 +307,7 @@ if resource.CompanyID != tokenCompanyID { return 403 }
 
 ### 7.3 CandidateService
 - CRUD scoped por empresa; unicidad `(company_id, email)`.
-- **`UploadResume`** — guarda el archivo bajo `uploads/companies/{slug}/` (directorios creados por CompanyService al crear la empresa).
+- **`UploadResume`** — guarda CVs privados mediante la interfaz de storage, valida firma/extensión y 10 MB, aplica cuota y registra metadatos. La descarga usa `GET /candidates/:id/resume` con JWT, permiso y scope de empresa.
 
 ### 7.4 ApplicationService
 - `CreateApplication` (stage inicial `applied`, `applied_at` auto).
@@ -332,17 +339,16 @@ if resource.CompanyID != tokenCompanyID { return 403 }
 ## 8. Base de Datos, Seeders y Consola
 
 ### 8.1 Migraciones
-`AutoMigrate(AllModels...)` al iniciar el servidor (orden de modelos respeta FKs: Region → Subregion → Country → State → City, etc.). Soft deletes en todas las tablas vía `gorm.Model`.
+`console migrate` ejecuta `AutoMigrate(AllModels...)` y luego migraciones de datos versionadas e idempotentes. El servidor HTTP no modifica el esquema al iniciar.
 
 ### 8.2 Seeders (`internal/database/seeders/`, orquestados por `DatabaseSeeder.Run`)
 
 | Seeder | Siembra |
 |---|---|
-| `role_seeder` | admin (50), recruiter (30), user (10) — roles de sistema |
 | `plan_seeder` | **Free $0** (2u/3j/50c/100a/1GB) · **Starter $39.99** (trial 14, 5u/10j/200c/500a/5GB, export) · **Professional $79.99** (trial 14, 15u/50j/1000c/5000a/20GB, +brand/API/integraciones) · **Enterprise $159.99** (trial 30, todo -1, soporte dedicado) |
 | `system_value_seeder` | 7 categorías de catálogos (~30 valores) |
 | `platform_settings_seeder` | Singleton: "DVRA ATS", color sky-500, support@dvra.io, https://dvra.io |
-| `user_seeder` | `superadmin@dvra.com` / `SuperAdmin123!` (sin empresa) y admin demo `admin@azentic.com` / `Admin123!` |
+| `user_seeder` | Datos demo opt-in con `SEED_DEMO_DATA=true`; deshabilitados por defecto |
 | `company_seeder` | Empresa demo (Azentic Sys) |
 
 ### 8.3 Consola y Makefile
@@ -350,6 +356,7 @@ if resource.CompanyID != tokenCompanyID { return 403 }
 ```bash
 go run cmd/console/main.go migrate [--seed] [--fresh]
 go run cmd/console/main.go seed
+go run ./cmd/console platform-admin --email admin@example.com
 
 make run          # servidor en :8080
 make build        # binario
@@ -429,13 +436,12 @@ Multi-tenancy con aislamiento auditado · JWT + refresh + switch-company · regi
 
 | # | Pendiente | Detalle |
 |---|---|---|
-| 1 | **Enforcement de límites de plan** | `MaxUsers/MaxJobs/...` existen en el modelo pero **ningún service los valida** al crear recursos. Falta un `PlanService.CheckLimit(companyID, resource)` invocado desde Create*/Publish |
+| 1 | **Enforcement de límites soft** | `max_jobs` y `max_storage_gb` ya son hard limits. Faltan warnings/tolerancia para candidatos y usuarios |
 | 2 | **Validación de trial expirado** | `TrialEndsAt` + `IsTrialActive()` existen; falta el middleware que actúe al expirar (downgrade a free / solo lectura) |
-| 3 | **Validación de uploads** | Sin límite de tamaño/tipo de archivo ni tracking de quota de storage |
-| 4 | **`PUT/DELETE /users/:id`** | Falta validar pertenencia vía memberships (ver §9.2) |
+| 3 | **Storage de producción** | Filesystem abstraído implementado; falta adaptador S3/CloudFront |
 | 5 | **Rate limiting** | No implementado |
 | 6 | **Transacciones** | Solo `RegisterCompany` y asignación de planes son transaccionales |
-| 7 | **Tests** | Sin tests unitarios ni de integración |
+| 7 | **Tests** | Cobertura inicial de seguridad/storage; falta ampliar a handlers y repositorios PostgreSQL |
 | 8 | **Emails transaccionales** | SendGrid/SES no integrado (confirmaciones de aplicación, invitaciones, notificaciones de stage) |
 | 9 | **Billing** | Stripe no integrado; cambios de plan son manuales (SuperAdmin) |
 | 10 | **Sistema de invitaciones** | Fase 2: `POST /memberships/invite` + `POST /auth/accept-invite` con tokens de expiración, para que Admins inviten usuarios existentes sin pasar por SuperAdmin |

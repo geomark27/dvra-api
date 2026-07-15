@@ -8,6 +8,7 @@ import (
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
 	"dvra-api/internal/shared/apperr"
+	"dvra-api/internal/shared/tenant"
 )
 
 // PublicService define el contrato del servicio público para Career Page
@@ -20,14 +21,15 @@ type PublicService interface {
 	GetPublishedJobByID(jobID uint) (*models.Job, error)
 
 	// Applications
-	ApplyToJob(jobID uint, dto dtos.PublicApplicationDTO) (*models.Application, error)
+	ApplyToJob(jobID uint, dto dtos.PublicApplicationDTO, upload *ResumeUpload) (*models.Application, error)
 }
 
 type publicService struct {
-	companyRepo     repositories.CompanyRepository
-	jobRepo         repositories.JobRepository
-	candidateRepo   repositories.CandidateRepository
-	applicationRepo repositories.ApplicationRepository
+	companyRepo      repositories.CompanyRepository
+	jobRepo          repositories.JobRepository
+	candidateRepo    repositories.CandidateRepository
+	applicationRepo  repositories.ApplicationRepository
+	candidateService CandidateService
 }
 
 // NewPublicService crea una nueva instancia de PublicService
@@ -36,12 +38,14 @@ func NewPublicService(
 	jobRepo repositories.JobRepository,
 	candidateRepo repositories.CandidateRepository,
 	applicationRepo repositories.ApplicationRepository,
+	candidateService CandidateService,
 ) PublicService {
 	return &publicService{
-		companyRepo:     companyRepo,
-		jobRepo:         jobRepo,
-		candidateRepo:   candidateRepo,
-		applicationRepo: applicationRepo,
+		companyRepo:      companyRepo,
+		jobRepo:          jobRepo,
+		candidateRepo:    candidateRepo,
+		applicationRepo:  applicationRepo,
+		candidateService: candidateService,
 	}
 }
 
@@ -79,7 +83,7 @@ func (s *publicService) GetPublishedJobsByCompanySlug(slug string) ([]models.Job
 
 // GetPublishedJobByID obtiene un job publicado por ID
 func (s *publicService) GetPublishedJobByID(jobID uint) (*models.Job, error) {
-	job, err := s.jobRepo.GetByID(jobID)
+	job, err := s.jobRepo.GetByID(jobID, tenant.GlobalScope())
 	if err != nil {
 		return nil, err
 	}
@@ -96,9 +100,9 @@ func (s *publicService) GetPublishedJobByID(jobID uint) (*models.Job, error) {
 }
 
 // ApplyToJob permite a un candidato aplicar a un job
-func (s *publicService) ApplyToJob(jobID uint, dto dtos.PublicApplicationDTO) (*models.Application, error) {
+func (s *publicService) ApplyToJob(jobID uint, dto dtos.PublicApplicationDTO, upload *ResumeUpload) (*models.Application, error) {
 	// 1. Obtener el job y verificar que esté activo
-	job, err := s.jobRepo.GetByID(jobID)
+	job, err := s.jobRepo.GetByID(jobID, tenant.GlobalScope())
 	if err != nil {
 		return nil, err
 	}
@@ -166,6 +170,12 @@ func (s *publicService) ApplyToJob(jobID uint, dto dtos.PublicApplicationDTO) (*
 	}
 	if existingApp != nil {
 		return nil, apperr.Conflict("you have already applied to this job")
+	}
+	if upload != nil {
+		if _, err := s.candidateService.StoreResume(candidate.ID, tenant.ForCompany(job.CompanyID), *upload); err != nil {
+			return nil, err
+		}
+		candidate.ResumeURL = fmt.Sprintf("/api/v1/candidates/%d/resume", candidate.ID)
 	}
 
 	// 4. Crear la aplicación

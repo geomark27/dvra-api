@@ -3,6 +3,7 @@ package server
 import (
 	"dvra-api/internal/app/repositories"
 	staffingdomain "dvra-api/internal/modules/staffing/domain"
+	"dvra-api/internal/shared/tenant"
 )
 
 // staffingAppFinder adapta el repositorio de applications (módulo recruitment) al
@@ -13,7 +14,7 @@ type staffingAppFinder struct {
 }
 
 func (a staffingAppFinder) FindByID(id uint) (*staffingdomain.HiredApplication, error) {
-	app, err := a.repo.GetByID(id)
+	app, err := a.repo.GetByID(id, tenant.GlobalScope())
 	if err != nil || app == nil {
 		return nil, err
 	}

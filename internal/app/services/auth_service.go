@@ -7,6 +7,8 @@ import (
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
 	"dvra-api/internal/shared/apperr"
+	"dvra-api/internal/shared/identity"
+	"dvra-api/internal/shared/permissions"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -72,12 +74,8 @@ func (s *AuthService) Register(dto *dtos.RegisterDTO) (*dtos.LoginResponseDTO, e
 	}
 
 	// Generate tokens (no company yet, user just registered)
-	accessToken, err := s.jwtService.GenerateAccessToken(createdUser.ID, nil, createdUser.Email, "user")
-	if err != nil {
-		return nil, err
-	}
-
-	refreshToken, err := s.jwtService.GenerateRefreshToken(createdUser.ID)
+	context := identity.Context{Type: identity.ContextIdentity}
+	accessToken, refreshToken, err := s.issueTokens(createdUser, context)
 	if err != nil {
 		return nil, err
 	}
@@ -92,6 +90,7 @@ func (s *AuthService) Register(dto *dtos.RegisterDTO) (*dtos.LoginResponseDTO, e
 			LastName:  createdUser.LastName,
 			IsActive:  createdUser.IsActive,
 		},
+		ActiveContext: dtos.ToAuthContextResponse(context),
 	}, nil
 }
 
@@ -99,7 +98,7 @@ func (s *AuthService) Register(dto *dtos.RegisterDTO) (*dtos.LoginResponseDTO, e
 func (s *AuthService) Login(dto *dtos.LoginDTO) (*dtos.LoginResponseDTO, error) {
 	// Find user by email
 	user, err := s.userRepo.FindByEmail(dto.Email)
-	if err != nil {
+	if err != nil || user == nil {
 		return nil, ErrInvalidCredentials
 	}
 
@@ -113,29 +112,11 @@ func (s *AuthService) Login(dto *dtos.LoginDTO) (*dtos.LoginResponseDTO, error) 
 		return nil, ErrInvalidCredentials
 	}
 
-	// Get user's default membership to include company context
-	var membership models.Membership
-	var companyID *uint
-	var role string = "user"
-
-	err = s.db.Where("user_id = ? AND is_default = ?", user.ID, true).
-		First(&membership).Error
-
-	if err == nil {
-		// User has a default company
-		companyID = membership.CompanyID
-		role = membership.Role
-	} else if err != gorm.ErrRecordNotFound {
-		return nil, err
-	}
-
-	// Generate tokens
-	accessToken, err := s.jwtService.GenerateAccessToken(user.ID, companyID, user.Email, role)
+	context, err := s.resolveInitialContext(user.ID)
 	if err != nil {
 		return nil, err
 	}
-
-	refreshToken, err := s.jwtService.GenerateRefreshToken(user.ID)
+	accessToken, refreshToken, err := s.issueTokens(user, context)
 	if err != nil {
 		return nil, err
 	}
@@ -153,20 +134,21 @@ func (s *AuthService) Login(dto *dtos.LoginDTO) (*dtos.LoginResponseDTO, error) 
 			LastName:  user.LastName,
 			IsActive:  user.IsActive,
 		},
+		ActiveContext: dtos.ToAuthContextResponse(context),
 	}, nil
 }
 
 // RefreshToken generates new access token from refresh token
 func (s *AuthService) RefreshToken(dto *dtos.RefreshTokenDTO) (*dtos.RefreshTokenResponseDTO, error) {
 	// Validate refresh token
-	claims, err := s.jwtService.ValidateToken(dto.RefreshToken)
+	claims, err := s.jwtService.ValidateRefreshToken(dto.RefreshToken)
 	if err != nil {
 		return nil, apperr.Unauthorized("invalid refresh token")
 	}
 
 	// Get user
 	user, err := s.userRepo.FindByID(int(claims.UserID))
-	if err != nil {
+	if err != nil || user == nil {
 		return nil, ErrUserNotFound
 	}
 
@@ -174,26 +156,11 @@ func (s *AuthService) RefreshToken(dto *dtos.RefreshTokenDTO) (*dtos.RefreshToke
 		return nil, apperr.Forbidden("account is inactive")
 	}
 
-	// Get user's default membership
-	var membership models.Membership
-	var companyID *uint
-	var role string = "user"
-
-	err = s.db.Where("user_id = ? AND is_default = ?", user.ID, true).
-		First(&membership).Error
-
-	if err == nil {
-		companyID = membership.CompanyID
-		role = membership.Role
-	}
-
-	// Generate new tokens
-	accessToken, err := s.jwtService.GenerateAccessToken(user.ID, companyID, user.Email, role)
+	context, err := s.resolveRefreshContext(user.ID, claims)
 	if err != nil {
 		return nil, err
 	}
-
-	newRefreshToken, err := s.jwtService.GenerateRefreshToken(user.ID)
+	accessToken, newRefreshToken, err := s.issueTokens(user, context)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +175,7 @@ func (s *AuthService) RefreshToken(dto *dtos.RefreshTokenDTO) (*dtos.RefreshToke
 func (s *AuthService) ChangePassword(userID uint, dto *dtos.ChangePasswordDTO) error {
 	// Get user
 	user, err := s.userRepo.FindByID(int(userID))
-	if err != nil {
+	if err != nil || user == nil {
 		return ErrUserNotFound
 	}
 
@@ -230,7 +197,7 @@ func (s *AuthService) ChangePassword(userID uint, dto *dtos.ChangePasswordDTO) e
 // GetMe returns current user info
 func (s *AuthService) GetMe(userID uint) (*dtos.UserResponse, error) {
 	user, err := s.userRepo.FindByID(int(userID))
-	if err != nil {
+	if err != nil || user == nil {
 		return nil, ErrUserNotFound
 	}
 
@@ -309,8 +276,8 @@ func (s *AuthService) RegisterCompany(dto *dtos.RegisterCompanyDTO) (*dtos.Regis
 	// 3. Create membership (admin → company)
 	membership := models.Membership{
 		UserID:    admin.ID,
-		CompanyID: &company.ID,
-		Role:      models.RoleAdmin,
+		CompanyID: company.ID,
+		Role:      permissions.RoleAdmin,
 		Status:    "active",
 		IsDefault: true, // First company is always default
 	}
@@ -325,13 +292,10 @@ func (s *AuthService) RegisterCompany(dto *dtos.RegisterCompanyDTO) (*dtos.Regis
 		return nil, err
 	}
 
-	// Generate tokens with company context
-	accessToken, err := s.jwtService.GenerateAccessToken(admin.ID, &company.ID, admin.Email, models.RoleAdmin)
-	if err != nil {
-		return nil, err
-	}
-
-	refreshToken, err := s.jwtService.GenerateRefreshToken(admin.ID)
+	membershipID := membership.ID
+	companyID := company.ID
+	context := identity.Context{Type: identity.ContextTenant, CompanyID: &companyID, MembershipID: &membershipID, Role: membership.Role}
+	accessToken, refreshToken, err := s.issueTokens(&admin, context)
 	if err != nil {
 		return nil, err
 	}
@@ -352,6 +316,7 @@ func (s *AuthService) RegisterCompany(dto *dtos.RegisterCompanyDTO) (*dtos.Regis
 			LastName:  admin.LastName,
 			IsActive:  admin.IsActive,
 		},
+		ActiveContext: dtos.ToAuthContextResponse(context),
 	}, nil
 }
 
@@ -367,10 +332,12 @@ func (s *AuthService) GetUserCompanies(userID uint) ([]dtos.CompanyResponse, err
 	for _, membership := range memberships {
 		if membership.Company != nil {
 			companies = append(companies, dtos.CompanyResponse{
-				ID:       membership.Company.ID,
-				Name:     membership.Company.Name,
-				Slug:     membership.Company.Slug,
-				PlanTier: membership.Company.PlanTier,
+				ID:           membership.Company.ID,
+				Name:         membership.Company.Name,
+				Slug:         membership.Company.Slug,
+				PlanTier:     membership.Company.PlanTier,
+				MembershipID: membership.ID,
+				Role:         membership.Role,
 			})
 		}
 	}
@@ -403,20 +370,45 @@ func (s *AuthService) SwitchCompany(userID uint, dto *dtos.SwitchCompanyDTO) (*d
 		return nil, ErrUserNotFound
 	}
 
-	// Generate new token with new company context
-	accessToken, err := s.jwtService.GenerateAccessToken(userID, &dto.CompanyID, user.Email, membership.Role)
+	membershipID := membership.ID
+	context := identity.Context{Type: identity.ContextTenant, CompanyID: &dto.CompanyID, MembershipID: &membershipID, Role: membership.Role}
+	accessToken, refreshToken, err := s.issueTokens(user, context)
 	if err != nil {
 		return nil, err
 	}
 
 	return &dtos.SwitchCompanyResponseDTO{
-		AccessToken: accessToken,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 		Company: dtos.CompanyResponse{
-			ID:       membership.Company.ID,
-			Name:     membership.Company.Name,
-			Slug:     membership.Company.Slug,
-			PlanTier: membership.Company.PlanTier,
+			ID:           membership.Company.ID,
+			Name:         membership.Company.Name,
+			Slug:         membership.Company.Slug,
+			PlanTier:     membership.Company.PlanTier,
+			MembershipID: membership.ID,
+			Role:         membership.Role,
 		},
+	}, nil
+}
+
+func (s *AuthService) SwitchToPlatform(userID uint) (*dtos.SwitchPlatformResponseDTO, error) {
+	user, err := s.userRepo.FindByID(int(userID))
+	if err != nil || user == nil {
+		return nil, ErrUserNotFound
+	}
+	var membership models.PlatformMembership
+	if err := s.db.Where("user_id = ? AND status = ?", userID, "active").First(&membership).Error; err != nil {
+		return nil, apperr.Forbidden("user has no active platform access")
+	}
+	membershipID := membership.ID
+	context := identity.Context{Type: identity.ContextPlatform, MembershipID: &membershipID, Role: membership.Role}
+	accessToken, refreshToken, err := s.issueTokens(user, context)
+	if err != nil {
+		return nil, err
+	}
+	return &dtos.SwitchPlatformResponseDTO{
+		AccessToken: accessToken, RefreshToken: refreshToken,
+		ActiveContext: dtos.ToAuthContextResponse(context),
 	}, nil
 }
 
@@ -424,7 +416,7 @@ func (s *AuthService) SwitchCompany(userID uint, dto *dtos.SwitchCompanyDTO) (*d
 func (s *AuthService) LoginWithCompanies(dto *dtos.LoginDTO) (*dtos.LoginResponseWithCompaniesDTO, error) {
 	// Find user by email
 	user, err := s.userRepo.FindByEmail(dto.Email)
-	if err != nil {
+	if err != nil || user == nil {
 		return nil, ErrInvalidCredentials
 	}
 
@@ -438,31 +430,22 @@ func (s *AuthService) LoginWithCompanies(dto *dtos.LoginDTO) (*dtos.LoginRespons
 		return nil, ErrInvalidCredentials
 	}
 
-	// Get user's default membership
-	var membership models.Membership
-	var companyID *uint
-	var role string = "user"
-
-	err = s.db.Where("user_id = ? AND is_default = ?", user.ID, true).
-		First(&membership).Error
-
-	if err == nil {
-		companyID = membership.CompanyID
-		role = membership.Role
-	} else if err != gorm.ErrRecordNotFound {
-		return nil, err
-	}
-
-	// Get all user's companies
-	companies, _ := s.GetUserCompanies(user.ID)
-
-	// Generate tokens
-	accessToken, err := s.jwtService.GenerateAccessToken(user.ID, companyID, user.Email, role)
+	context, err := s.resolveInitialContext(user.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.jwtService.GenerateRefreshToken(user.ID)
+	// Get all user's companies
+	companies, err := s.GetUserCompanies(user.ID)
+	if err != nil {
+		return nil, err
+	}
+	platformAccess, err := s.getPlatformAccess(user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	accessToken, refreshToken, err := s.issueTokens(user, context)
 	if err != nil {
 		return nil, err
 	}
@@ -480,7 +463,9 @@ func (s *AuthService) LoginWithCompanies(dto *dtos.LoginDTO) (*dtos.LoginRespons
 			LastName:  user.LastName,
 			IsActive:  user.IsActive,
 		},
-		Companies: companies,
+		Companies:      companies,
+		ActiveContext:  dtos.ToAuthContextResponse(context),
+		PlatformAccess: platformAccess,
 	}, nil
 }
 
@@ -493,4 +478,87 @@ func HashPassword(password string) (string, error) {
 // ComparePassword compares a hashed password with plain text password
 func ComparePassword(hashedPassword, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+}
+
+func (s *AuthService) issueTokens(user *models.User, context identity.Context) (string, string, error) {
+	accessToken, err := s.jwtService.GenerateAccessToken(user.ID, user.Email, context)
+	if err != nil {
+		return "", "", err
+	}
+	refreshToken, err := s.jwtService.GenerateRefreshToken(user.ID, context)
+	if err != nil {
+		return "", "", err
+	}
+	return accessToken, refreshToken, nil
+}
+
+func (s *AuthService) resolveInitialContext(userID uint) (identity.Context, error) {
+	var platform models.PlatformMembership
+	err := s.db.Where("user_id = ? AND status = ?", userID, "active").First(&platform).Error
+	if err == nil {
+		membershipID := platform.ID
+		return identity.Context{Type: identity.ContextPlatform, MembershipID: &membershipID, Role: platform.Role}, nil
+	}
+	if err != gorm.ErrRecordNotFound {
+		return identity.Context{}, err
+	}
+
+	var membership models.Membership
+	err = s.db.Where("user_id = ? AND status = ?", userID, "active").
+		Order("is_default DESC, id ASC").First(&membership).Error
+	if err == nil {
+		companyID := membership.CompanyID
+		membershipID := membership.ID
+		return identity.Context{Type: identity.ContextTenant, CompanyID: &companyID, MembershipID: &membershipID, Role: membership.Role}, nil
+	}
+	if err != gorm.ErrRecordNotFound {
+		return identity.Context{}, err
+	}
+	var count int64
+	if err := s.db.Model(&models.Membership{}).Where("user_id = ?", userID).Count(&count).Error; err != nil {
+		return identity.Context{}, err
+	}
+	var platformCount int64
+	if err := s.db.Model(&models.PlatformMembership{}).Where("user_id = ?", userID).Count(&platformCount).Error; err != nil {
+		return identity.Context{}, err
+	}
+	if count+platformCount > 0 {
+		return identity.Context{}, apperr.Forbidden("user has no active authorization context")
+	}
+	return identity.Context{Type: identity.ContextIdentity}, nil
+}
+
+func (s *AuthService) resolveRefreshContext(userID uint, claims *RefreshClaims) (identity.Context, error) {
+	switch claims.ContextType {
+	case identity.ContextPlatform:
+		var platform models.PlatformMembership
+		if err := s.db.Where("id = ? AND user_id = ? AND status = ?", *claims.MembershipID, userID, "active").First(&platform).Error; err != nil {
+			return identity.Context{}, apperr.Forbidden("platform access is no longer active")
+		}
+		membershipID := platform.ID
+		return identity.Context{Type: identity.ContextPlatform, MembershipID: &membershipID, Role: platform.Role}, nil
+	case identity.ContextTenant:
+		var membership models.Membership
+		if err := s.db.Where("id = ? AND user_id = ? AND company_id = ? AND status = ?", *claims.MembershipID, userID, *claims.CompanyID, "active").First(&membership).Error; err != nil {
+			return identity.Context{}, apperr.Forbidden("tenant access is no longer active")
+		}
+		companyID := membership.CompanyID
+		membershipID := membership.ID
+		return identity.Context{Type: identity.ContextTenant, CompanyID: &companyID, MembershipID: &membershipID, Role: membership.Role}, nil
+	case identity.ContextIdentity:
+		return identity.Context{Type: identity.ContextIdentity}, nil
+	default:
+		return identity.Context{}, apperr.Unauthorized("invalid authorization context")
+	}
+}
+
+func (s *AuthService) getPlatformAccess(userID uint) (*dtos.PlatformAccessResponse, error) {
+	var membership models.PlatformMembership
+	if err := s.db.Where("user_id = ? AND status = ?", userID, "active").First(&membership).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &dtos.PlatformAccessResponse{MembershipID: membership.ID, Role: membership.Role}, nil
 }

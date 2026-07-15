@@ -57,7 +57,7 @@ func (h *PlatformSettingsHandler) GetPublicSettings(c *gin.Context) {
 // @Failure      401 {object} map[string]string
 // @Failure      403 {object} map[string]string
 // @Failure      500 {object} map[string]string
-// @Router       /superadmin/platform-settings [get]
+// @Router       /platform/settings [get]
 func (h *PlatformSettingsHandler) GetFullSettings(c *gin.Context) {
 	settings, err := h.service.GetFull()
 	if err != nil {
@@ -81,7 +81,7 @@ func (h *PlatformSettingsHandler) GetFullSettings(c *gin.Context) {
 // @Failure      401 {object} map[string]string
 // @Failure      403 {object} map[string]string
 // @Failure      500 {object} map[string]string
-// @Router       /superadmin/platform-settings [put]
+// @Router       /platform/settings [put]
 func (h *PlatformSettingsHandler) UpdateSettings(c *gin.Context) {
 	var updateDTO dtos.UpdatePlatformSettingsDTO
 	if err := c.ShouldBindJSON(&updateDTO); err != nil {

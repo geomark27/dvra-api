@@ -1,5 +1,7 @@
 package dtos
 
+import "dvra-api/internal/shared/identity"
+
 // RegisterDTO represents the registration request
 type RegisterDTO struct {
 	Email     string `json:"email" binding:"required,email"`
@@ -16,22 +18,24 @@ type LoginDTO struct {
 
 // LoginResponseDTO represents the login response
 type LoginResponseDTO struct {
-	AccessToken  string       `json:"access_token"`
-	RefreshToken string       `json:"refresh_token"`
-	User         UserResponse `json:"user"`
+	AccessToken   string               `json:"access_token"`
+	RefreshToken  string               `json:"refresh_token"`
+	User          UserResponse         `json:"user"`
+	ActiveContext *AuthContextResponse `json:"active_context"`
 }
 
 // UserResponse represents user data in auth response.
 // Role y Permissions solo se llenan en GET /auth/me: corresponden a la
 // empresa activa del token, para que el frontend muestre/oculte acciones.
 type UserResponse struct {
-	ID          uint     `json:"id"`
-	Email       string   `json:"email"`
-	FirstName   string   `json:"first_name"`
-	LastName    string   `json:"last_name"`
-	IsActive    bool     `json:"is_active"`
-	Role        string   `json:"role,omitempty"`
-	Permissions []string `json:"permissions,omitempty"`
+	ID            uint                 `json:"id"`
+	Email         string               `json:"email"`
+	FirstName     string               `json:"first_name"`
+	LastName      string               `json:"last_name"`
+	IsActive      bool                 `json:"is_active"`
+	Role          string               `json:"role,omitempty"`
+	Permissions   []string             `json:"permissions,omitempty"`
+	ActiveContext *AuthContextResponse `json:"active_context,omitempty"`
 }
 
 // RefreshTokenDTO represents the refresh token request
@@ -64,26 +68,47 @@ type RegisterCompanyDTO struct {
 
 // RegisterCompanyResponseDTO represents company registration response
 type RegisterCompanyResponseDTO struct {
-	AccessToken  string          `json:"access_token"`
-	RefreshToken string          `json:"refresh_token"`
-	Company      CompanyResponse `json:"company"`
-	Admin        UserResponse    `json:"admin"`
+	AccessToken   string               `json:"access_token"`
+	RefreshToken  string               `json:"refresh_token"`
+	Company       CompanyResponse      `json:"company"`
+	Admin         UserResponse         `json:"admin"`
+	ActiveContext *AuthContextResponse `json:"active_context"`
 }
 
 // CompanyResponse represents company data in response
 type CompanyResponse struct {
-	ID       uint   `json:"id"`
-	Name     string `json:"name"`
-	Slug     string `json:"slug"`
-	PlanTier string `json:"plan_tier"`
+	ID           uint   `json:"id"`
+	Name         string `json:"name"`
+	Slug         string `json:"slug"`
+	PlanTier     string `json:"plan_tier"`
+	MembershipID uint   `json:"membership_id,omitempty"`
+	Role         string `json:"role,omitempty"`
+}
+
+type PlatformAccessResponse struct {
+	MembershipID uint   `json:"membership_id"`
+	Role         string `json:"role"`
+}
+
+type AuthContextResponse struct {
+	Type         string `json:"type"`
+	CompanyID    *uint  `json:"company_id,omitempty"`
+	MembershipID *uint  `json:"membership_id,omitempty"`
+	Role         string `json:"role,omitempty"`
+}
+
+func ToAuthContextResponse(context identity.Context) *AuthContextResponse {
+	return &AuthContextResponse{Type: context.Type, CompanyID: context.CompanyID, MembershipID: context.MembershipID, Role: context.Role}
 }
 
 // LoginResponseWithCompaniesDTO represents login response with user's companies
 type LoginResponseWithCompaniesDTO struct {
-	AccessToken  string            `json:"access_token"`
-	RefreshToken string            `json:"refresh_token"`
-	User         UserResponse      `json:"user"`
-	Companies    []CompanyResponse `json:"companies"`
+	AccessToken    string                  `json:"access_token"`
+	RefreshToken   string                  `json:"refresh_token"`
+	User           UserResponse            `json:"user"`
+	Companies      []CompanyResponse       `json:"companies"`
+	PlatformAccess *PlatformAccessResponse `json:"platform_access,omitempty"`
+	ActiveContext  *AuthContextResponse    `json:"active_context"`
 }
 
 // SwitchCompanyDTO represents switch company request
@@ -93,6 +118,13 @@ type SwitchCompanyDTO struct {
 
 // SwitchCompanyResponseDTO represents switch company response
 type SwitchCompanyResponseDTO struct {
-	AccessToken string          `json:"access_token"`
-	Company     CompanyResponse `json:"company"`
+	AccessToken  string          `json:"access_token"`
+	RefreshToken string          `json:"refresh_token"`
+	Company      CompanyResponse `json:"company"`
+}
+
+type SwitchPlatformResponseDTO struct {
+	AccessToken   string               `json:"access_token"`
+	RefreshToken  string               `json:"refresh_token"`
+	ActiveContext *AuthContextResponse `json:"active_context"`
 }

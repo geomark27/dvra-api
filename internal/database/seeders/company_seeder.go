@@ -2,7 +2,10 @@ package seeders
 
 import (
 	"dvra-api/internal/app/models"
+	"dvra-api/internal/shared/permissions"
+	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"gorm.io/gorm"
@@ -13,6 +16,13 @@ type CompanySeeder struct{}
 
 // Run implements the Seeder interface
 func (s *CompanySeeder) Run(db *gorm.DB) error {
+	if os.Getenv("SEED_DEMO_DATA") != "true" {
+		log.Println("⏭️  Demo company disabled (set SEED_DEMO_DATA=true to enable)")
+		return nil
+	}
+	if os.Getenv("ENVIRONMENT") == "production" {
+		return fmt.Errorf("demo company cannot be seeded in production")
+	}
 	var existing models.Company
 	result := db.Where("slug = ?", "azentic-sys").First(&existing)
 
@@ -49,8 +59,8 @@ func (s *CompanySeeder) Run(db *gorm.DB) error {
 		joinedAt := time.Now()
 		membership := models.Membership{
 			UserID:    adminUser.ID,
-			CompanyID: &company.ID,
-			Role:      models.RoleAdmin, // Admin de la empresa
+			CompanyID: company.ID,
+			Role:      permissions.RoleAdmin, // Admin de la empresa
 			Status:    "active",
 			IsDefault: true,
 			JoinedAt:  &joinedAt,

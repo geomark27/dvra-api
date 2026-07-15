@@ -6,6 +6,39 @@
 
 ---
 
+## 2026-07-15 — Separación landlord/tenant y contextos de autorización
+
+Se reemplazó la membresía ambigua de SuperAdmin con `company_id = NULL` por
+`platform_memberships`. Las memberships tenant requieren company, son únicas por
+usuario/tenant y conservan exclusivamente los perfiles `admin`, `recruiter`,
+`hiring_manager` y `user`.
+
+JWT access/refresh incluyen `context_type` y `membership_id`. Login selecciona
+un contexto activo, refresh lo conserva y valida contra BD, `switch-company`
+rota ambos tokens y `switch-platform` permite volver al landlord. Los permisos
+`platform.*` se evalúan separadamente de los permisos tenant y las rutas
+landlord viven en `/api/v1/platform/*`.
+
+Se agregó migración para perfiles legacy, comando `console platform-admin`,
+respuesta de contexto en `/auth/me` y filtros por recurso para que
+`hiring_manager` solo vea jobs asignados y sus candidatos/postulaciones.
+
+**Referencia vigente:** `docs/md/tecnico/ADR-002-contextos-landlord-tenant.md`.
+
+## 2026-07-15 — Remediación de seguridad, tenancy, JWT y storage
+
+**Qué se hizo:** se separó la validación de access/refresh JWT; se bloqueó el rol reservado `superadmin` en memberships de empresa; `POST /users` ahora crea credenciales y membresía transaccional; y las mutaciones de usuarios quedaron tenant-scoped. Jobs usa únicamente `draft/published/closed`, aplica `max_jobs` al publicar y Applications valida Job/Candidate contra el mismo tenant.
+
+Se introdujo `tenant.Scope` fail-closed y se migraron repositorios ATS críticos a `*gorm.DB` inyectado. Los CVs usan filesystem abstraído, nombres generados, firmas de archivo, límite de 10 MB, cuota del plan, metadatos en `stored_files` y descarga autenticada. Docker monta un volumen persistente.
+
+**Operación:** `console migrate` ejecuta migraciones idempotentes que convierten jobs `active` a `published` y memberships tenant con rol `superadmin` a `admin`. Producción rechaza secretos JWT inseguros; seeders demo requieren `SEED_DEMO_DATA=true`; readiness hace ping real a PostgreSQL y el servidor cierra con graceful shutdown.
+
+**Verificado:** tests unitarios de JWT, memberships, tenant scope, configuración y filesystem; `go test ./...`, `go vet ./...` y `go build ./...`.
+
+**Pendientes:** límites soft de candidatos/usuarios, rate limiting, invitaciones por email y backend S3.
+
+**Referencia vigente:** `docs/04_DOCUMENTACION_TECNICA_API.md`, `internal/shared/tenant/`, `internal/platform/storage/`.
+
 ## 2026-06-20 — Piloto monolito modular + hexagonal-lite: módulo `staffing`
 
 **Contexto:** primer paso del ADR-001. Se migró `staffing` de la organización por capa técnica (`internal/app/{models,dtos,...}`) a un módulo autocontenido en `internal/modules/staffing/`, como piloto para validar el patrón antes de replicarlo.

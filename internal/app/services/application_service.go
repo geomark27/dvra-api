@@ -7,38 +7,42 @@ import (
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
 	"dvra-api/internal/shared/apperr"
+	"dvra-api/internal/shared/tenant"
 )
 
 // ApplicationService define el contrato del servicio de applications
 type ApplicationService interface {
 	GetAllApplications() ([]models.Application, error)
-	GetApplicationByID(id uint) (*models.Application, error)
+	GetApplicationByID(id uint, scope tenant.Scope) (*models.Application, error)
 	GetApplicationsByJobID(jobID uint) ([]models.Application, error)
 	GetApplicationsByCandidateID(candidateID uint) ([]models.Application, error)
 	GetApplicationsByCompanyID(companyID uint) ([]models.Application, error)
+	GetApplicationsWithScope(scope tenant.Scope) ([]models.Application, error)
 	GetApplicationsByStage(stage string, companyID uint) ([]models.Application, error)
-	GetApplicationsGroupedByStage(companyID uint) (map[string][]models.Application, error)
+	GetApplicationsGroupedByStage(scope tenant.Scope) (map[string][]models.Application, error)
 	CreateApplication(dto dtos.CreateApplicationDTO) (*models.Application, error)
-	UpdateApplication(id uint, dto dtos.UpdateApplicationDTO) (*models.Application, error)
-	MoveToStage(id uint, stage string) (*models.Application, error)
-	RateApplication(id uint, rating int) (*models.Application, error)
-	DeleteApplication(id uint) error
+	UpdateApplication(id uint, scope tenant.Scope, dto dtos.UpdateApplicationDTO) (*models.Application, error)
+	MoveToStage(id uint, scope tenant.Scope, stage string) (*models.Application, error)
+	RateApplication(id uint, scope tenant.Scope, rating int) (*models.Application, error)
+	DeleteApplication(id uint, scope tenant.Scope) error
 }
 
 type applicationService struct {
 	applicationRepo repositories.ApplicationRepository
+	jobRepo         repositories.JobRepository
+	candidateRepo   repositories.CandidateRepository
 }
 
-func NewApplicationService(applicationRepo repositories.ApplicationRepository) ApplicationService {
-	return &applicationService{applicationRepo: applicationRepo}
+func NewApplicationService(applicationRepo repositories.ApplicationRepository, jobRepo repositories.JobRepository, candidateRepo repositories.CandidateRepository) ApplicationService {
+	return &applicationService{applicationRepo: applicationRepo, jobRepo: jobRepo, candidateRepo: candidateRepo}
 }
 
 func (s *applicationService) GetAllApplications() ([]models.Application, error) {
 	return s.applicationRepo.GetAll()
 }
 
-func (s *applicationService) GetApplicationByID(id uint) (*models.Application, error) {
-	application, err := s.applicationRepo.GetByID(id)
+func (s *applicationService) GetApplicationByID(id uint, scope tenant.Scope) (*models.Application, error) {
+	application, err := s.applicationRepo.GetByID(id, scope)
 	if err != nil {
 		return nil, err
 	}
@@ -60,11 +64,42 @@ func (s *applicationService) GetApplicationsByCompanyID(companyID uint) ([]model
 	return s.applicationRepo.GetByCompanyID(companyID)
 }
 
+func (s *applicationService) GetApplicationsWithScope(scope tenant.Scope) ([]models.Application, error) {
+	return s.applicationRepo.GetByScope(scope)
+}
+
 func (s *applicationService) GetApplicationsByStage(stage string, companyID uint) ([]models.Application, error) {
 	return s.applicationRepo.GetByStage(stage, companyID)
 }
 
 func (s *applicationService) CreateApplication(dto dtos.CreateApplicationDTO) (*models.Application, error) {
+	job, err := s.jobRepo.GetByID(dto.JobID, tenant.ForCompany(dto.CompanyID))
+	if err != nil {
+		return nil, err
+	}
+	if job == nil {
+		return nil, apperr.NotFound("job not found")
+	}
+	if job.CompanyID != dto.CompanyID {
+		return nil, apperr.Forbidden("job does not belong to your company")
+	}
+	candidate, err := s.candidateRepo.GetByID(dto.CandidateID, tenant.ForCompany(dto.CompanyID))
+	if err != nil {
+		return nil, err
+	}
+	if candidate == nil {
+		return nil, apperr.NotFound("candidate not found")
+	}
+	if candidate.CompanyID != dto.CompanyID {
+		return nil, apperr.Forbidden("candidate does not belong to your company")
+	}
+	existing, err := s.applicationRepo.GetByCandidateAndJob(dto.CandidateID, dto.JobID)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return nil, apperr.Conflict("candidate already has an application for this job")
+	}
 	now := time.Now()
 	application := &models.Application{
 		JobID:       dto.JobID,
@@ -79,8 +114,8 @@ func (s *applicationService) CreateApplication(dto dtos.CreateApplicationDTO) (*
 	return s.applicationRepo.Create(application)
 }
 
-func (s *applicationService) UpdateApplication(id uint, dto dtos.UpdateApplicationDTO) (*models.Application, error) {
-	application, err := s.applicationRepo.GetByID(id)
+func (s *applicationService) UpdateApplication(id uint, scope tenant.Scope, dto dtos.UpdateApplicationDTO) (*models.Application, error) {
+	application, err := s.applicationRepo.GetByID(id, scope)
 	if err != nil {
 		return nil, err
 	}
@@ -116,8 +151,8 @@ func (s *applicationService) UpdateApplication(id uint, dto dtos.UpdateApplicati
 	return s.applicationRepo.Update(application)
 }
 
-func (s *applicationService) DeleteApplication(id uint) error {
-	application, err := s.applicationRepo.GetByID(id)
+func (s *applicationService) DeleteApplication(id uint, scope tenant.Scope) error {
+	application, err := s.applicationRepo.GetByID(id, scope)
 	if err != nil {
 		return err
 	}
@@ -127,8 +162,8 @@ func (s *applicationService) DeleteApplication(id uint) error {
 	return s.applicationRepo.Delete(id)
 }
 
-func (s *applicationService) GetApplicationsGroupedByStage(companyID uint) (map[string][]models.Application, error) {
-	applications, err := s.applicationRepo.GetByCompanyID(companyID)
+func (s *applicationService) GetApplicationsGroupedByStage(scope tenant.Scope) (map[string][]models.Application, error) {
+	applications, err := s.applicationRepo.GetByScope(scope)
 	if err != nil {
 		return nil, err
 	}
@@ -148,8 +183,8 @@ func (s *applicationService) GetApplicationsGroupedByStage(companyID uint) (map[
 	return result, nil
 }
 
-func (s *applicationService) MoveToStage(id uint, stage string) (*models.Application, error) {
-	application, err := s.applicationRepo.GetByID(id)
+func (s *applicationService) MoveToStage(id uint, scope tenant.Scope, stage string) (*models.Application, error) {
+	application, err := s.applicationRepo.GetByID(id, scope)
 	if err != nil {
 		return nil, err
 	}
@@ -171,8 +206,8 @@ func (s *applicationService) MoveToStage(id uint, stage string) (*models.Applica
 	return s.applicationRepo.Update(application)
 }
 
-func (s *applicationService) RateApplication(id uint, rating int) (*models.Application, error) {
-	application, err := s.applicationRepo.GetByID(id)
+func (s *applicationService) RateApplication(id uint, scope tenant.Scope, rating int) (*models.Application, error) {
+	application, err := s.applicationRepo.GetByID(id, scope)
 	if err != nil {
 		return nil, err
 	}

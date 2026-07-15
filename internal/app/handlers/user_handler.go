@@ -131,7 +131,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		// Verificar si el user pertenece a la empresa
 		userBelongsToCompany := false
 		for _, membership := range user.Memberships {
-			if membership.CompanyID != nil && *membership.CompanyID == companyID {
+			if membership.CompanyID == companyID {
 				userBelongsToCompany = true
 				break
 			}
@@ -172,14 +172,14 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		})
 		return
 	}
-	// Validate DTO
-	if errors := helpers.ValidateStruct(&dto); len(errors) > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Validation failed",
-			"details": errors,
-		})
+	companyID, ok := authctx.CompanyID(c)
+	if !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
 		return
 	}
+	userID, _ := authctx.UserID(c)
+	dto.CompanyID = companyID
+	dto.InvitedBy = userID
 
 	user, err := h.userService.CreateUser(dto)
 	if err != nil {
@@ -209,7 +209,6 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 // @Failure      404   {object}  map[string]interface{}
 // @Failure      500   {object}  map[string]interface{}
 // @Security     BearerAuth
-// @Router       /users/{id} [put]
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	idParam, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -228,16 +227,18 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		})
 		return
 	}
-	// Validate DTO
-	if errors := helpers.ValidateStruct(&dto); len(errors) > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Validation failed",
-			"details": errors,
-		})
-		return
+	global := authctx.IsSuperAdmin(c)
+	var companyID uint
+	if !global {
+		var ok bool
+		companyID, ok = authctx.CompanyID(c)
+		if !ok {
+			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+			return
+		}
 	}
 
-	user, err := h.userService.UpdateUser(id, dto)
+	user, err := h.userService.UpdateUser(id, companyID, global, dto)
 	if err != nil {
 		h.logger.Error("Failed to update user", "error", err, "user_id", id)
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
@@ -275,15 +276,30 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	}
 	id := uint(idParam)
 
-	if err := h.userService.DeleteUser(id); err != nil {
+	global := authctx.IsSuperAdmin(c)
+	var companyID uint
+	if !global {
+		var ok bool
+		companyID, ok = authctx.CompanyID(c)
+		if !ok {
+			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+			return
+		}
+	}
+
+	if err := h.userService.DeleteUser(id, companyID, global); err != nil {
 		h.logger.Error("Failed to delete user", "error", err, "user_id", id)
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
 	h.logger.Info("User deleted successfully", "user_id", id)
+	message := "User removed from company"
+	if global {
+		message = "User deleted successfully"
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
-		"message": "User deleted successfully",
+		"message": message,
 	})
 }

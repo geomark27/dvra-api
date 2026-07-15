@@ -1,9 +1,12 @@
 package seeders
 
 import (
+	"fmt"
 	"log"
+	"os"
 
 	"dvra-api/internal/app/models"
+	"dvra-api/internal/shared/permissions"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -14,6 +17,13 @@ type UserSeeder struct{}
 
 // Run executes the user seeder
 func (s *UserSeeder) Run(db *gorm.DB) error {
+	if os.Getenv("SEED_DEMO_DATA") != "true" {
+		log.Println("⏭️  Demo users disabled (set SEED_DEMO_DATA=true to enable)")
+		return nil
+	}
+	if os.Getenv("ENVIRONMENT") == "production" {
+		return fmt.Errorf("demo users cannot be seeded in production")
+	}
 
 	// 1. Crear SuperAdmin (modo dios - sin empresa)
 	var superAdmin models.User
@@ -45,6 +55,10 @@ func (s *UserSeeder) Run(db *gorm.DB) error {
 		return result.Error
 	} else {
 		log.Println("⏭️  SuperAdmin already exists, skipping")
+	}
+	platformMembership := models.PlatformMembership{UserID: superAdmin.ID, Role: permissions.RoleSuperAdmin, Status: "active"}
+	if err := db.Where("user_id = ?", superAdmin.ID).FirstOrCreate(&platformMembership).Error; err != nil {
+		return fmt.Errorf("create superadmin platform membership: %w", err)
 	}
 
 	// 2. Crear Admin de empresa (para Azentic Sys)

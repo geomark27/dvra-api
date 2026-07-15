@@ -1,7 +1,14 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"dvra-api/internal/database"
 	"dvra-api/internal/platform/config"
@@ -36,6 +43,9 @@ func main() {
 
 	// Cargar configuración
 	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("Invalid configuration: %v", err)
+	}
 
 	// Inicializar base de datos
 	db, err := database.InitDB(cfg)
@@ -49,14 +59,34 @@ func main() {
 	}()
 
 	// Crear servidor
-	srv := server.New(cfg, db)
+	srv, err := server.New(cfg, db)
+	if err != nil {
+		log.Fatalf("Error creando servidor: %v", err)
+	}
 
 	// Mensaje de inicio
 	log.Printf("🚀 Servidor %s iniciado en http://localhost:%s", "dvra-api", cfg.Port)
 	log.Printf("✨ Proyecto generado con Loom")
 
-	// Iniciar servidor
-	if err := srv.Start(); err != nil {
-		log.Fatal("Error iniciando servidor:", err)
+	serverErrors := make(chan error, 1)
+	go func() {
+		if err := srv.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serverErrors <- err
+		}
+	}()
+
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	select {
+	case err := <-serverErrors:
+		log.Fatalf("Error iniciando servidor: %v", err)
+	case sig := <-signals:
+		log.Printf("Received %s, shutting down", sig)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("Error during graceful shutdown: %v", err)
 	}
 }

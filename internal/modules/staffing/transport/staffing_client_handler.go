@@ -73,22 +73,15 @@ func (h *StaffingClientHandler) GetStaffingClient(c *gin.Context) {
 		return
 	}
 
-	client, err := h.svc.GetByID(uint(id))
+	scope, ok := authctx.TenantScope(c)
+	if !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+		return
+	}
+	client, err := h.svc.GetByID(uint(id), scope)
 	if err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
-	}
-
-	if !authctx.IsSuperAdmin(c) {
-		companyID, ok := authctx.CompanyID(c)
-		if !ok {
-			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
-			return
-		}
-		if client.CompanyID != companyID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			return
-		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": dtos.ToStaffingClientResponse(client)})
@@ -148,14 +141,10 @@ func (h *StaffingClientHandler) UpdateStaffingClient(c *gin.Context) {
 		return
 	}
 
-	var companyID uint
-	if !authctx.IsSuperAdmin(c) {
-		cid, ok := authctx.CompanyID(c)
-		if !ok {
-			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
-			return
-		}
-		companyID = cid
+	scope, ok := authctx.TenantScope(c)
+	if !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+		return
 	}
 
 	var dto dtos.UpdateStaffingClientDTO
@@ -164,7 +153,7 @@ func (h *StaffingClientHandler) UpdateStaffingClient(c *gin.Context) {
 		return
 	}
 
-	updated, err := h.svc.Update(uint(id), companyID, dto)
+	updated, err := h.svc.Update(uint(id), scope, dto)
 	if err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
@@ -187,17 +176,13 @@ func (h *StaffingClientHandler) DeleteStaffingClient(c *gin.Context) {
 		return
 	}
 
-	var companyID uint
-	if !authctx.IsSuperAdmin(c) {
-		cid, ok := authctx.CompanyID(c)
-		if !ok {
-			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
-			return
-		}
-		companyID = cid
+	scope, ok := authctx.TenantScope(c)
+	if !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+		return
 	}
 
-	if err := h.svc.Delete(uint(id), companyID); err != nil {
+	if err := h.svc.Delete(uint(id), scope); err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}

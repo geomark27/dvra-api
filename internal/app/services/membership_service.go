@@ -16,7 +16,7 @@ type MembershipService interface {
 	GetMembershipsByUserID(userID uint) ([]models.Membership, error)
 	GetMembershipsByCompanyID(companyID uint) ([]models.Membership, error)
 	CreateMembership(dto dtos.CreateMembershipDTO) (*models.Membership, error)
-	UpdateMembership(id uint, dto dtos.UpdateMembershipDTO) (*models.Membership, error)
+	UpdateMembership(id, actorUserID, actorCompanyID uint, global bool, dto dtos.UpdateMembershipDTO) (*models.Membership, error)
 	DeleteMembership(id uint) error
 }
 
@@ -52,23 +52,28 @@ func (s *membershipService) GetMembershipsByCompanyID(companyID uint) ([]models.
 }
 
 func (s *membershipService) CreateMembership(dto dtos.CreateMembershipDTO) (*models.Membership, error) {
+	if dto.CompanyID == nil || *dto.CompanyID == 0 {
+		return nil, apperr.BadRequest("company_id is required for tenant memberships")
+	}
 	// Verificar si ya existe membership para user+company
-	if dto.CompanyID != nil {
-		existing, err := s.membershipRepo.GetByUserAndCompany(dto.UserID, *dto.CompanyID)
-		if err != nil {
-			return nil, err
-		}
-		if existing != nil {
-			return nil, apperr.Conflict("membership already exists for this user and company")
-		}
+	existing, err := s.membershipRepo.GetByUserAndCompany(dto.UserID, *dto.CompanyID)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return nil, apperr.Conflict("membership already exists for this user and company")
 	}
 
 	now := time.Now()
+	status := dto.Status
+	if status == "" {
+		status = "active"
+	}
 	membership := &models.Membership{
 		UserID:    dto.UserID,
-		CompanyID: dto.CompanyID,
+		CompanyID: *dto.CompanyID,
 		Role:      dto.Role,
-		Status:    dto.Status,
+		Status:    status,
 		IsDefault: dto.IsDefault,
 		InvitedBy: dto.InvitedBy,
 		InvitedAt: &now,
@@ -77,7 +82,7 @@ func (s *membershipService) CreateMembership(dto dtos.CreateMembershipDTO) (*mod
 	return s.membershipRepo.Create(membership)
 }
 
-func (s *membershipService) UpdateMembership(id uint, dto dtos.UpdateMembershipDTO) (*models.Membership, error) {
+func (s *membershipService) UpdateMembership(id, actorUserID, actorCompanyID uint, global bool, dto dtos.UpdateMembershipDTO) (*models.Membership, error) {
 	membership, err := s.membershipRepo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -85,8 +90,19 @@ func (s *membershipService) UpdateMembership(id uint, dto dtos.UpdateMembershipD
 	if membership == nil {
 		return nil, apperr.NotFound("membership not found")
 	}
+	if !global {
+		if membership.CompanyID != actorCompanyID {
+			return nil, apperr.Forbidden("access denied")
+		}
+		if dto.Role != nil && membership.UserID == actorUserID {
+			return nil, apperr.Forbidden("you cannot change your own role")
+		}
+	}
 
 	if dto.Role != nil {
+		if *dto.Role == "superadmin" {
+			return nil, apperr.Forbidden("superadmin is a reserved platform role")
+		}
 		membership.Role = *dto.Role
 	}
 	if dto.Status != nil {

@@ -1,8 +1,12 @@
 # 👥 Cliente (Admin de Empresa) - Flujo Completo del Sistema
 
 > **Documento de Referencia Técnica**  
-> Versión: 1.0 | Fecha: 9 de Diciembre, 2025  
+> Versión: 1.1 | Actualizado: 15 de Julio, 2026
 > Describe en detalle qué puede y NO puede hacer un Cliente en el ATS
+
+> La definición canónica de los contextos está en
+> [ADR-002](ADR-002-contextos-landlord-tenant.md). Los ejemplos antiguos que
+> contradigan ese ADR deben considerarse históricos.
 
 ---
 
@@ -46,13 +50,13 @@ Un **Cliente** es cualquier usuario que pertenece a una o más **empresas** en e
 
 | Característica | Cliente | SuperAdmin |
 |---------------|---------|------------|
-| **company_id en JWT** | ✅ Requerido | ❌ NULL |
+| **Contexto JWT** | `tenant` con `company_id` | `platform` sin `company_id` |
 | **Alcance de datos** | Solo su empresa | Todas las empresas |
 | **Puede crear empresas** | ❌ No | ✅ Sí |
 | **Gestionar planes** | ❌ No | ✅ Sí |
 | **Ver otras empresas** | ❌ No | ✅ Sí |
-| **Crear memberships** | ❌ No (MVP) | ✅ Sí |
-| **Multi-empresa** | ✅ Sí (via switch) | ❌ N/A |
+| **Crear memberships** | Según permisos tenant vigentes | ✅ Desde `/platform/memberships` |
+| **Multi-empresa** | ✅ Sí (via switch) | Puede cambiar a tenant si también posee membership |
 | **Límites de plan** | ✅ Aplican | ❌ Ilimitado |
 
 ---
@@ -62,7 +66,7 @@ Un **Cliente** es cualquier usuario que pertenece a una o más **empresas** en e
 ### **2.1 Roles Disponibles para Clientes**
 
 ```go
-// internal/app/models/role.go
+// internal/shared/permissions/permissions.go
 
 const (
     RoleAdmin          = "admin"           // Level 50

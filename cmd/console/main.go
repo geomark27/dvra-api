@@ -2,10 +2,14 @@ package main
 
 import (
 	"log"
+	"strings"
 
+	"dvra-api/internal/app/models"
 	"dvra-api/internal/database"
+	"dvra-api/internal/database/migrations"
 	"dvra-api/internal/database/seeders"
 	"dvra-api/internal/platform/config"
+	"dvra-api/internal/shared/permissions"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
@@ -39,17 +43,53 @@ func main() {
 		Long:  `Populate database with initial or test data`,
 		Run:   runSeed,
 	}
+	platformAdminCmd := &cobra.Command{
+		Use:   "platform-admin",
+		Short: "Grant landlord superadmin access to an existing user",
+		Run:   runPlatformAdmin,
+	}
+	platformAdminCmd.Flags().String("email", "", "Email of the existing user")
+	_ = platformAdminCmd.MarkFlagRequired("email")
 
-	rootCmd.AddCommand(migrateCmd, seedCmd)
+	rootCmd.AddCommand(migrateCmd, seedCmd, platformAdminCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
 	}
 }
 
+func runPlatformAdmin(cmd *cobra.Command, args []string) {
+	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("Invalid configuration: %v", err)
+	}
+	db, err := database.InitDB(cfg)
+	if err != nil {
+		log.Fatalf("Error connecting to database: %v", err)
+	}
+	defer func() { _ = database.CloseDB() }()
+
+	email, _ := cmd.Flags().GetString("email")
+	email = strings.ToLower(strings.TrimSpace(email))
+	var user models.User
+	if err := db.Where("LOWER(email) = ?", email).First(&user).Error; err != nil {
+		log.Fatalf("User %q was not found; create the identity first", email)
+	}
+	profile := models.PlatformMembership{UserID: user.ID, Role: permissions.RoleSuperAdmin, Status: "active"}
+	if err := db.Where("user_id = ?", user.ID).
+		Assign(map[string]interface{}{"role": permissions.RoleSuperAdmin, "status": "active"}).
+		FirstOrCreate(&profile).Error; err != nil {
+		log.Fatalf("Error granting platform access: %v", err)
+	}
+	log.Printf("Platform superadmin access granted to %s", email)
+}
+
 func runMigrate(cmd *cobra.Command, args []string) {
 	// Load configuration
 	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("❌ Invalid configuration: %v", err)
+	}
 
 	// Initialize database
 	db, err := database.InitDB(cfg)
@@ -62,15 +102,35 @@ func runMigrate(cmd *cobra.Command, args []string) {
 	fresh, _ := cmd.Flags().GetBool("fresh")
 	if fresh {
 		log.Println("🗑️  Dropping all tables...")
-		if err := db.Migrator().DropTable(database.AllModels...); err != nil {
+		modelsToDrop := make([]interface{}, 0, len(database.AllModels)+1)
+		modelsToDrop = append(modelsToDrop, &models.SchemaMigration{})
+		modelsToDrop = append(modelsToDrop, database.AllModels...)
+		if err := db.Migrator().DropTable(modelsToDrop...); err != nil {
 			log.Printf("⚠️  Warning dropping tables: %v", err)
 		}
 	}
 
-	// Run migrations
+	// Bootstrap migration metadata and landlord profiles before tightening the
+	// tenant membership schema.
 	log.Println("🔄 Running migrations...")
+	if !db.Migrator().HasTable(&models.SchemaMigration{}) {
+		if err := db.AutoMigrate(&models.SchemaMigration{}); err != nil {
+			log.Fatalf("❌ Migration bootstrap error: %v", err)
+		}
+	}
+	if db.Migrator().HasTable("memberships") {
+		if err := db.AutoMigrate(&models.PlatformMembership{}); err != nil {
+			log.Fatalf("❌ Platform membership migration error: %v", err)
+		}
+		if err := migrations.RunBeforeSchema(db); err != nil {
+			log.Fatalf("❌ Pre-schema data migration error: %v", err)
+		}
+	}
 	if err := db.AutoMigrate(database.AllModels...); err != nil {
 		log.Fatalf("❌ Migration error: %v", err)
+	}
+	if err := migrations.Run(db); err != nil {
+		log.Fatalf("❌ Data migration error: %v", err)
 	}
 	log.Println("✅ Migrations completed successfully")
 
@@ -84,6 +144,9 @@ func runMigrate(cmd *cobra.Command, args []string) {
 func runSeed(cmd *cobra.Command, args []string) {
 	// Load configuration
 	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("❌ Invalid configuration: %v", err)
+	}
 
 	// Initialize database
 	db, err := database.InitDB(cfg)

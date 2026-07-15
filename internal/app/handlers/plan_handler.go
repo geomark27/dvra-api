@@ -39,7 +39,7 @@ func NewPlanHandler(planService services.PlanService) *PlanHandler {
 // @Failure 400 {object} map[string]string
 // @Failure 403 {object} map[string]string
 // @Failure 409 {object} map[string]string
-// @Router /admin/plans [post]
+// @Router /platform/plans [post]
 func (h *PlanHandler) CreatePlan(c *gin.Context) {
 	var dto dtos.PlanDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
@@ -68,7 +68,7 @@ func (h *PlanHandler) CreatePlan(c *gin.Context) {
 // @Security BearerAuth
 // @Success 200 {object} map[string]interface{}
 // @Failure 500 {object} map[string]string
-// @Router /admin/plans [get]
+// @Router /platform/plans [get]
 func (h *PlanHandler) GetPlans(c *gin.Context) {
 
 	var plans []dtos.PlanResponse
@@ -107,7 +107,7 @@ func (h *PlanHandler) GetPlans(c *gin.Context) {
 // @Success 200 {object} dtos.PlanResponse
 // @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /admin/plans/{id} [get]
+// @Router /platform/plans/{id} [get]
 func (h *PlanHandler) GetPlanByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -192,7 +192,7 @@ func (h *PlanHandler) GetPublicPlans(c *gin.Context) {
 // @Failure 400 {object} map[string]string
 // @Failure 403 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /admin/plans/{id} [put]
+// @Router /platform/plans/{id} [put]
 func (h *PlanHandler) UpdatePlan(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -233,7 +233,7 @@ func (h *PlanHandler) UpdatePlan(c *gin.Context) {
 // @Failure 400 {object} map[string]string
 // @Failure 403 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /admin/plans/{id}/toggle [patch]
+// @Router /platform/plans/{id}/toggle [patch]
 func (h *PlanHandler) TogglePlanStatus(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -278,7 +278,7 @@ func (h *PlanHandler) TogglePlanStatus(c *gin.Context) {
 // @Failure 403 {object} map[string]string
 // @Failure 404 {object} map[string]string
 // @Failure 409 {object} map[string]string
-// @Router /admin/plans/{id} [delete]
+// @Router /platform/plans/{id} [delete]
 func (h *PlanHandler) DeletePlan(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -311,7 +311,7 @@ func (h *PlanHandler) DeletePlan(c *gin.Context) {
 // @Failure 400 {object} map[string]string
 // @Failure 403 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /admin/plans/assign [post]
+// @Router /platform/plans/assign [post]
 func (h *PlanHandler) AssignPlanToCompany(c *gin.Context) {
 	var dto dtos.AssignPlanToCompanyDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {

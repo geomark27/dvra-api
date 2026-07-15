@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -27,6 +28,9 @@ type Config struct {
 	// JWT (para futuras implementaciones)
 	JWTSecret        string
 	JWTRefreshSecret string
+
+	StorageRoot  string
+	SeedDemoData bool
 }
 
 // Load carga la configuración desde variables de entorno
@@ -51,7 +55,27 @@ func Load() *Config {
 		// JWT
 		JWTSecret:        getEnv("JWT_SECRET", "your-default-secret-change-in-production"),
 		JWTRefreshSecret: getEnv("JWT_REFRESH_SECRET", "your-refresh-secret-change-in-production"),
+
+		StorageRoot:  getEnv("STORAGE_ROOT", "./uploads"),
+		SeedDemoData: getEnvBool("SEED_DEMO_DATA", false),
 	}
+}
+
+// Validate rechaza configuraciones inseguras antes de abrir conexiones.
+func (c *Config) Validate() error {
+	if c.Environment != "production" {
+		return nil
+	}
+	if c.JWTSecret == "your-default-secret-change-in-production" || len(c.JWTSecret) < 32 {
+		return fmt.Errorf("JWT_SECRET must be set to at least 32 characters in production")
+	}
+	if c.JWTRefreshSecret == "your-refresh-secret-change-in-production" || len(c.JWTRefreshSecret) < 32 {
+		return fmt.Errorf("JWT_REFRESH_SECRET must be set to at least 32 characters in production")
+	}
+	if c.DatabaseURL == "" && (c.DBName == "" || c.DBUser == "" || c.DBPassword == "") {
+		return fmt.Errorf("database configuration is incomplete")
+	}
+	return nil
 }
 
 // getEnv obtiene una variable de entorno o retorna un valor por defecto
@@ -60,6 +84,18 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func getEnvBool(key string, defaultValue bool) bool {
+	value := getEnv(key, "")
+	if value == "" {
+		return defaultValue
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return defaultValue
+	}
+	return parsed
 }
 
 // parseCorsOrigins parsea la lista de orígenes CORS desde una cadena separada por comas

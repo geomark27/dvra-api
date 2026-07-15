@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"dvra-api/internal/app/services"
-	"dvra-api/internal/shared/permissions"
 
 	"github.com/gin-gonic/gin"
 )
@@ -32,7 +31,7 @@ func AuthMiddleware(jwtService services.JWTService) gin.HandlerFunc {
 		tokenString := parts[1]
 
 		// Validate token
-		claims, err := jwtService.ValidateToken(tokenString)
+		claims, err := jwtService.ValidateAccessToken(tokenString)
 		if err != nil {
 			if err == services.ErrExpiredToken {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Token has expired"})
@@ -47,30 +46,13 @@ func AuthMiddleware(jwtService services.JWTService) gin.HandlerFunc {
 		c.Set("user_id", claims.UserID)
 		c.Set("email", claims.Email)
 		c.Set("role", claims.Role)
+		c.Set("context_type", claims.ContextType)
+		if claims.MembershipID != nil {
+			c.Set("membership_id", *claims.MembershipID)
+		}
 
 		if claims.CompanyID != nil {
 			c.Set("company_id", *claims.CompanyID)
-		}
-
-		c.Next()
-	}
-}
-
-// RequireRole checks if user has required role level
-func RequireRole(minLevel int) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		role, exists := c.Get("role")
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-			c.Abort()
-			return
-		}
-
-		userLevel := getRoleLevel(role.(string))
-		if userLevel < minLevel {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
-			c.Abort()
-			return
 		}
 
 		c.Next()
@@ -107,11 +89,15 @@ func OptionalAuth(jwtService services.JWTService) gin.HandlerFunc {
 		}
 
 		tokenString := parts[1]
-		claims, err := jwtService.ValidateToken(tokenString)
+		claims, err := jwtService.ValidateAccessToken(tokenString)
 		if err == nil {
 			c.Set("user_id", claims.UserID)
 			c.Set("email", claims.Email)
 			c.Set("role", claims.Role)
+			c.Set("context_type", claims.ContextType)
+			if claims.MembershipID != nil {
+				c.Set("membership_id", *claims.MembershipID)
+			}
 
 			if claims.CompanyID != nil {
 				c.Set("company_id", *claims.CompanyID)
@@ -120,20 +106,4 @@ func OptionalAuth(jwtService services.JWTService) gin.HandlerFunc {
 
 		c.Next()
 	}
-}
-
-// getRoleLevel returns the numeric level for a role
-func getRoleLevel(role string) int {
-	levels := map[string]int{
-		permissions.RoleSuperAdmin:    100,
-		permissions.RoleAdmin:         50,
-		permissions.RoleRecruiter:     30,
-		permissions.RoleHiringManager: 20,
-		permissions.RoleUser:          10,
-	}
-
-	if level, exists := levels[role]; exists {
-		return level
-	}
-	return 0
 }

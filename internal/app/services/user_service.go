@@ -1,10 +1,13 @@
 package services
 
 import (
+	"time"
+
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
 	"dvra-api/internal/shared/apperr"
+	"gorm.io/gorm"
 )
 
 // UserService define el contrato del servicio de usuarios
@@ -13,19 +16,21 @@ type UserService interface {
 	GetUserByID(id uint) (*models.User, error)
 	GetUsersByCompanyID(companyID uint) ([]models.User, error)
 	CreateUser(dto dtos.CreateUserDTO) (*models.User, error)
-	UpdateUser(id uint, dto dtos.UpdateUserDTO) (*models.User, error)
-	DeleteUser(id uint) error
+	UpdateUser(id, companyID uint, global bool, dto dtos.UpdateUserDTO) (*models.User, error)
+	DeleteUser(id, companyID uint, global bool) error
 }
 
 // userService es la implementación privada del servicio
 type userService struct {
 	userRepo repositories.UserRepository
+	db       *gorm.DB
 }
 
 // NewUserService crea una nueva instancia de UserService
-func NewUserService(userRepo repositories.UserRepository) UserService {
+func NewUserService(userRepo repositories.UserRepository, db *gorm.DB) UserService {
 	return &userService{
 		userRepo: userRepo,
+		db:       db,
 	}
 }
 
@@ -68,28 +73,46 @@ func (s *userService) CreateUser(dto dtos.CreateUserDTO) (*models.User, error) {
 		return nil, apperr.Conflict("email already exists")
 	}
 
-	user := &models.User{
-		FirstName: dto.FirstName,
-		LastName:  dto.LastName,
-		Email:     dto.Email,
-	}
-
-	createdUser, err := s.userRepo.Create(user)
+	hashedPassword, err := HashPassword(dto.Password)
 	if err != nil {
 		return nil, err
 	}
-
-	return createdUser, nil
+	user := &models.User{
+		FirstName:    dto.FirstName,
+		LastName:     dto.LastName,
+		Email:        dto.Email,
+		PasswordHash: hashedPassword,
+		IsActive:     true,
+	}
+	invitedAt := time.Now()
+	err = s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(user).Error; err != nil {
+			return err
+		}
+		membership := &models.Membership{
+			UserID: user.ID, CompanyID: dto.CompanyID, Role: dto.Role,
+			Status: "active", IsDefault: true, InvitedBy: &dto.InvitedBy,
+			InvitedAt: &invitedAt, JoinedAt: &invitedAt,
+		}
+		return tx.Create(membership).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 // UpdateUser actualiza un usuario existente
-func (s *userService) UpdateUser(id uint, dto dtos.UpdateUserDTO) (*models.User, error) {
+func (s *userService) UpdateUser(id, companyID uint, global bool, dto dtos.UpdateUserDTO) (*models.User, error) {
 	existingUser, err := s.userRepo.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
 	if existingUser == nil {
 		return nil, apperr.NotFound("user not found")
+	}
+	if !global && !userHasCompany(existingUser, companyID) {
+		return nil, apperr.Forbidden("access denied")
 	}
 
 	// Actualizar campos si se proporcionan
@@ -112,7 +135,7 @@ func (s *userService) UpdateUser(id uint, dto dtos.UpdateUserDTO) (*models.User,
 }
 
 // DeleteUser elimina un usuario
-func (s *userService) DeleteUser(id uint) error {
+func (s *userService) DeleteUser(id, companyID uint, global bool) error {
 	existingUser, err := s.userRepo.GetByID(id)
 	if err != nil {
 		return err
@@ -120,6 +143,27 @@ func (s *userService) DeleteUser(id uint) error {
 	if existingUser == nil {
 		return apperr.NotFound("user not found")
 	}
+	if !global && !userHasCompany(existingUser, companyID) {
+		return apperr.Forbidden("access denied")
+	}
 
-	return s.userRepo.Delete(id)
+	if global {
+		return s.userRepo.Delete(id)
+	}
+	if err := s.userRepo.RemoveFromCompany(id, companyID); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return apperr.NotFound("tenant membership not found")
+		}
+		return err
+	}
+	return nil
+}
+
+func userHasCompany(user *models.User, companyID uint) bool {
+	for _, membership := range user.Memberships {
+		if membership.CompanyID == companyID {
+			return true
+		}
+	}
+	return false
 }

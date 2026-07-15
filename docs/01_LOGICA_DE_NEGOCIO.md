@@ -121,13 +121,13 @@ User (Nivel 10)         → Solo lectura, reportes básicos.
 | Buscar candidatos en la red | — | ✅ | ✅ | ❌ | ❌ |
 | Contactar candidato | — | ✅ | Con aprobación | ❌ | ❌ |
 
-> El SuperAdmin tiene lectura global pero **no crea** jobs/candidatos/aplicaciones porque no tiene contexto de empresa (`company_id = NULL`).
+> El SuperAdmin opera en contexto `platform`. No consume rutas tenant ni crea jobs/candidatos/aplicaciones; la gestión landlord usa `/api/v1/platform/*`.
 
 ### 3.3 Reglas de membresías
 
 - **RN-MEMB-001 — Multi-empresa:** un usuario (email) puede tener N membresías en N empresas, cada una con su propio rol. Ej.: Admin en CompanyA y Recruiter en CompanyB.
 - **RN-MEMB-002 — Membresía por defecto:** el usuario marca 1 empresa como `is_default` para el login inicial; si no hay default se usa la primera membresía.
-- **RN-MEMB-003 — SuperAdmin es especial:** su membresía tiene `company_id = NULL`. No aparece en listados de team members de ninguna empresa.
+- **RN-MEMB-003 — SuperAdmin es landlord:** su acceso vive en `platform_memberships`, separado de las memberships tenant. No aparece en listados de ningún team.
 - **RN-MEMB-004 — Creación restringida (MVP):** solo SuperAdmin puede asignar usuarios *existentes* a empresas (evita manipulación cross-company). El Admin de empresa puede crear usuarios *nuevos* en su empresa, ver/actualizar roles y eliminar membresías propias. **Fase 2:** sistema de invitaciones por email.
 - **RN-MEMB-005 — Lifecycle:** estados `pending` (invitado) → `active` → `suspended` / `removed`. Suspendido no puede hacer login; removido es soft delete.
 

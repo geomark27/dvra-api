@@ -5,21 +5,23 @@ import (
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
 	"dvra-api/internal/shared/apperr"
+	"dvra-api/internal/shared/tenant"
 )
 
 // JobService define el contrato del servicio de jobs
 type JobService interface {
 	GetAllJobs() ([]models.Job, error)
 	GetAllJobsWithFilters(filters dtos.JobFilters) ([]models.Job, error)
-	GetJobByID(id uint) (*models.Job, error)
+	GetJobByID(id uint, scope tenant.Scope) (*models.Job, error)
 	GetJobsByCompanyID(companyID uint) ([]models.Job, error)
 	GetJobsByCompanyIDWithFilters(companyID uint, filters dtos.JobFilters) ([]models.Job, error)
+	GetJobsWithScope(scope tenant.Scope, filters dtos.JobFilters) ([]models.Job, error)
 	GetJobsByStatus(status string, companyID uint) ([]models.Job, error)
 	CreateJob(dto dtos.CreateJobDTO) (*models.Job, error)
-	UpdateJob(id uint, dto dtos.UpdateJobDTO) (*models.Job, error)
-	PublishJob(id uint) (*models.Job, error)
-	CloseJob(id uint) (*models.Job, error)
-	DeleteJob(id uint) error
+	UpdateJob(id uint, scope tenant.Scope, dto dtos.UpdateJobDTO) (*models.Job, error)
+	PublishJob(id uint, scope tenant.Scope) (*models.Job, error)
+	CloseJob(id uint, scope tenant.Scope) (*models.Job, error)
+	DeleteJob(id uint, scope tenant.Scope) error
 }
 
 // staffingClientReader es lo que job necesita de staffing: validar que un cliente
@@ -32,10 +34,11 @@ type staffingClientReader interface {
 type jobService struct {
 	jobRepo      repositories.JobRepository
 	staffingRepo staffingClientReader
+	planService  PlanService
 }
 
-func NewJobService(jobRepo repositories.JobRepository, staffingRepo staffingClientReader) JobService {
-	return &jobService{jobRepo: jobRepo, staffingRepo: staffingRepo}
+func NewJobService(jobRepo repositories.JobRepository, staffingRepo staffingClientReader, planService PlanService) JobService {
+	return &jobService{jobRepo: jobRepo, staffingRepo: staffingRepo, planService: planService}
 }
 
 // validateStaffingClient asegura que el cliente final exista y pertenezca a la
@@ -63,8 +66,8 @@ func (s *jobService) GetAllJobsWithFilters(filters dtos.JobFilters) ([]models.Jo
 	return s.jobRepo.GetAllWithFilters(filters)
 }
 
-func (s *jobService) GetJobByID(id uint) (*models.Job, error) {
-	job, err := s.jobRepo.GetByID(id)
+func (s *jobService) GetJobByID(id uint, scope tenant.Scope) (*models.Job, error) {
+	job, err := s.jobRepo.GetByID(id, scope)
 	if err != nil {
 		return nil, err
 	}
@@ -82,6 +85,10 @@ func (s *jobService) GetJobsByCompanyIDWithFilters(companyID uint, filters dtos.
 	return s.jobRepo.GetByCompanyIDWithFilters(companyID, filters)
 }
 
+func (s *jobService) GetJobsWithScope(scope tenant.Scope, filters dtos.JobFilters) ([]models.Job, error) {
+	return s.jobRepo.GetByScopeWithFilters(scope, filters)
+}
+
 func (s *jobService) GetJobsByStatus(status string, companyID uint) ([]models.Job, error) {
 	return s.jobRepo.GetByStatus(status, companyID)
 }
@@ -90,6 +97,9 @@ func (s *jobService) CreateJob(dto dtos.CreateJobDTO) (*models.Job, error) {
 	status := dto.Status
 	if status == "" {
 		status = "draft"
+	}
+	if status != "draft" {
+		return nil, apperr.BadRequest("jobs must be created as draft; use the publish endpoint")
 	}
 
 	// Si el job se asigna a un cliente final, debe ser del mismo tenant
@@ -118,8 +128,8 @@ func (s *jobService) CreateJob(dto dtos.CreateJobDTO) (*models.Job, error) {
 	return s.jobRepo.Create(job)
 }
 
-func (s *jobService) UpdateJob(id uint, dto dtos.UpdateJobDTO) (*models.Job, error) {
-	job, err := s.jobRepo.GetByID(id)
+func (s *jobService) UpdateJob(id uint, scope tenant.Scope, dto dtos.UpdateJobDTO) (*models.Job, error) {
+	job, err := s.jobRepo.GetByID(id, scope)
 	if err != nil {
 		return nil, err
 	}
@@ -152,6 +162,9 @@ func (s *jobService) UpdateJob(id uint, dto dtos.UpdateJobDTO) (*models.Job, err
 		job.Benefits = *dto.Benefits
 	}
 	if dto.Status != nil {
+		if *dto.Status == "published" {
+			return nil, apperr.BadRequest("use the publish endpoint to publish a job")
+		}
 		job.Status = *dto.Status
 	}
 	if dto.AssignedRecruiter != nil {
@@ -170,8 +183,8 @@ func (s *jobService) UpdateJob(id uint, dto dtos.UpdateJobDTO) (*models.Job, err
 	return s.jobRepo.Update(job)
 }
 
-func (s *jobService) PublishJob(id uint) (*models.Job, error) {
-	job, err := s.jobRepo.GetByID(id)
+func (s *jobService) PublishJob(id uint, scope tenant.Scope) (*models.Job, error) {
+	job, err := s.jobRepo.GetByID(id, scope)
 	if err != nil {
 		return nil, err
 	}
@@ -183,13 +196,19 @@ func (s *jobService) PublishJob(id uint) (*models.Job, error) {
 	if job.Title == "" || job.Description == "" {
 		return nil, apperr.BadRequest("job must have title and description to be published")
 	}
+	if job.Status == "published" {
+		return job, nil
+	}
+	if err := s.planService.PublishJobWithinLimit(job); err != nil {
+		return nil, err
+	}
 
-	job.Status = "active"
-	return s.jobRepo.Update(job)
+	job.Status = "published"
+	return job, nil
 }
 
-func (s *jobService) CloseJob(id uint) (*models.Job, error) {
-	job, err := s.jobRepo.GetByID(id)
+func (s *jobService) CloseJob(id uint, scope tenant.Scope) (*models.Job, error) {
+	job, err := s.jobRepo.GetByID(id, scope)
 	if err != nil {
 		return nil, err
 	}
@@ -201,8 +220,8 @@ func (s *jobService) CloseJob(id uint) (*models.Job, error) {
 	return s.jobRepo.Update(job)
 }
 
-func (s *jobService) DeleteJob(id uint) error {
-	job, err := s.jobRepo.GetByID(id)
+func (s *jobService) DeleteJob(id uint, scope tenant.Scope) error {
+	job, err := s.jobRepo.GetByID(id, scope)
 	if err != nil {
 		return err
 	}

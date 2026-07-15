@@ -21,5 +21,5 @@ func (s *ScopedDB) WithCompanyScope() *gorm.DB {
 		return s.db
 	}
 
-	return s.db.Where("company_id = ?", &s.companyID)
+	return s.db.Where("company_id = ?", *s.companyID)
 }

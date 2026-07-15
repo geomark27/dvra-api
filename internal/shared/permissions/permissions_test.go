@@ -2,10 +2,13 @@ package permissions
 
 import "testing"
 
-func TestSuperAdminCanEverything(t *testing.T) {
-	for _, perm := range []string{JobsCreate, CompaniesDelete, MembershipsCreate, UsersDelete} {
-		if !Can(RoleSuperAdmin, perm) {
-			t.Errorf("superadmin debería tener %q", perm)
+func TestSuperAdminPermissionsArePlatformOnly(t *testing.T) {
+	if Can(RoleSuperAdmin, JobsCreate) {
+		t.Fatal("platform superadmin inherited tenant permissions")
+	}
+	for _, permission := range []string{PlatformCompaniesManage, PlatformPlansManage, PlatformSettingsManage} {
+		if !PlatformCan(RoleSuperAdmin, permission) {
+			t.Errorf("superadmin should have platform permission %q", permission)
 		}
 	}
 }
@@ -42,6 +45,8 @@ func TestMatrixPorRol(t *testing.T) {
 		// user: solo lectura
 		{RoleUser, JobsView, true},
 		{RoleUser, DashboardView, true},
+		{RoleUser, CandidatesView, false},
+		{RoleUser, ApplicationsView, false},
 		{RoleUser, JobsCreate, false},
 		{RoleUser, ApplicationsRate, false},
 	}

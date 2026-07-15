@@ -6,13 +6,19 @@ ifneq (,$(wildcard .env))
 	export
 endif
 
-.PHONY: build run test clean fmt fmt-check vet lint check hooks-install deps help
+.PHONY: help build run test test-coverage fmt vet fmt-check lint check hooks-install \
+	deps clean dev dev-full fresh install-tools up down restart logs logs-api \
+	ps rebuild db-up db-down db-restart db-logs db-clean clean-all db-shell \
+	db-fresh db-fresh-full db-migrate db-seed db-location push pull status sync swagger
 
 # Variables
 APP_NAME=dvra-api
 BUILD_DIR=build
 CMD_DIR=cmd/$(APP_NAME)
 BRANCH := $(shell git branch --show-current)
+DOCKER ?= docker
+COMPOSE := $(DOCKER) compose
+COMPOSE_PROJECT := $(if $(COMPOSE_PROJECT_NAME),$(COMPOSE_PROJECT_NAME),dvra-ats)
 
 # Comandos principales
 help: ## Muestra esta ayuda
@@ -36,18 +42,20 @@ help: ## Muestra esta ayuda
 	@echo "    db-down            Detiene PostgreSQL"
 	@echo "    db-restart         Reinicia PostgreSQL"
 	@echo "    db-logs            Muestra logs de PostgreSQL"
-	@echo "    db-clean           Elimina PostgreSQL y volumenes"
+	@echo "    db-clean           Elimina PostgreSQL; conserva uploads"
+	@echo "    clean-all          Elimina DB, uploads y todos los contenedores"
 	@echo "    db-shell           Accede a psql en el contenedor"
 	@echo ""
-	@echo "  Docker (Produccion - API + DB):"
+	@echo "  Docker Compose (API + DB):"
 	@echo "    up                 Levanta toda la aplicacion (API + DB)"
 	@echo "    down               Detiene toda la aplicacion"
 	@echo "    restart            Reinicia toda la aplicacion"
 	@echo "    logs               Muestra logs de todos los servicios"
 	@echo "    logs-api           Muestra logs solo de la API"
+	@echo "    ps                 Muestra el estado de los servicios"
 	@echo "    rebuild            Reconstruye y levanta la API"
 	@echo ""
-	@echo "  Database (LOOM):"
+	@echo "  Database:"
 	@echo "    db-migrate         Ejecuta migraciones"
 	@echo "    db-seed            Ejecuta seeders"
 	@echo "    db-location        Pobla datos de ubicaciones (countries, cities, etc)"
@@ -105,7 +113,7 @@ build: ## Compila la aplicacion
 
 run: ## Ejecuta la aplicacion (sin migraciones)
 	@echo "Ejecutando $(APP_NAME)..."
-	@echo "Nota: Para migraciones usa 'make db-migrate' o 'loom db:migrate'"
+	@echo "Nota: Para migraciones usa 'make db-migrate'"
 	@go run $(CMD_DIR)/main.go
 
 test: ## Ejecuta los tests
@@ -170,9 +178,7 @@ dev: ## Modo desarrollo con hot reload (requiere air)
 dev-full: ## Setup completo desarrollo (DB + migrate + seed + run)
 	@echo "Starting development environment..."
 	@$(MAKE) db-up
-	@echo "Waiting for PostgreSQL..."
-	@sleep 3
-	@loom db:migrate --seed
+	@go run ./cmd/console migrate --seed
 	@echo "Ready! Starting API..."
 	@go run $(CMD_DIR)/main.go
 
@@ -180,9 +186,7 @@ fresh: ## Reset completo (clean DB + migrate + seed) [location=1 para ubicacione
 	@echo "Fresh install..."
 	@$(MAKE) db-clean
 	@$(MAKE) db-up
-	@echo "Waiting for PostgreSQL..."
-	@sleep 3
-	@loom db:fresh --seed
+	@go run ./cmd/console migrate --fresh --seed
 	@if [ "$(location)" = "1" ]; then \
 		echo "Poblando ubicaciones..."; \
 		$(MAKE) db-location; \
@@ -201,28 +205,34 @@ install-tools: ## Instala herramientas de desarrollo
 
 up: ## Levanta toda la aplicacion (API + PostgreSQL)
 	@echo "Starting DVRA API..."
-	@docker compose up -d
+	@$(COMPOSE) up -d --wait postgres
+	@$(MAKE) db-migrate
+	@$(COMPOSE) up -d api
 	@echo "API running on http://localhost:$(PORT)"
 	@echo "Swagger: http://localhost:$(PORT)/swagger/index.html"
 
 down: ## Detiene toda la aplicacion
 	@echo "Stopping DVRA..."
-	@docker compose down
+	@$(COMPOSE) down
 
 restart: ## Reinicia toda la aplicacion
 	@echo "Restarting DVRA..."
-	@docker compose restart
+	@$(COMPOSE) restart
 
 logs: ## Muestra logs de todos los servicios
-	@docker compose logs -f
+	@$(COMPOSE) logs -f
 
 logs-api: ## Muestra logs solo de la API
-	@docker compose logs -f api
+	@$(COMPOSE) logs -f api
+
+ps: ## Muestra el estado de los servicios
+	@$(COMPOSE) ps --all
 
 rebuild: ## Reconstruye y levanta la API
 	@echo "Rebuilding DVRA API..."
-	@docker compose build --no-cache api
-	@docker compose up -d api
+	@$(COMPOSE) up -d --wait postgres
+	@$(MAKE) db-migrate
+	@$(COMPOSE) up -d --build api
 	@echo "API rebuilt and running!"
 
 # ============================================
@@ -231,14 +241,12 @@ rebuild: ## Reconstruye y levanta la API
 
 db-up: ## Inicia PostgreSQL [fresh=1 para reset] [location=1 para ubicaciones]
 	@echo "Starting PostgreSQL (DEV MODE)..."
-	@docker compose up -d postgres
+	@$(COMPOSE) up -d --wait postgres
 	@echo "PostgreSQL running on localhost:$(DB_PORT)"
 	@if [ "$(fresh)" = "1" ]; then \
 		echo ""; \
 		echo "Fresh flag detected! Running database reset..."; \
-		echo "Waiting for PostgreSQL to be ready..."; \
-		sleep 3; \
-		loom db:fresh --seed; \
+		go run ./cmd/console migrate --fresh --seed; \
 		if [ "$(location)" = "1" ]; then \
 			echo "Poblando ubicaciones..."; \
 			$(MAKE) db-location; \
@@ -253,22 +261,29 @@ db-up: ## Inicia PostgreSQL [fresh=1 para reset] [location=1 para ubicaciones]
 
 db-down: ## Detiene PostgreSQL
 	@echo "Stopping PostgreSQL..."
-	@docker compose stop postgres
+	@$(COMPOSE) stop postgres
 
 db-restart: ## Reinicia PostgreSQL
 	@echo "Restarting PostgreSQL..."
-	@docker compose restart postgres
+	@$(COMPOSE) restart postgres
 
 db-logs: ## Muestra logs de PostgreSQL
-	@docker compose logs -f postgres
+	@$(COMPOSE) logs -f postgres
 
-db-clean: ## Elimina PostgreSQL y volumenes
+db-clean: ## Elimina PostgreSQL y su volumen; conserva uploads
 	@echo "Cleaning database..."
-	@docker compose down -v
-	@echo "Database cleaned"
+	@$(COMPOSE) stop api postgres 2>/dev/null || true
+	@$(COMPOSE) rm -f api postgres 2>/dev/null || true
+	@$(DOCKER) volume rm $(COMPOSE_PROJECT)_postgres_data 2>/dev/null || true
+	@echo "Database cleaned; uploads volume preserved"
+
+clean-all: ## Elimina contenedores y todos los volumenes (DB + uploads)
+	@echo "WARNING: deleting database and uploaded files..."
+	@$(COMPOSE) down -v
+	@echo "All Docker data cleaned"
 
 db-shell: ## Accede a psql en el contenedor
-	@docker compose exec postgres psql -U $(DB_USER) -d $(DB_NAME)
+	@$(COMPOSE) exec postgres psql -U $(DB_USER) -d $(DB_NAME)
 
 db-fresh: ## Alias: db-up con fresh automatico
 	@$(MAKE) db-up fresh=1
@@ -277,20 +292,20 @@ db-fresh-full: ## Alias: db-up + fresh + locations
 	@$(MAKE) db-up fresh=1 location=1
 
 # ============================================
-# COMANDOS BASE DE DATOS (LOOM)
+# COMANDOS BASE DE DATOS
 # ============================================
 
-db-migrate: ## Ejecuta migraciones con LOOM
+db-migrate: ## Ejecuta migraciones de esquema y datos
 	@echo "Running migrations..."
-	@loom db:migrate
+	@go run ./cmd/console migrate
 
-db-seed: ## Ejecuta seeders con LOOM
+db-seed: ## Ejecuta seeders
 	@echo "Running seeders..."
-	@loom db:seed
+	@go run ./cmd/console seed
 
 db-location: ## Pobla datos de ubicaciones (countries, cities, etc)
 	@echo "Poblando datos de ubicaciones..."
-	@docker compose exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) < scripts/location.sql
+	@$(COMPOSE) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) < scripts/location.sql
 	@echo "Datos de ubicaciones poblados exitosamente"
 
 # ============================================
@@ -346,4 +361,4 @@ swagger: ## Genera documentacion Swagger/OpenAPI
 	@echo "Generando documentacion Swagger..."
 	@~/go/bin/swag init -g cmd/dvra-api/main.go -o docs
 	@echo "Documentacion generada en docs/"
-	@echo "Accede a http://localhost:8000/swagger/index.html"
+	@echo "Accede a http://localhost:$(PORT)/swagger/index.html"
