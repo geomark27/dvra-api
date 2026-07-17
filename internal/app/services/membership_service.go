@@ -22,10 +22,11 @@ type MembershipService interface {
 
 type membershipService struct {
 	membershipRepo repositories.MembershipRepository
+	rbac           TenantAuthorizer
 }
 
-func NewMembershipService(membershipRepo repositories.MembershipRepository) MembershipService {
-	return &membershipService{membershipRepo: membershipRepo}
+func NewMembershipService(membershipRepo repositories.MembershipRepository, rbac TenantAuthorizer) MembershipService {
+	return &membershipService{membershipRepo: membershipRepo, rbac: rbac}
 }
 
 func (s *membershipService) GetAllMemberships() ([]models.Membership, error) {
@@ -52,6 +53,10 @@ func (s *membershipService) GetMembershipsByCompanyID(companyID uint) ([]models.
 }
 
 func (s *membershipService) CreateMembership(dto dtos.CreateMembershipDTO) (*models.Membership, error) {
+	role, err := s.rbac.RoleByID(dto.TenantRoleID)
+	if err != nil {
+		return nil, apperr.BadRequest("invalid tenant_role_id")
+	}
 	if dto.CompanyID == nil || *dto.CompanyID == 0 {
 		return nil, apperr.BadRequest("company_id is required for tenant memberships")
 	}
@@ -70,13 +75,14 @@ func (s *membershipService) CreateMembership(dto dtos.CreateMembershipDTO) (*mod
 		status = "active"
 	}
 	membership := &models.Membership{
-		UserID:    dto.UserID,
-		CompanyID: *dto.CompanyID,
-		Role:      dto.Role,
-		Status:    status,
-		IsDefault: dto.IsDefault,
-		InvitedBy: dto.InvitedBy,
-		InvitedAt: &now,
+		UserID:       dto.UserID,
+		CompanyID:    *dto.CompanyID,
+		TenantRoleID: dto.TenantRoleID,
+		TenantRole:   role,
+		Status:       status,
+		IsDefault:    dto.IsDefault,
+		InvitedBy:    dto.InvitedBy,
+		InvitedAt:    &now,
 	}
 
 	return s.membershipRepo.Create(membership)
@@ -94,16 +100,18 @@ func (s *membershipService) UpdateMembership(id, actorUserID, actorCompanyID uin
 		if membership.CompanyID != actorCompanyID {
 			return nil, apperr.Forbidden("access denied")
 		}
-		if dto.Role != nil && membership.UserID == actorUserID {
+		if dto.TenantRoleID != nil && membership.UserID == actorUserID {
 			return nil, apperr.Forbidden("you cannot change your own role")
 		}
 	}
 
-	if dto.Role != nil {
-		if *dto.Role == "superadmin" {
-			return nil, apperr.Forbidden("superadmin is a reserved platform role")
+	if dto.TenantRoleID != nil {
+		role, err := s.rbac.RoleByID(*dto.TenantRoleID)
+		if err != nil {
+			return nil, apperr.BadRequest("invalid tenant_role_id")
 		}
-		membership.Role = *dto.Role
+		membership.TenantRoleID = *dto.TenantRoleID
+		membership.TenantRole = role
 	}
 	if dto.Status != nil {
 		membership.Status = *dto.Status

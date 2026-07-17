@@ -19,6 +19,7 @@ const (
 	KeyRole         = "role"
 	KeyCompanyID    = "company_id"
 	KeyMembershipID = "membership_id"
+	KeyTenantRoleID = "tenant_role_id"
 	KeyContextType  = "context_type"
 )
 
@@ -86,6 +87,15 @@ func CompanyID(c *gin.Context) (uint, bool) {
 
 func MembershipID(c *gin.Context) (uint, bool) {
 	v, ok := c.Get(KeyMembershipID)
+	if !ok {
+		return 0, false
+	}
+	id, ok := v.(uint)
+	return id, ok
+}
+
+func TenantRoleID(c *gin.Context) (uint, bool) {
+	v, ok := c.Get(KeyTenantRoleID)
 	if !ok {
 		return 0, false
 	}

@@ -28,7 +28,7 @@ func NewMembershipRepository(db *gorm.DB) MembershipRepository {
 
 func (r *membershipRepository) GetAll() ([]models.Membership, error) {
 	var memberships []models.Membership
-	if err := r.db.Preload("User").Preload("Company").Find(&memberships).Error; err != nil {
+	if err := r.db.Preload("User").Preload("Company").Preload("TenantRole").Find(&memberships).Error; err != nil {
 		return nil, err
 	}
 	return memberships, nil
@@ -36,7 +36,7 @@ func (r *membershipRepository) GetAll() ([]models.Membership, error) {
 
 func (r *membershipRepository) GetByID(id uint) (*models.Membership, error) {
 	var membership models.Membership
-	if err := r.db.Preload("User").Preload("Company").First(&membership, id).Error; err != nil {
+	if err := r.db.Preload("User").Preload("Company").Preload("TenantRole").First(&membership, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
@@ -47,7 +47,7 @@ func (r *membershipRepository) GetByID(id uint) (*models.Membership, error) {
 
 func (r *membershipRepository) GetByUserID(userID uint) ([]models.Membership, error) {
 	var memberships []models.Membership
-	if err := r.db.Where("user_id = ?", userID).Preload("Company").Find(&memberships).Error; err != nil {
+	if err := r.db.Where("user_id = ?", userID).Preload("Company").Preload("TenantRole").Find(&memberships).Error; err != nil {
 		return nil, err
 	}
 	return memberships, nil
@@ -55,7 +55,7 @@ func (r *membershipRepository) GetByUserID(userID uint) ([]models.Membership, er
 
 func (r *membershipRepository) GetByCompanyID(companyID uint) ([]models.Membership, error) {
 	var memberships []models.Membership
-	if err := r.db.Where("company_id = ?", companyID).Preload("User").Find(&memberships).Error; err != nil {
+	if err := r.db.Where("company_id = ?", companyID).Preload("User").Preload("TenantRole").Find(&memberships).Error; err != nil {
 		return nil, err
 	}
 	return memberships, nil
@@ -63,7 +63,7 @@ func (r *membershipRepository) GetByCompanyID(companyID uint) ([]models.Membersh
 
 func (r *membershipRepository) GetByUserAndCompany(userID uint, companyID uint) (*models.Membership, error) {
 	var membership models.Membership
-	if err := r.db.Where("user_id = ? AND company_id = ?", userID, companyID).First(&membership).Error; err != nil {
+	if err := r.db.Where("user_id = ? AND company_id = ?", userID, companyID).Preload("TenantRole").First(&membership).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}

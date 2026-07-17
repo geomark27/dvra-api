@@ -10,7 +10,7 @@ import (
 )
 
 // AuthMiddleware validates JWT token and injects user info into context
-func AuthMiddleware(jwtService services.JWTService) gin.HandlerFunc {
+func AuthMiddleware(jwtService services.JWTService, rbac services.TenantAuthorizer) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get Authorization header
 		authHeader := c.GetHeader("Authorization")
@@ -45,7 +45,18 @@ func AuthMiddleware(jwtService services.JWTService) gin.HandlerFunc {
 		// Inject claims into context
 		c.Set("user_id", claims.UserID)
 		c.Set("email", claims.Email)
-		c.Set("role", claims.Role)
+		if claims.ContextType == "tenant" {
+			role, roleErr := rbac.RoleForMembership(*claims.MembershipID, claims.UserID, *claims.CompanyID)
+			if roleErr != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant role is no longer active"})
+				c.Abort()
+				return
+			}
+			c.Set("tenant_role_id", role.ID)
+			c.Set("role", role.Key)
+		} else {
+			c.Set("role", claims.Role)
+		}
 		c.Set("context_type", claims.ContextType)
 		if claims.MembershipID != nil {
 			c.Set("membership_id", *claims.MembershipID)
@@ -74,7 +85,7 @@ func RequireCompany() gin.HandlerFunc {
 }
 
 // OptionalAuth validates token if present, but doesn't require it
-func OptionalAuth(jwtService services.JWTService) gin.HandlerFunc {
+func OptionalAuth(jwtService services.JWTService, rbac services.TenantAuthorizer) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -93,7 +104,17 @@ func OptionalAuth(jwtService services.JWTService) gin.HandlerFunc {
 		if err == nil {
 			c.Set("user_id", claims.UserID)
 			c.Set("email", claims.Email)
-			c.Set("role", claims.Role)
+			if claims.ContextType == "tenant" {
+				role, roleErr := rbac.RoleForMembership(*claims.MembershipID, claims.UserID, *claims.CompanyID)
+				if roleErr != nil {
+					c.Next()
+					return
+				}
+				c.Set("tenant_role_id", role.ID)
+				c.Set("role", role.Key)
+			} else {
+				c.Set("role", claims.Role)
+			}
 			c.Set("context_type", claims.ContextType)
 			if claims.MembershipID != nil {
 				c.Set("membership_id", *claims.MembershipID)

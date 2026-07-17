@@ -72,7 +72,7 @@ const (
     RoleAdmin          = "admin"           // Level 50
     RoleRecruiter      = "recruiter"       // Level 30
     RoleHiringManager  = "hiring_manager"  // Level 20
-    RoleUser           = "user"            // Level 10
+    RoleInterviewer    = "interviewer"     // Level 10
 )
 ```
 
@@ -101,17 +101,17 @@ const (
 │     • NO puede crear jobs ni candidatos                     │
 │     • Acceso limitado de solo lectura                       │
 │                                                              │
-│  ⚪ USER (Level 10)                                          │
-│     • Solo lectura                                          │
-│     • Ve reportes básicos                                   │
-│     • NO puede modificar nada                               │
+│  ⚪ INTERVIEWER (Level 10)                                   │
+│     • Lectura básica                                      │
+│     • Sin acceso a candidatos hasta tener asignaciones      │
+│     • NO puede modificar el pipeline                        │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### **2.3 Matriz de Permisos por Rol**
 
-| Acción | Admin | Recruiter | Hiring Mgr | User |
+| Acción | Admin | Recruiter | Hiring Mgr | Interviewer |
 |--------|-------|-----------|------------|------|
 | **Company Settings** |
 | Ver configuración empresa | ✅ | ❌ | ❌ | ❌ |
@@ -129,12 +129,12 @@ const (
 | Eliminar job | ✅ | ✅ | ❌ | ❌ |
 | Publicar/cerrar job | ✅ | ✅ | ❌ | ❌ |
 | **Candidates** |
-| Ver todos candidatos | ✅ | ✅ | Solo de sus jobs | Solo de sus jobs |
+| Ver todos candidatos | ✅ | ✅ | Solo de sus jobs | ❌ (hasta asignación) |
 | Crear candidato | ✅ | ✅ | ❌ | ❌ |
 | Editar candidato | ✅ | ✅ | ❌ | ❌ |
 | Eliminar candidato | ✅ | ✅ | ❌ | ❌ |
 | **Applications** |
-| Ver aplicaciones | ✅ | ✅ | Solo de sus jobs | Solo de sus jobs |
+| Ver aplicaciones | ✅ | ✅ | Solo de sus jobs | ❌ (hasta asignación) |
 | Cambiar stage | ✅ | ✅ | Solo de sus jobs | ❌ |
 | Calificar candidato | ✅ | ✅ | ✅ | ❌ |
 | Agregar notas | ✅ | ✅ | ✅ | ❌ |
@@ -622,7 +622,7 @@ Content-Type: application/json
   "password": "TempPass123!",
   "first_name": "Carlos",
   "last_name": "Ramírez",
-  "role": "user"
+  "role": "interviewer"
 }
 ```
 
@@ -678,7 +678,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
     },
     "membership": {
       "id": 15,
-      "role": "user",
+      "role": "interviewer",
       "status": "active"
     }
   }
@@ -1795,7 +1795,7 @@ func CheckTrialExpired() gin.HandlerFunc {
 │  ✅ TIENE: company_id en JWT                                │
 │  ✅ VE: Solo datos de su empresa                            │
 │  ✅ PUEDE: Crear/editar recursos de su empresa              │
-│  ✅ ROLES: admin, recruiter, hiring_manager, user           │
+│  ✅ ROLES: admin, recruiter, hiring_manager, interviewer   │
 │  ✅ MULTI-EMPRESA: Switch entre empresas                    │
 │  ✅ LÍMITES: Según plan (free, starter, pro, enterprise)    │
 │                                                              │

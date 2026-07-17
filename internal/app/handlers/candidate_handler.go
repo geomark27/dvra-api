@@ -151,7 +151,7 @@ func (h *CandidateHandler) UploadResume(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resume file"})
 		return
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 	stored, err := h.candidateService.StoreResume(uint(id), scope, services.ResumeUpload{
 		Reader: src, OriginalName: header.Filename, Size: header.Size,
 	})
@@ -188,7 +188,7 @@ func (h *CandidateHandler) DownloadResume(c *gin.Context) {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 	disposition := mime.FormatMediaType("attachment", map[string]string{"filename": stored.OriginalName})
 	c.Header("Content-Disposition", disposition)
 	c.DataFromReader(http.StatusOK, stored.SizeBytes, stored.ContentType, reader, nil)

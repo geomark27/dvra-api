@@ -34,7 +34,9 @@ func registerRoutes(
 	dashboardHandler *handlers.DashboardHandler,
 	publicHandler *handlers.PublicHandler,
 	platformSettingsHandler *handlers.PlatformSettingsHandler,
+	tenantRoleHandler *handlers.TenantRoleHandler,
 	jwtService services.JWTService,
+	rbac services.TenantAuthorizer,
 	cfg *config.Config,
 ) {
 	// Root route
@@ -86,7 +88,7 @@ func registerRoutes(
 
 			// Protected auth routes
 			authProtected := auth.Group("")
-			authProtected.Use(middleware.AuthMiddleware(jwtService))
+			authProtected.Use(middleware.AuthMiddleware(jwtService, rbac))
 			{
 				authProtected.GET("/me", authHandler.GetMe)
 				authProtected.POST("/change-password", authHandler.ChangePassword)
@@ -99,79 +101,81 @@ func registerRoutes(
 
 		// Protected routes (require authentication)
 		protected := api.Group("")
-		protected.Use(middleware.AuthMiddleware(jwtService))
+		protected.Use(middleware.AuthMiddleware(jwtService, rbac))
 		{
+			protected.GET("/tenant-roles", middleware.RequirePermission(rbac, permissions.UsersView), tenantRoleHandler.GetTenantRoles)
+
 			// User routes
 			users := protected.Group("/users")
 			{
-				users.GET("", middleware.RequirePermission(permissions.UsersView), userHandler.GetUsers)
-				users.POST("", middleware.RequirePermission(permissions.UsersCreate), userHandler.CreateUser)
-				users.GET("/:id", middleware.RequirePermission(permissions.UsersView), userHandler.GetUser)
-				users.DELETE("/:id", middleware.RequirePermission(permissions.UsersDelete), userHandler.DeleteUser)
+				users.GET("", middleware.RequirePermission(rbac, permissions.UsersView), userHandler.GetUsers)
+				users.POST("", middleware.RequirePermission(rbac, permissions.UsersCreate), userHandler.CreateUser)
+				users.GET("/:id", middleware.RequirePermission(rbac, permissions.UsersView), userHandler.GetUser)
+				users.DELETE("/:id", middleware.RequirePermission(rbac, permissions.UsersDelete), userHandler.DeleteUser)
 			}
 
 			// Company routes
 			companies := protected.Group("/companies")
 			{
-				companies.GET("", middleware.RequirePermission(permissions.CompaniesView), companyHandler.GetCompanies)
-				companies.GET("/:id", middleware.RequirePermission(permissions.CompaniesView), companyHandler.GetCompany)
-				companies.PUT("/:id", middleware.RequirePermission(permissions.CompaniesUpdate), companyHandler.UpdateCompany)
+				companies.GET("", middleware.RequirePermission(rbac, permissions.CompaniesView), companyHandler.GetCompanies)
+				companies.GET("/:id", middleware.RequirePermission(rbac, permissions.CompaniesView), companyHandler.GetCompany)
+				companies.PUT("/:id", middleware.RequirePermission(rbac, permissions.CompaniesUpdate), companyHandler.UpdateCompany)
 			}
 
 			// Membership routes
 			memberships := protected.Group("/memberships")
 			{
-				memberships.GET("", middleware.RequirePermission(permissions.MembershipsView), membershipHandler.GetMemberships)
-				memberships.GET("/:id", middleware.RequirePermission(permissions.MembershipsView), membershipHandler.GetMembership)
-				memberships.PUT("/:id", middleware.RequirePermission(permissions.MembershipsUpdate), membershipHandler.UpdateMembership)
-				memberships.DELETE("/:id", middleware.RequirePermission(permissions.MembershipsDelete), membershipHandler.DeleteMembership)
+				memberships.GET("", middleware.RequirePermission(rbac, permissions.MembershipsView), membershipHandler.GetMemberships)
+				memberships.GET("/:id", middleware.RequirePermission(rbac, permissions.MembershipsView), membershipHandler.GetMembership)
+				memberships.PUT("/:id", middleware.RequirePermission(rbac, permissions.MembershipsUpdate), membershipHandler.UpdateMembership)
+				memberships.DELETE("/:id", middleware.RequirePermission(rbac, permissions.MembershipsDelete), membershipHandler.DeleteMembership)
 			}
 
 			// Job routes
 			jobs := protected.Group("/jobs")
 			{
-				jobs.GET("", middleware.RequirePermission(permissions.JobsView), jobHandler.GetJobs)
-				jobs.POST("", middleware.RequirePermission(permissions.JobsCreate), jobHandler.CreateJob)
-				jobs.GET("/:id", middleware.RequirePermission(permissions.JobsView), jobHandler.GetJob)
-				jobs.PUT("/:id", middleware.RequirePermission(permissions.JobsUpdate), jobHandler.UpdateJob)
-				jobs.DELETE("/:id", middleware.RequirePermission(permissions.JobsDelete), jobHandler.DeleteJob)
-				jobs.PATCH("/:id/publish", middleware.RequirePermission(permissions.JobsPublish), jobHandler.PublishJob)
-				jobs.PATCH("/:id/close", middleware.RequirePermission(permissions.JobsClose), jobHandler.CloseJob)
+				jobs.GET("", middleware.RequirePermission(rbac, permissions.JobsView), jobHandler.GetJobs)
+				jobs.POST("", middleware.RequirePermission(rbac, permissions.JobsCreate), jobHandler.CreateJob)
+				jobs.GET("/:id", middleware.RequirePermission(rbac, permissions.JobsView), jobHandler.GetJob)
+				jobs.PUT("/:id", middleware.RequirePermission(rbac, permissions.JobsUpdate), jobHandler.UpdateJob)
+				jobs.DELETE("/:id", middleware.RequirePermission(rbac, permissions.JobsDelete), jobHandler.DeleteJob)
+				jobs.PATCH("/:id/publish", middleware.RequirePermission(rbac, permissions.JobsPublish), jobHandler.PublishJob)
+				jobs.PATCH("/:id/close", middleware.RequirePermission(rbac, permissions.JobsClose), jobHandler.CloseJob)
 			}
 
 			// Módulo staffing (monolito modular, ver ADR-001): registra sus propias
 			// rutas (/staffing-clients y /placements), gateadas por plan internamente.
-			staffingModule.RegisterRoutes(protected, planService)
+			staffingModule.RegisterRoutes(protected, planService, rbac)
 
 			// Candidate routes
 			candidates := protected.Group("/candidates")
 			{
-				candidates.GET("", middleware.RequirePermission(permissions.CandidatesView), candidateHandler.GetCandidates)
-				candidates.POST("", middleware.RequirePermission(permissions.CandidatesCreate), candidateHandler.CreateCandidate)
-				candidates.GET("/:id", middleware.RequirePermission(permissions.CandidatesView), candidateHandler.GetCandidate)
-				candidates.PUT("/:id", middleware.RequirePermission(permissions.CandidatesUpdate), candidateHandler.UpdateCandidate)
-				candidates.DELETE("/:id", middleware.RequirePermission(permissions.CandidatesDelete), candidateHandler.DeleteCandidate)
-				candidates.POST("/:id/upload-resume", middleware.RequirePermission(permissions.CandidatesUploadResume), candidateHandler.UploadResume)
-				candidates.GET("/:id/resume", middleware.RequirePermission(permissions.CandidatesView), candidateHandler.DownloadResume)
+				candidates.GET("", middleware.RequirePermission(rbac, permissions.CandidatesView), candidateHandler.GetCandidates)
+				candidates.POST("", middleware.RequirePermission(rbac, permissions.CandidatesCreate), candidateHandler.CreateCandidate)
+				candidates.GET("/:id", middleware.RequirePermission(rbac, permissions.CandidatesView), candidateHandler.GetCandidate)
+				candidates.PUT("/:id", middleware.RequirePermission(rbac, permissions.CandidatesUpdate), candidateHandler.UpdateCandidate)
+				candidates.DELETE("/:id", middleware.RequirePermission(rbac, permissions.CandidatesDelete), candidateHandler.DeleteCandidate)
+				candidates.POST("/:id/upload-resume", middleware.RequirePermission(rbac, permissions.CandidatesUploadResume), candidateHandler.UploadResume)
+				candidates.GET("/:id/resume", middleware.RequirePermission(rbac, permissions.CandidatesView), candidateHandler.DownloadResume)
 			}
 
 			// Application routes
 			applications := protected.Group("/applications")
 			{
-				applications.GET("", middleware.RequirePermission(permissions.ApplicationsView), applicationHandler.GetApplications)
-				applications.GET("/by-stage", middleware.RequirePermission(permissions.ApplicationsView), applicationHandler.GetApplicationsByStage)
-				applications.POST("", middleware.RequirePermission(permissions.ApplicationsCreate), applicationHandler.CreateApplication)
-				applications.GET("/:id", middleware.RequirePermission(permissions.ApplicationsView), applicationHandler.GetApplication)
-				applications.PUT("/:id", middleware.RequirePermission(permissions.ApplicationsUpdate), applicationHandler.UpdateApplication)
-				applications.PATCH("/:id/move", middleware.RequirePermission(permissions.ApplicationsMove), applicationHandler.MoveApplication)
-				applications.PATCH("/:id/rate", middleware.RequirePermission(permissions.ApplicationsRate), applicationHandler.RateApplication)
-				applications.DELETE("/:id", middleware.RequirePermission(permissions.ApplicationsDelete), applicationHandler.DeleteApplication)
+				applications.GET("", middleware.RequirePermission(rbac, permissions.ApplicationsView), applicationHandler.GetApplications)
+				applications.GET("/by-stage", middleware.RequirePermission(rbac, permissions.ApplicationsView), applicationHandler.GetApplicationsByStage)
+				applications.POST("", middleware.RequirePermission(rbac, permissions.ApplicationsCreate), applicationHandler.CreateApplication)
+				applications.GET("/:id", middleware.RequirePermission(rbac, permissions.ApplicationsView), applicationHandler.GetApplication)
+				applications.PUT("/:id", middleware.RequirePermission(rbac, permissions.ApplicationsUpdate), applicationHandler.UpdateApplication)
+				applications.PATCH("/:id/move", middleware.RequirePermission(rbac, permissions.ApplicationsMove), applicationHandler.MoveApplication)
+				applications.PATCH("/:id/rate", middleware.RequirePermission(rbac, permissions.ApplicationsRate), applicationHandler.RateApplication)
+				applications.DELETE("/:id", middleware.RequirePermission(rbac, permissions.ApplicationsDelete), applicationHandler.DeleteApplication)
 			}
 
 			// Dashboard routes
 			dashboard := protected.Group("/dashboard")
 			{
-				dashboard.GET("/stats", middleware.RequirePermission(permissions.DashboardView), dashboardHandler.GetStats)
+				dashboard.GET("/stats", middleware.RequirePermission(rbac, permissions.DashboardView), dashboardHandler.GetStats)
 			}
 
 			// System Values routes (read only)
@@ -184,7 +188,7 @@ func registerRoutes(
 		// Landlord routes use an explicit platform context and a permission matrix
 		// separate from tenant roles.
 		platform := api.Group("/platform")
-		platform.Use(middleware.AuthMiddleware(jwtService))
+		platform.Use(middleware.AuthMiddleware(jwtService, rbac))
 		{
 			platform.GET("/companies", middleware.RequirePlatformPermission(permissions.PlatformCompaniesView), companyHandler.GetCompanies)
 			platform.POST("/companies", middleware.RequirePlatformPermission(permissions.PlatformCompaniesManage), companyHandler.CreateCompany)

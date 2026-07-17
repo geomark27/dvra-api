@@ -38,6 +38,6 @@ func New(db *gorm.DB, appFinder domain.ApplicationFinder) *Module {
 }
 
 // RegisterRoutes monta las rutas del módulo bajo el grupo protegido.
-func (m *Module) RegisterRoutes(rg *gin.RouterGroup, planService services.PlanService) {
-	transport.RegisterRoutes(rg, m.clientSvc, m.placementSvc, planService)
+func (m *Module) RegisterRoutes(rg *gin.RouterGroup, planService services.PlanService, rbac services.TenantAuthorizer) {
+	transport.RegisterRoutes(rg, m.clientSvc, m.placementSvc, planService, rbac)
 }

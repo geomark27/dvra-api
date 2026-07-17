@@ -196,7 +196,7 @@ fresh: ## Reset completo (clean DB + migrate + seed) [location=1 para ubicacione
 install-tools: ## Instala herramientas de desarrollo
 	@echo "Instalando herramientas de desarrollo..."
 	@go install github.com/cosmtrek/air@latest
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
 	@go install github.com/swaggo/swag/cmd/swag@latest
 
 # ============================================

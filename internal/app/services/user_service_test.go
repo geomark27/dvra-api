@@ -34,7 +34,7 @@ func (f *userRepoFake) UpdatePassword(uint, string) error                 { retu
 func TestUserMutationsRejectOtherTenant(t *testing.T) {
 	companyID := uint(2)
 	repo := &userRepoFake{user: &models.User{Memberships: []models.Membership{{CompanyID: companyID}}}}
-	svc := NewUserService(repo, nil)
+	svc := NewUserService(repo, nil, testTenantAuthorizer())
 	name := "Changed"
 	if _, err := svc.UpdateUser(1, 3, false, dtos.UpdateUserDTO{FirstName: &name}); err == nil {
 		t.Fatal("cross-tenant update was accepted")
@@ -50,7 +50,7 @@ func TestUserMutationsRejectOtherTenant(t *testing.T) {
 func TestUserMutationsAllowSameTenant(t *testing.T) {
 	companyID := uint(2)
 	repo := &userRepoFake{user: &models.User{Memberships: []models.Membership{{CompanyID: companyID}}}}
-	svc := NewUserService(repo, nil)
+	svc := NewUserService(repo, nil, testTenantAuthorizer())
 	name := "Changed"
 	if _, err := svc.UpdateUser(1, companyID, false, dtos.UpdateUserDTO{FirstName: &name}); err != nil {
 		t.Fatal(err)
@@ -60,5 +60,12 @@ func TestUserMutationsAllowSameTenant(t *testing.T) {
 	}
 	if !repo.updated || !repo.removed || repo.deleted {
 		t.Fatal("same-tenant mutations did not reach repository")
+	}
+}
+
+func TestCreateUserRejectsUnknownTenantRole(t *testing.T) {
+	svc := NewUserService(&userRepoFake{}, nil, testTenantAuthorizer())
+	if _, err := svc.CreateUser(dtos.CreateUserDTO{TenantRoleID: 999}); err == nil {
+		t.Fatal("unknown tenant role ID was accepted")
 	}
 }

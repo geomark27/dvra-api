@@ -6,6 +6,26 @@
 
 ---
 
+## 2026-07-17 — RBAC tenant relacional y perfil `interviewer`
+
+El perfil genérico `user` se renombró a `interviewer`. Las memberships
+existentes se migran de forma idempotente a una FK `tenant_role_id`; la columna
+textual `role` se elimina.
+
+Se incorporaron `tenant_roles`, `permissions` y `tenant_role_permissions`. Los
+grants iniciales siguen versionados en código, pero middleware y servicios
+resuelven rol y permisos desde BD. Crear o editar usuarios/memberships requiere
+`tenant_role_id`; `GET /api/v1/tenant-roles` expone las opciones activas. El
+middleware relee la membership vigente para que cambios de rol y suspensiones
+tengan efecto inmediato.
+
+El perfil `admin` se sincroniza con el catálogo tenant completo y una migración
+adicional repara instalaciones que ya hubieran sembrado grants incompletos. La
+regla no concede permisos landlord ni omite los límites de features del plan.
+
+**Referencia vigente:** `internal/shared/permissions/`,
+`internal/database/migrations/data_migrations.go` y ADR-002.
+
 ## 2026-07-15 — Separación landlord/tenant y contextos de autorización
 
 Se reemplazó la membresía ambigua de SuperAdmin con `company_id = NULL` por

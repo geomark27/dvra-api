@@ -30,7 +30,7 @@ Este doc es **descriptivo de lo que el proyecto ya hace bien** + **prescriptivo 
 
 ## 1. Stack y versiones
 
-- **Go 1.24.0** (ver `go.mod`). No usar features sobre esa versión sin actualizar `go.mod`.
+- **Go 1.26.1** (ver `go.mod`). No usar features sobre esa versión sin actualizar `go.mod`.
 - **Gin** (HTTP), **GORM** (ORM, PostgreSQL), **swag** (Swagger), framework interno **Loom**.
 - Migraciones por **GORM AutoMigrate** (no SQL manual): todo modelo nuevo va en `internal/database/models_all.go` (`AllModels`).
 

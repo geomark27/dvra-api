@@ -11,6 +11,7 @@ const (
 )
 
 func init() {
+	define(ApplicationsView, ApplicationsCreate, ApplicationsUpdate, ApplicationsMove, ApplicationsRate, ApplicationsDelete)
 	grant(RoleAdmin, ApplicationsView, ApplicationsCreate, ApplicationsUpdate, ApplicationsMove, ApplicationsRate, ApplicationsDelete)
 	grant(RoleRecruiter, ApplicationsView, ApplicationsCreate, ApplicationsUpdate, ApplicationsMove, ApplicationsRate)
 	// El repositorio limita al hiring_manager a postulaciones de sus jobs.

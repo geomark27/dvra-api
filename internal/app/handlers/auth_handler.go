@@ -139,7 +139,20 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 	if authctx.IsPlatformContext(c) {
 		response.Permissions = permissions.ForPlatform(role)
 	} else if authctx.IsTenantContext(c) {
-		response.Permissions = permissions.For(role)
+		roleID, ok := authctx.TenantRoleID(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant role missing"})
+			return
+		}
+		tenantRole, rolePermissions, authErr := h.service.GetTenantAuthorization(roleID)
+		if authErr != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant role is no longer active"})
+			return
+		}
+		response.TenantRole = dtos.ToTenantRoleResponse(tenantRole)
+		response.Permissions = rolePermissions
+		context.TenantRoleID = &roleID
+		context.TenantRole = dtos.ToTenantRoleResponse(tenantRole)
 	}
 
 	c.JSON(http.StatusOK, response)

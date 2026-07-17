@@ -95,12 +95,12 @@ SuperAdmin (Nivel 100)  → Gestiona toda la plataforma, todas las empresas.
 Admin (Nivel 50)        → Dueño/manager de la empresa. Permisos completos en SU empresa.
 Recruiter (Nivel 30)    → Gestiona jobs, candidatos y pipeline. No gestiona usuarios ni billing.
 Hiring Manager (Nivel 20) → Ve y califica candidatos de SUS jobs asignados. No crea jobs.
-User (Nivel 10)         → Solo lectura, reportes básicos.
+Interviewer (Nivel 10)  → Lectura básica; evaluación asignada cuando exista el módulo de entrevistas.
 ```
 
 ### 3.2 Matriz de permisos
 
-| Acción | SuperAdmin | Admin | Recruiter | Hiring Mgr | User |
+| Acción | SuperAdmin | Admin | Recruiter | Hiring Mgr | Interviewer |
 |---|---|---|---|---|---|
 | **Empresa** |
 | Ver/editar configuración de empresa | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -112,7 +112,7 @@ User (Nivel 10)         → Solo lectura, reportes básicos.
 | Ver jobs | ✅ todos | ✅ | ✅ | Solo asignados | ✅ |
 | Crear / editar / publicar / cerrar | — | ✅ | ✅ | Editar solo asignados | ❌ |
 | **Candidatos** |
-| Ver candidatos | ✅ todos | ✅ | ✅ | Solo de sus jobs | Solo de sus jobs |
+| Ver candidatos | ✅ todos | ✅ | ✅ | Solo de sus jobs | ❌ (hasta asignación de entrevistas) |
 | Crear / editar | — | ✅ | ✅ | ❌ | ❌ |
 | **Aplicaciones** |
 | Cambiar stage | — | ✅ | ✅ | Solo de sus jobs | ❌ |

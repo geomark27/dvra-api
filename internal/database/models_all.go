@@ -5,6 +5,9 @@ import (
 )
 
 var AllModels = []interface{}{
+	&models.TenantRole{},
+	&models.Permission{},
+	&models.TenantRolePermission{},
 	&models.User{},
 	&models.PlatformMembership{},
 	&models.Company{},

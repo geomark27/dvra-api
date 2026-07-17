@@ -10,6 +10,7 @@ const (
 )
 
 func init() {
+	define(CandidatesView, CandidatesCreate, CandidatesUpdate, CandidatesDelete, CandidatesUploadResume)
 	grant(RoleAdmin, CandidatesView, CandidatesCreate, CandidatesUpdate, CandidatesDelete, CandidatesUploadResume)
 	grant(RoleRecruiter, CandidatesView, CandidatesCreate, CandidatesUpdate, CandidatesUploadResume)
 	// El repositorio limita al hiring_manager a candidatos vinculados con sus jobs.

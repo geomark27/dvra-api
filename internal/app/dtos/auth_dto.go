@@ -34,6 +34,7 @@ type UserResponse struct {
 	LastName      string               `json:"last_name"`
 	IsActive      bool                 `json:"is_active"`
 	Role          string               `json:"role,omitempty"`
+	TenantRole    *TenantRoleResponse  `json:"tenant_role,omitempty"`
 	Permissions   []string             `json:"permissions,omitempty"`
 	ActiveContext *AuthContextResponse `json:"active_context,omitempty"`
 }
@@ -77,12 +78,14 @@ type RegisterCompanyResponseDTO struct {
 
 // CompanyResponse represents company data in response
 type CompanyResponse struct {
-	ID           uint   `json:"id"`
-	Name         string `json:"name"`
-	Slug         string `json:"slug"`
-	PlanTier     string `json:"plan_tier"`
-	MembershipID uint   `json:"membership_id,omitempty"`
-	Role         string `json:"role,omitempty"`
+	ID           uint                `json:"id"`
+	Name         string              `json:"name"`
+	Slug         string              `json:"slug"`
+	PlanTier     string              `json:"plan_tier"`
+	MembershipID uint                `json:"membership_id,omitempty"`
+	Role         string              `json:"role,omitempty"`
+	TenantRoleID uint                `json:"tenant_role_id,omitempty"`
+	TenantRole   *TenantRoleResponse `json:"tenant_role,omitempty"`
 }
 
 type PlatformAccessResponse struct {
@@ -91,14 +94,16 @@ type PlatformAccessResponse struct {
 }
 
 type AuthContextResponse struct {
-	Type         string `json:"type"`
-	CompanyID    *uint  `json:"company_id,omitempty"`
-	MembershipID *uint  `json:"membership_id,omitempty"`
-	Role         string `json:"role,omitempty"`
+	Type         string              `json:"type"`
+	CompanyID    *uint               `json:"company_id,omitempty"`
+	MembershipID *uint               `json:"membership_id,omitempty"`
+	TenantRoleID *uint               `json:"tenant_role_id,omitempty"`
+	Role         string              `json:"role,omitempty"`
+	TenantRole   *TenantRoleResponse `json:"tenant_role,omitempty"`
 }
 
 func ToAuthContextResponse(context identity.Context) *AuthContextResponse {
-	return &AuthContextResponse{Type: context.Type, CompanyID: context.CompanyID, MembershipID: context.MembershipID, Role: context.Role}
+	return &AuthContextResponse{Type: context.Type, CompanyID: context.CompanyID, MembershipID: context.MembershipID, TenantRoleID: context.TenantRoleID, Role: context.Role}
 }
 
 // LoginResponseWithCompaniesDTO represents login response with user's companies

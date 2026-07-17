@@ -18,6 +18,10 @@ definitions:
         type: integer
       role:
         type: string
+      tenant_role:
+        $ref: '#/definitions/dtos.TenantRoleResponse'
+      tenant_role_id:
+        type: integer
       type:
         type: string
     type: object
@@ -48,6 +52,10 @@ definitions:
         type: string
       slug:
         type: string
+      tenant_role:
+        $ref: '#/definitions/dtos.TenantRoleResponse'
+      tenant_role_id:
+        type: integer
     type: object
   dtos.CountryDTO:
     properties:
@@ -177,13 +185,6 @@ definitions:
         type: integer
       is_default:
         type: boolean
-      role:
-        enum:
-        - admin
-        - recruiter
-        - hiring_manager
-        - user
-        type: string
       status:
         enum:
         - active
@@ -192,11 +193,14 @@ definitions:
         - suspended
         - removed
         type: string
+      tenant_role_id:
+        minimum: 1
+        type: integer
       user_id:
         minimum: 1
         type: integer
     required:
-    - role
+    - tenant_role_id
     - user_id
     type: object
   dtos.CreatePlacementDTO:
@@ -344,19 +348,15 @@ definitions:
       password:
         minLength: 8
         type: string
-      role:
-        enum:
-        - admin
-        - recruiter
-        - hiring_manager
-        - user
-        type: string
+      tenant_role_id:
+        minimum: 1
+        type: integer
     required:
     - email
     - first_name
     - last_name
     - password
-    - role
+    - tenant_role_id
     type: object
   dtos.LocationSearchDTO:
     properties:
@@ -736,6 +736,19 @@ definitions:
       refresh_token:
         type: string
     type: object
+  dtos.TenantRoleResponse:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      is_system:
+        type: boolean
+      key:
+        type: string
+      name:
+        type: string
+    type: object
   dtos.TogglePlanStatusDTO:
     properties:
       is_active:
@@ -798,13 +811,6 @@ definitions:
         type: boolean
       joined_at:
         type: string
-      role:
-        enum:
-        - admin
-        - recruiter
-        - hiring_manager
-        - user
-        type: string
       status:
         enum:
         - active
@@ -813,6 +819,9 @@ definitions:
         - suspended
         - removed
         type: string
+      tenant_role_id:
+        minimum: 1
+        type: integer
     type: object
   dtos.UpdatePlacementDTO:
     properties:
@@ -3497,6 +3506,22 @@ paths:
       summary: Obtener valores por categoría
       tags:
       - System Values
+  /tenant-roles:
+    get:
+      description: Devuelve los perfiles activos que pueden asignarse a memberships
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar roles tenant
+      tags:
+      - Tenant Roles
   /users:
     get:
       consumes:

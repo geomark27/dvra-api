@@ -2,11 +2,14 @@ package migrations
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"dvra-api/internal/app/models"
+	"dvra-api/internal/shared/permissions"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type migration struct {
@@ -24,9 +27,24 @@ var dataMigrations = []migration{
 	{
 		id: "20260715_tenant_superadmin_to_admin",
 		run: func(tx *gorm.DB) error {
+			if !tx.Migrator().HasColumn("memberships", "role") {
+				return nil
+			}
 			return tx.Model(&models.Membership{}).
 				Where("company_id IS NOT NULL AND role = ?", "superadmin").
 				Update("role", "admin").Error
+		},
+	},
+	{
+		id: "20260717_seed_relational_tenant_rbac",
+		run: func(tx *gorm.DB) error {
+			return seedTenantRBAC(tx)
+		},
+	},
+	{
+		id: "20260717_admin_full_tenant_access",
+		run: func(tx *gorm.DB) error {
+			return seedTenantRBAC(tx)
 		},
 	},
 }
@@ -125,6 +143,121 @@ var beforeSchemaMigrations = []migration{
 			return tx.Exec("CREATE UNIQUE INDEX idx_user_company ON memberships (user_id, company_id) WHERE deleted_at IS NULL").Error
 		},
 	},
+	{
+		id: "20260717_relational_tenant_rbac",
+		run: func(tx *gorm.DB) error {
+			if err := tx.AutoMigrate(&models.TenantRole{}, &models.Permission{}, &models.TenantRolePermission{}); err != nil {
+				return err
+			}
+			if err := seedTenantRBAC(tx); err != nil {
+				return err
+			}
+			if !tx.Migrator().HasColumn("memberships", "tenant_role_id") {
+				if err := tx.Exec("ALTER TABLE memberships ADD COLUMN tenant_role_id BIGINT").Error; err != nil {
+					return err
+				}
+			}
+			if tx.Migrator().HasColumn("memberships", "role") {
+				if err := tx.Exec("UPDATE memberships SET role = 'interviewer' WHERE role = 'user'").Error; err != nil {
+					return err
+				}
+				if err := tx.Exec("UPDATE memberships SET role = 'admin' WHERE role = 'superadmin'").Error; err != nil {
+					return err
+				}
+				var invalidRoles []string
+				if err := tx.Table("memberships").Distinct("role").
+					Where("role NOT IN ?", permissions.TenantRoles()).Pluck("role", &invalidRoles).Error; err != nil {
+					return err
+				}
+				if len(invalidRoles) > 0 {
+					return fmt.Errorf("memberships contain unsupported tenant roles: %v", invalidRoles)
+				}
+				if err := tx.Exec(`UPDATE memberships AS m
+					SET tenant_role_id = tr.id
+					FROM tenant_roles AS tr
+					WHERE tr.key = m.role`).Error; err != nil {
+					return err
+				}
+			}
+			var missing int64
+			if err := tx.Table("memberships").Where("tenant_role_id IS NULL OR tenant_role_id = 0").Count(&missing).Error; err != nil {
+				return err
+			}
+			if missing > 0 {
+				return fmt.Errorf("%d memberships could not be assigned to a tenant role", missing)
+			}
+			statements := []string{
+				"ALTER TABLE memberships ALTER COLUMN tenant_role_id SET NOT NULL",
+				"CREATE INDEX IF NOT EXISTS idx_memberships_tenant_role_id ON memberships (tenant_role_id)",
+				"ALTER TABLE memberships DROP CONSTRAINT IF EXISTS fk_memberships_tenant_role",
+				"ALTER TABLE memberships ADD CONSTRAINT fk_memberships_tenant_role FOREIGN KEY (tenant_role_id) REFERENCES tenant_roles(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+				"ALTER TABLE memberships DROP CONSTRAINT IF EXISTS memberships_role_check",
+			}
+			for _, statement := range statements {
+				if err := tx.Exec(statement).Error; err != nil {
+					return err
+				}
+			}
+			if tx.Migrator().HasColumn("memberships", "role") {
+				return tx.Exec("ALTER TABLE memberships DROP COLUMN role").Error
+			}
+			return nil
+		},
+	},
+}
+
+func seedTenantRBAC(tx *gorm.DB) error {
+	for _, definition := range permissions.TenantRoleDefinitions() {
+		role := models.TenantRole{
+			Key: definition.Key, Name: definition.Name, Description: definition.Description,
+			IsSystem: true, IsActive: true,
+		}
+		if err := tx.Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "key"}},
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"name": definition.Name, "description": definition.Description,
+				"is_system": true, "is_active": true, "deleted_at": nil,
+			}),
+		}).Create(&role).Error; err != nil {
+			return err
+		}
+	}
+
+	permissionIDs := make(map[string]uint)
+	for _, key := range permissions.AllTenantPermissions() {
+		module, action, _ := strings.Cut(key, ".")
+		permission := models.Permission{Key: key, Module: module, Action: action, IsActive: true}
+		if err := tx.Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "key"}},
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"module": module, "action": action, "is_active": true, "deleted_at": nil,
+			}),
+		}).Create(&permission).Error; err != nil {
+			return err
+		}
+		var persisted models.Permission
+		if err := tx.Where("key = ?", key).First(&persisted).Error; err != nil {
+			return err
+		}
+		permissionIDs[key] = persisted.ID
+	}
+
+	for _, definition := range permissions.TenantRoleDefinitions() {
+		var role models.TenantRole
+		if err := tx.Where("key = ?", definition.Key).First(&role).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("tenant_role_id = ?", role.ID).Delete(&models.TenantRolePermission{}).Error; err != nil {
+			return err
+		}
+		for _, key := range definition.Permissions {
+			mapping := models.TenantRolePermission{TenantRoleID: role.ID, PermissionID: permissionIDs[key]}
+			if err := tx.Create(&mapping).Error; err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // Run ejecuta migraciones de datos versionadas después de AutoMigrate.

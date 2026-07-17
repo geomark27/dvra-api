@@ -21,7 +21,7 @@
 ## 1. Tech Stack
 
 ### Backend
-- **Lenguaje**: Go 1.24.0
+- **Lenguaje**: Go 1.26.1
 - **Framework Web**: Gin (HTTP router)
 - **ORM**: GORM (PostgreSQL)
 - **Autenticación**: JWT (golang-jwt/jwt)
@@ -188,15 +188,16 @@ type User struct {
 // Membership (User ↔ Company)
 type Membership struct {
     gorm.Model
-    UserID    uint   `gorm:"not null;index"`
-    CompanyID *uint  `gorm:"index"` // NULL = SuperAdmin
-    Role      string `gorm:"type:varchar(50);not null;default:'user'"`
-    Status    string `gorm:"type:varchar(50);not null;default:'active'"`
-    IsDefault bool   `gorm:"default:false"`
+    UserID       uint   `gorm:"not null;index"`
+    CompanyID    uint   `gorm:"not null;index"`
+    TenantRoleID uint   `gorm:"not null;index"`
+    Status       string `gorm:"type:varchar(50);not null;default:'active'"`
+    IsDefault    bool   `gorm:"default:false"`
     
     // Relaciones
-    User      User     `gorm:"foreignKey:UserID"`
-    Company   *Company `gorm:"foreignKey:CompanyID"`
+    User       User       `gorm:"foreignKey:UserID"`
+    Company    Company    `gorm:"foreignKey:CompanyID"`
+    TenantRole TenantRole `gorm:"foreignKey:TenantRoleID"`
 }
 
 // Job
@@ -838,17 +839,21 @@ type JWTService struct {
 }
 
 type Claims struct {
-    UserID    uint   `json:"user_id"`
-    CompanyID uint   `json:"company_id"`
-    Role      string `json:"role"`
+    UserID       uint   `json:"user_id"`
+    CompanyID    *uint  `json:"company_id"`
+    MembershipID *uint  `json:"membership_id"`
+    TenantRoleID *uint  `json:"tenant_role_id"`
+    ContextType  string `json:"context_type"`
     jwt.RegisteredClaims
 }
 
 func (s *JWTService) GenerateToken(user *User, membership *Membership) (string, error) {
     claims := Claims{
-        UserID:    user.ID,
-        CompanyID: *membership.CompanyID,
-        Role:      membership.Role,
+        UserID:       user.ID,
+        CompanyID:    &membership.CompanyID,
+        MembershipID: &membership.ID,
+        TenantRoleID: &membership.TenantRoleID,
+        ContextType:  "tenant",
         RegisteredClaims: jwt.RegisteredClaims{
             ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
             IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -936,7 +941,7 @@ func getRoleLevel(role string) int {
         "admin":          50,
         "recruiter":      30,
         "hiring_manager": 20,
-        "user":           10,
+        "interviewer":    10,
     }
     return levels[role]
 }
@@ -1046,7 +1051,7 @@ func (s *CandidateService) ListCandidates(companyID uint) ([]Candidate, error) {
 
 ```dockerfile
 # Dockerfile
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26.1-alpine AS builder
 
 WORKDIR /app
 

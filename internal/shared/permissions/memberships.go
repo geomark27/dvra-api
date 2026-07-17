@@ -5,12 +5,13 @@ const (
 	MembershipsView   = "memberships.view"
 	MembershipsUpdate = "memberships.update"
 	MembershipsDelete = "memberships.delete"
-	// MembershipsCreate no se asigna a ningún rol: en el MVP solo SuperAdmin
-	// crea memberships (RN-MEMB-004). Cuando exista el sistema de invitaciones
-	// por email (Fase 2) se otorgará a admin un permiso memberships.invite.
+	// La acción se cataloga para el perfil admin completo. En el MVP no existe
+	// una ruta tenant para crear memberships; el alta directa sigue siendo una
+	// operación platform y la creación tenant ocurre vía POST /users.
 	MembershipsCreate = "memberships.create"
 )
 
 func init() {
+	define(MembershipsView, MembershipsCreate, MembershipsUpdate, MembershipsDelete)
 	grant(RoleAdmin, MembershipsView, MembershipsUpdate, MembershipsDelete)
 }

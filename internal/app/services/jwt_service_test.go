@@ -11,7 +11,8 @@ func TestJWTSeparatesAccessAndRefreshTokens(t *testing.T) {
 	svc := NewJWTService("access-secret-with-more-than-32-chars", "refresh-secret-with-more-than-32-chars")
 	companyID := uint(9)
 	membershipID := uint(12)
-	context := identity.Context{Type: identity.ContextTenant, CompanyID: &companyID, MembershipID: &membershipID, Role: "admin"}
+	tenantRoleID := uint(1)
+	context := identity.Context{Type: identity.ContextTenant, CompanyID: &companyID, MembershipID: &membershipID, TenantRoleID: &tenantRoleID, Role: "admin"}
 	access, err := svc.GenerateAccessToken(7, "user@example.com", context)
 	if err != nil {
 		t.Fatal(err)
@@ -24,6 +25,9 @@ func TestJWTSeparatesAccessAndRefreshTokens(t *testing.T) {
 	accessClaims, err := svc.ValidateAccessToken(access)
 	if err != nil || accessClaims.UserID != 7 || accessClaims.TokenType != "access" || accessClaims.ContextType != identity.ContextTenant {
 		t.Fatalf("unexpected access claims: %#v, %v", accessClaims, err)
+	}
+	if accessClaims.TenantRoleID == nil || *accessClaims.TenantRoleID != tenantRoleID || accessClaims.Role != "" {
+		t.Fatalf("tenant access token did not reference its role ID: %#v", accessClaims)
 	}
 	refreshClaims, err := svc.ValidateRefreshToken(refresh)
 	if err != nil || refreshClaims.UserID != 7 || refreshClaims.Subject != "7" || refreshClaims.CompanyID == nil || *refreshClaims.CompanyID != companyID {

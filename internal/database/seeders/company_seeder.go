@@ -55,15 +55,20 @@ func (s *CompanySeeder) Run(db *gorm.DB) error {
 			log.Printf("❌ Admin user not found: %v", err)
 			return err
 		}
+		var adminRole models.TenantRole
+		if err := db.Where("key = ? AND is_active = ?", permissions.RoleAdmin, true).First(&adminRole).Error; err != nil {
+			log.Printf("❌ Tenant admin role not found: %v", err)
+			return err
+		}
 
 		joinedAt := time.Now()
 		membership := models.Membership{
-			UserID:    adminUser.ID,
-			CompanyID: company.ID,
-			Role:      permissions.RoleAdmin, // Admin de la empresa
-			Status:    "active",
-			IsDefault: true,
-			JoinedAt:  &joinedAt,
+			UserID:       adminUser.ID,
+			CompanyID:    company.ID,
+			TenantRoleID: adminRole.ID,
+			Status:       "active",
+			IsDefault:    true,
+			JoinedAt:     &joinedAt,
 		}
 
 		if err := db.Create(&membership).Error; err != nil {

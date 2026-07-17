@@ -2,7 +2,7 @@
 
 Backend del **Dvra ATS** — plataforma SaaS multi-tenant de reclutamiento (Applicant Tracking System) para startups tech en LATAM, con marketplace de talento (Red Dvra) en el roadmap.
 
-API REST construida en **Go 1.24 + Gin + GORM + PostgreSQL 16**, con autenticación JWT, multi-empresa (switch de contexto), pipeline de candidatos, dashboard analítico y career page pública.
+API REST construida en **Go 1.26 + Gin + GORM + PostgreSQL 16**, con autenticación JWT, multi-empresa (switch de contexto), pipeline de candidatos, dashboard analítico y career page pública.
 
 ## 📚 Documentación
 

@@ -189,7 +189,7 @@ func (h *PublicHandler) ApplyToJob(c *gin.Context) {
 	var upload *services.ResumeUpload
 	file, header, err := c.Request.FormFile("resume")
 	if err == nil {
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 		upload = &services.ResumeUpload{Reader: file, OriginalName: header.Filename, Size: header.Size}
 	} else if err != http.ErrMissingFile {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Invalid multipart request"})

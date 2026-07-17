@@ -16,6 +16,10 @@ const (
 )
 
 func init() {
+	define(
+		StaffingClientsView, StaffingClientsCreate, StaffingClientsUpdate, StaffingClientsDelete,
+		PlacementsView, PlacementsCreate, PlacementsUpdate, PlacementsDelete,
+	)
 	// admin: control total del módulo (delete reservado a admin, igual que jobs).
 	grant(RoleAdmin,
 		StaffingClientsView, StaffingClientsCreate, StaffingClientsUpdate, StaffingClientsDelete,
@@ -28,6 +32,7 @@ func init() {
 	)
 	// hiring_manager: lectura (los placements incluyen datos de billing).
 	grant(RoleHiringManager, StaffingClientsView, PlacementsView)
-	// user: solo ve el catálogo de clientes, no los placements/billing.
-	grant(RoleUser, StaffingClientsView)
+	// interviewer: conserva la lectura del catálogo que tenía el perfil
+	// legacy user, pero no puede ver placements ni datos de billing.
+	grant(RoleInterviewer, StaffingClientsView)
 }

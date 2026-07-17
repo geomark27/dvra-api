@@ -46,7 +46,7 @@ func (s *Filesystem) Save(key string, src io.Reader) (int64, error) {
 		return 0, err
 	}
 	tmpName := tmp.Name()
-	defer os.Remove(tmpName)
+	defer func() { _ = os.Remove(tmpName) }()
 	written, copyErr := io.Copy(tmp, src)
 	closeErr := tmp.Close()
 	if copyErr != nil {

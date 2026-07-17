@@ -11,5 +11,6 @@ type Context struct {
 	Type         string
 	CompanyID    *uint
 	MembershipID *uint
+	TenantRoleID *uint
 	Role         string
 }

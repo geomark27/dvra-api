@@ -32,15 +32,17 @@ type AuthService struct {
 	userRepo   repositories.UserRepository
 	planRepo   repositories.PlanRepository
 	jwtService JWTService
+	rbac       TenantAuthorizer
 	db         *gorm.DB
 }
 
 // NewAuthService creates a new auth service
-func NewAuthService(userRepo repositories.UserRepository, planRepo repositories.PlanRepository, jwtService JWTService, db *gorm.DB) *AuthService {
+func NewAuthService(userRepo repositories.UserRepository, planRepo repositories.PlanRepository, jwtService JWTService, rbac TenantAuthorizer, db *gorm.DB) *AuthService {
 	return &AuthService{
 		userRepo:   userRepo,
 		planRepo:   planRepo,
 		jwtService: jwtService,
+		rbac:       rbac,
 		db:         db,
 	}
 }
@@ -210,6 +212,18 @@ func (s *AuthService) GetMe(userID uint) (*dtos.UserResponse, error) {
 	}, nil
 }
 
+func (s *AuthService) GetTenantAuthorization(tenantRoleID uint) (*models.TenantRole, []string, error) {
+	role, err := s.rbac.RoleByID(tenantRoleID)
+	if err != nil {
+		return nil, nil, err
+	}
+	rolePermissions, err := s.rbac.Permissions(tenantRoleID)
+	if err != nil {
+		return nil, nil, err
+	}
+	return role, rolePermissions, nil
+}
+
 // RegisterCompany creates a new company with its first admin user
 func (s *AuthService) RegisterCompany(dto *dtos.RegisterCompanyDTO) (*dtos.RegisterCompanyResponseDTO, error) {
 	// Check if admin email already exists
@@ -225,6 +239,10 @@ func (s *AuthService) RegisterCompany(dto *dtos.RegisterCompanyDTO) (*dtos.Regis
 			return nil, errors.New("free plan is not available, please contact support")
 		}
 		return nil, err
+	}
+	adminRole, err := s.rbac.RoleByKey(permissions.RoleAdmin)
+	if err != nil {
+		return nil, errors.New("admin tenant role is not configured")
 	}
 
 	// Start transaction
@@ -275,11 +293,11 @@ func (s *AuthService) RegisterCompany(dto *dtos.RegisterCompanyDTO) (*dtos.Regis
 
 	// 3. Create membership (admin → company)
 	membership := models.Membership{
-		UserID:    admin.ID,
-		CompanyID: company.ID,
-		Role:      permissions.RoleAdmin,
-		Status:    "active",
-		IsDefault: true, // First company is always default
+		UserID:       admin.ID,
+		CompanyID:    company.ID,
+		TenantRoleID: adminRole.ID,
+		Status:       "active",
+		IsDefault:    true, // First company is always default
 	}
 
 	if err := tx.Create(&membership).Error; err != nil {
@@ -294,7 +312,8 @@ func (s *AuthService) RegisterCompany(dto *dtos.RegisterCompanyDTO) (*dtos.Regis
 
 	membershipID := membership.ID
 	companyID := company.ID
-	context := identity.Context{Type: identity.ContextTenant, CompanyID: &companyID, MembershipID: &membershipID, Role: membership.Role}
+	roleID := adminRole.ID
+	context := identity.Context{Type: identity.ContextTenant, CompanyID: &companyID, MembershipID: &membershipID, TenantRoleID: &roleID, Role: adminRole.Key}
 	accessToken, refreshToken, err := s.issueTokens(&admin, context)
 	if err != nil {
 		return nil, err
@@ -323,7 +342,7 @@ func (s *AuthService) RegisterCompany(dto *dtos.RegisterCompanyDTO) (*dtos.Regis
 // GetUserCompanies returns all companies that a user belongs to
 func (s *AuthService) GetUserCompanies(userID uint) ([]dtos.CompanyResponse, error) {
 	var memberships []models.Membership
-	err := s.db.Preload("Company").Where("user_id = ? AND status = ?", userID, "active").Find(&memberships).Error
+	err := s.db.Preload("Company").Preload("TenantRole").Where("user_id = ? AND status = ?", userID, "active").Find(&memberships).Error
 	if err != nil {
 		return nil, err
 	}
@@ -331,13 +350,16 @@ func (s *AuthService) GetUserCompanies(userID uint) ([]dtos.CompanyResponse, err
 	companies := make([]dtos.CompanyResponse, 0, len(memberships))
 	for _, membership := range memberships {
 		if membership.Company != nil {
+			role := dtos.ToTenantRoleResponse(membership.TenantRole)
 			companies = append(companies, dtos.CompanyResponse{
 				ID:           membership.Company.ID,
 				Name:         membership.Company.Name,
 				Slug:         membership.Company.Slug,
 				PlanTier:     membership.Company.PlanTier,
 				MembershipID: membership.ID,
-				Role:         membership.Role,
+				TenantRoleID: membership.TenantRoleID,
+				TenantRole:   role,
+				Role:         membership.TenantRole.Key,
 			})
 		}
 	}
@@ -349,7 +371,7 @@ func (s *AuthService) GetUserCompanies(userID uint) ([]dtos.CompanyResponse, err
 func (s *AuthService) SwitchCompany(userID uint, dto *dtos.SwitchCompanyDTO) (*dtos.SwitchCompanyResponseDTO, error) {
 	// Verify user has membership in this company
 	var membership models.Membership
-	err := s.db.Preload("Company").
+	err := s.db.Preload("Company").Preload("TenantRole").
 		Where("user_id = ? AND company_id = ? AND status = ?", userID, dto.CompanyID, "active").
 		First(&membership).Error
 
@@ -371,7 +393,8 @@ func (s *AuthService) SwitchCompany(userID uint, dto *dtos.SwitchCompanyDTO) (*d
 	}
 
 	membershipID := membership.ID
-	context := identity.Context{Type: identity.ContextTenant, CompanyID: &dto.CompanyID, MembershipID: &membershipID, Role: membership.Role}
+	roleID := membership.TenantRoleID
+	context := identity.Context{Type: identity.ContextTenant, CompanyID: &dto.CompanyID, MembershipID: &membershipID, TenantRoleID: &roleID, Role: membership.TenantRole.Key}
 	accessToken, refreshToken, err := s.issueTokens(user, context)
 	if err != nil {
 		return nil, err
@@ -386,7 +409,9 @@ func (s *AuthService) SwitchCompany(userID uint, dto *dtos.SwitchCompanyDTO) (*d
 			Slug:         membership.Company.Slug,
 			PlanTier:     membership.Company.PlanTier,
 			MembershipID: membership.ID,
-			Role:         membership.Role,
+			TenantRoleID: membership.TenantRoleID,
+			TenantRole:   dtos.ToTenantRoleResponse(membership.TenantRole),
+			Role:         membership.TenantRole.Key,
 		},
 	}, nil
 }
@@ -504,12 +529,13 @@ func (s *AuthService) resolveInitialContext(userID uint) (identity.Context, erro
 	}
 
 	var membership models.Membership
-	err = s.db.Where("user_id = ? AND status = ?", userID, "active").
+	err = s.db.Preload("TenantRole").Where("user_id = ? AND status = ?", userID, "active").
 		Order("is_default DESC, id ASC").First(&membership).Error
 	if err == nil {
 		companyID := membership.CompanyID
 		membershipID := membership.ID
-		return identity.Context{Type: identity.ContextTenant, CompanyID: &companyID, MembershipID: &membershipID, Role: membership.Role}, nil
+		roleID := membership.TenantRoleID
+		return identity.Context{Type: identity.ContextTenant, CompanyID: &companyID, MembershipID: &membershipID, TenantRoleID: &roleID, Role: membership.TenantRole.Key}, nil
 	}
 	if err != gorm.ErrRecordNotFound {
 		return identity.Context{}, err
@@ -539,12 +565,13 @@ func (s *AuthService) resolveRefreshContext(userID uint, claims *RefreshClaims) 
 		return identity.Context{Type: identity.ContextPlatform, MembershipID: &membershipID, Role: platform.Role}, nil
 	case identity.ContextTenant:
 		var membership models.Membership
-		if err := s.db.Where("id = ? AND user_id = ? AND company_id = ? AND status = ?", *claims.MembershipID, userID, *claims.CompanyID, "active").First(&membership).Error; err != nil {
+		if err := s.db.Preload("TenantRole").Where("id = ? AND user_id = ? AND company_id = ? AND status = ?", *claims.MembershipID, userID, *claims.CompanyID, "active").First(&membership).Error; err != nil {
 			return identity.Context{}, apperr.Forbidden("tenant access is no longer active")
 		}
 		companyID := membership.CompanyID
 		membershipID := membership.ID
-		return identity.Context{Type: identity.ContextTenant, CompanyID: &companyID, MembershipID: &membershipID, Role: membership.Role}, nil
+		roleID := membership.TenantRoleID
+		return identity.Context{Type: identity.ContextTenant, CompanyID: &companyID, MembershipID: &membershipID, TenantRoleID: &roleID, Role: membership.TenantRole.Key}, nil
 	case identity.ContextIdentity:
 		return identity.Context{Type: identity.ContextIdentity}, nil
 	default:

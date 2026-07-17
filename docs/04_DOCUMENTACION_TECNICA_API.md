@@ -11,7 +11,7 @@
 
 | Componente | Tecnología | Versión |
 |---|---|---|
-| Lenguaje | Go | 1.24.0 |
+| Lenguaje | Go | 1.26.1 |
 | Framework HTTP | Gin | 1.11.0 |
 | ORM | GORM (driver PostgreSQL) | 1.31.1 |
 | Base de datos | PostgreSQL | 16-alpine |
@@ -103,12 +103,16 @@ Todos usan `gorm.Model` (ID, CreatedAt, UpdatedAt, DeletedAt → **soft delete g
 |---|---|
 | `UserID` | FK not null (índice compuesto con CompanyID) |
 | `CompanyID` | FK **not null**; índice único activo con UserID |
-| `Role` | `admin` / `recruiter` / `hiring_manager` / `user` |
+| `TenantRoleID` | FK not null hacia `tenant_roles`; se asigna por ID |
 | `Status` | default `active` (pending/suspended/removed previstos) |
 | `IsDefault` | empresa usada al hacer login |
 | `InvitedBy`, `InvitedAt`, `JoinedAt` | tracking de invitación |
 
-Los roles tenant son perfiles de producto definidos en `internal/shared/permissions`. No existe un catálogo parcialmente conectado; roles personalizados requieren el modelo completo descrito en ADR-002.
+El RBAC tenant es relacional: `tenant_roles` contiene perfiles,
+`permissions` acciones atómicas y `tenant_role_permissions` sus grants. La
+configuración inicial se versiona en `internal/shared/permissions`, pero las
+peticiones se autorizan consultando BD. `GET /api/v1/tenant-roles` devuelve los
+IDs válidos para formularios de usuarios y membresías.
 
 ### 3.2 Core ATS
 
@@ -154,8 +158,9 @@ type JWTClaims struct {
     ContextType  string // identity | tenant | platform
     CompanyID    *uint
     MembershipID *uint
+    TenantRoleID *uint
     Email        string
-    Role         string
+    Role         string // solo contexto platform
     jwt.RegisteredClaims
 }
 ```
@@ -163,23 +168,25 @@ type JWTClaims struct {
 - **Access token:** 1 hora · **Refresh token:** 30 días.
 - Firmas HS256 con `JWT_SECRET` / `JWT_REFRESH_SECRET`.
 - Access y refresh token llevan el contexto seleccionado. `switch-company` y `switch-platform` rotan ambos tokens.
-- El refresh valida nuevamente que la platform membership o tenant membership siga activa y toma el rol vigente de BD.
+- Cada petición tenant valida que la membership siga activa y toma su rol
+  vigente de BD; cambios de rol o suspensión tienen efecto inmediato.
 
 ### 4.2 Middleware (`internal/shared/middleware/auth_middleware.go`)
 
 | Middleware | Función |
 |---|---|
-| `AuthMiddleware(jwtService)` | Valida `Authorization: Bearer <token>` e inyecta `user_id`, `context_type`, `membership_id`, `role` y `company_id` cuando corresponde |
-| `RequirePermission(permission)` | Exige contexto tenant y permiso del perfil tenant |
+| `AuthMiddleware(jwtService, rbac)` | Valida `Authorization: Bearer <token>`, membership y rol tenant vigente; inyecta el contexto resuelto |
+| `RequirePermission(rbac, permission)` | Exige contexto tenant y consulta el grant relacional |
 | `RequirePlatformPermission(permission)` | Exige contexto platform y permiso landlord |
 | `RequireCompany()` | Exige `company_id` en contexto. 403 si falta |
-| `OptionalAuth(jwtService)` | Valida token si está presente; continúa sin él (rutas públicas con contexto opcional) |
+| `OptionalAuth(jwtService, rbac)` | Valida token si está presente; continúa sin él (rutas públicas con contexto opcional) |
 
 ### 4.3 Perfiles y contextos
 
-Los perfiles tenant son `admin`, `recruiter`, `hiring_manager` y `user`. El rol
-`superadmin` existe únicamente en `platform_memberships`. Las rutas landlord
-viven bajo `/api/v1/platform/*`; no heredan permisos tenant. Ver ADR-002.
+Los perfiles tenant incorporados son `admin`, `recruiter`, `hiring_manager` e
+`interviewer`, relacionados por ID. El rol `superadmin` existe únicamente en
+`platform_memberships`. Las rutas landlord viven bajo `/api/v1/platform/*`; no
+heredan permisos tenant. Ver ADR-002.
 
 ---
 
@@ -406,7 +413,7 @@ make fmt / vet / test
 
 ### 11.1 Docker (actual)
 
-- **Dockerfile** multi-stage: `golang:1.24-alpine` (build, `CGO_ENABLED=0`) → `alpine` runtime con usuario no-root. Expone 8080.
+- **Dockerfile** multi-stage: `golang:1.26.1-alpine` (build, `CGO_ENABLED=0`) → `alpine` runtime con usuario no-root. Expone 8080.
 - **docker-compose:** servicios `api` + `postgres:16-alpine` con healthcheck y volumen persistente `postgres_data`.
 
 ```bash

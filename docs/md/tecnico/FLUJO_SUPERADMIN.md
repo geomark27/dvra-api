@@ -80,8 +80,9 @@ La especificación exacta de request y response se publica en
 - Toda membership tenant requiere `company_id` y solo puede existir una activa
   por `(user_id, company_id)`.
 - Los handlers tenant no conceden acceso global implícito al SuperAdmin.
-- Los roles tenant (`admin`, `recruiter`, `hiring_manager`, `user`) se resuelven
-  con una matriz distinta a los permisos landlord.
+- Los roles tenant (`admin`, `recruiter`, `hiring_manager`, `interviewer`) se
+  asignan mediante `memberships.tenant_role_id`; sus grants se resuelven en
+  `tenant_role_permissions`, separados de los permisos landlord.
 - `hiring_manager` solo ve los jobs asignados y candidatos/aplicaciones ligados
   a esos jobs.
 - Eliminar un usuario desde un tenant elimina su membership en esa empresa; no
@@ -91,7 +92,8 @@ La especificación exacta de request y response se publica en
 
 `go run ./cmd/console migrate` transforma las memberships legacy con
 `company_id IS NULL` y rol `superadmin` en perfiles `platform_memberships`.
-Luego exige `memberships.company_id NOT NULL` y crea el índice único parcial de
+Luego exige `memberships.company_id NOT NULL`, migra el rol textual hacia
+`tenant_role_id`, elimina la columna antigua y crea el índice único parcial de
 membresías activas. La migración se detiene ante roles globales desconocidos o
 duplicados para evitar una conversión silenciosa incorrecta.
 

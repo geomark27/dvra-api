@@ -52,12 +52,13 @@ func New(cfg *config.Config, db *gorm.DB) (*Server, error) {
 	locationRepo := repositories.NewLocationRepository()
 	dashboardRepo := repositories.NewDashboardRepository()
 	platformSettingsRepo := repositories.NewPlatformSettingsRepository(db)
+	rbacService := services.NewTenantRBACService(db)
 
 	// Create services (injecting repositories)
-	authService := services.NewAuthService(userRepo, planRepo, jwtService, db)
-	userService := services.NewUserService(userRepo, db)
+	authService := services.NewAuthService(userRepo, planRepo, jwtService, rbacService, db)
+	userService := services.NewUserService(userRepo, db, rbacService)
 	companyService := services.NewCompanyService(companyRepo)
-	membershipService := services.NewMembershipService(membershipRepo)
+	membershipService := services.NewMembershipService(membershipRepo, rbacService)
 	candidateService := services.NewCandidateService(candidateRepo, planRepo, db, fileStorage)
 	applicationService := services.NewApplicationService(applicationRepo, jobRepo, candidateRepo)
 	// Módulo staffing (monolito modular + hexagonal-lite, ver ADR-001). Se cablea
@@ -87,6 +88,7 @@ func New(cfg *config.Config, db *gorm.DB) (*Server, error) {
 	dashboardHandler := handlers.NewDashboardHandler(dashboardService)
 	publicHandler := handlers.NewPublicHandler(publicService)
 	platformSettingsHandler := handlers.NewPlatformSettingsHandler(platformSettingsService)
+	tenantRoleHandler := handlers.NewTenantRoleHandler(rbacService)
 
 	// Create Gin router
 	router := gin.Default()
@@ -95,7 +97,7 @@ func New(cfg *config.Config, db *gorm.DB) (*Server, error) {
 	router.Use(corsMiddleware(cfg.CorsAllowedOrigins))
 
 	// Register routes (passing config for dynamic Swagger host)
-	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, staffingModule, planHandler, planService, systemValueHandler, locationHandler, dashboardHandler, publicHandler, platformSettingsHandler, jwtService, cfg)
+	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, staffingModule, planHandler, planService, systemValueHandler, locationHandler, dashboardHandler, publicHandler, platformSettingsHandler, tenantRoleHandler, jwtService, rbacService, cfg)
 
 	// Configure HTTP server
 	httpServer := &http.Server{

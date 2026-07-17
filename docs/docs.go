@@ -3800,6 +3800,32 @@ const docTemplate = `{
                 }
             }
         },
+        "/tenant-roles": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Devuelve los perfiles activos que pueden asignarse a memberships",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tenant Roles"
+                ],
+                "summary": "Listar roles tenant",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/users": {
             "get": {
                 "security": [
@@ -4040,6 +4066,12 @@ const docTemplate = `{
                 "role": {
                     "type": "string"
                 },
+                "tenant_role": {
+                    "$ref": "#/definitions/dtos.TenantRoleResponse"
+                },
+                "tenant_role_id": {
+                    "type": "integer"
+                },
                 "type": {
                     "type": "string"
                 }
@@ -4085,6 +4117,12 @@ const docTemplate = `{
                 },
                 "slug": {
                     "type": "string"
+                },
+                "tenant_role": {
+                    "$ref": "#/definitions/dtos.TenantRoleResponse"
+                },
+                "tenant_role_id": {
+                    "type": "integer"
                 }
             }
         },
@@ -4258,7 +4296,7 @@ const docTemplate = `{
         "dtos.CreateMembershipDTO": {
             "type": "object",
             "required": [
-                "role",
+                "tenant_role_id",
                 "user_id"
             ],
             "properties": {
@@ -4272,15 +4310,6 @@ const docTemplate = `{
                 "is_default": {
                     "type": "boolean"
                 },
-                "role": {
-                    "type": "string",
-                    "enum": [
-                        "admin",
-                        "recruiter",
-                        "hiring_manager",
-                        "user"
-                    ]
-                },
                 "status": {
                     "type": "string",
                     "enum": [
@@ -4290,6 +4319,10 @@ const docTemplate = `{
                         "suspended",
                         "removed"
                     ]
+                },
+                "tenant_role_id": {
+                    "type": "integer",
+                    "minimum": 1
                 },
                 "user_id": {
                     "type": "integer",
@@ -4495,7 +4528,7 @@ const docTemplate = `{
                 "first_name",
                 "last_name",
                 "password",
-                "role"
+                "tenant_role_id"
             ],
             "properties": {
                 "email": {
@@ -4511,14 +4544,9 @@ const docTemplate = `{
                     "type": "string",
                     "minLength": 8
                 },
-                "role": {
-                    "type": "string",
-                    "enum": [
-                        "admin",
-                        "recruiter",
-                        "hiring_manager",
-                        "user"
-                    ]
+                "tenant_role_id": {
+                    "type": "integer",
+                    "minimum": 1
                 }
             }
         },
@@ -5079,6 +5107,26 @@ const docTemplate = `{
                 }
             }
         },
+        "dtos.TenantRoleResponse": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_system": {
+                    "type": "boolean"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "dtos.TogglePlanStatusDTO": {
             "type": "object",
             "properties": {
@@ -5170,15 +5218,6 @@ const docTemplate = `{
                 "joined_at": {
                     "type": "string"
                 },
-                "role": {
-                    "type": "string",
-                    "enum": [
-                        "admin",
-                        "recruiter",
-                        "hiring_manager",
-                        "user"
-                    ]
-                },
                 "status": {
                     "type": "string",
                     "enum": [
@@ -5188,6 +5227,10 @@ const docTemplate = `{
                         "suspended",
                         "removed"
                     ]
+                },
+                "tenant_role_id": {
+                    "type": "integer",
+                    "minimum": 1
                 }
             }
         },

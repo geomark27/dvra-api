@@ -22,24 +22,24 @@ func (f *membershipRepoFake) Create(m *models.Membership) (*models.Membership, e
 func (f *membershipRepoFake) Update(m *models.Membership) (*models.Membership, error) { return m, nil }
 func (f *membershipRepoFake) Delete(uint) error                                       { return nil }
 
-func TestMembershipUpdateRejectsReservedRole(t *testing.T) {
+func TestMembershipUpdateRejectsUnknownRoleID(t *testing.T) {
 	companyID := uint(3)
-	repo := &membershipRepoFake{membership: &models.Membership{UserID: 8, CompanyID: companyID, Role: "user"}}
-	svc := NewMembershipService(repo)
-	role := "superadmin"
-	_, err := svc.UpdateMembership(1, 9, companyID, false, dtos.UpdateMembershipDTO{Role: &role})
+	repo := &membershipRepoFake{membership: &models.Membership{UserID: 8, CompanyID: companyID, TenantRoleID: 4}}
+	svc := NewMembershipService(repo, testTenantAuthorizer())
+	unknownRoleID := uint(999)
+	_, err := svc.UpdateMembership(1, 9, companyID, false, dtos.UpdateMembershipDTO{TenantRoleID: &unknownRoleID})
 	var appErr *apperr.AppError
-	if !errors.As(err, &appErr) || appErr.Code != 403 {
-		t.Fatalf("expected forbidden, got %v", err)
+	if !errors.As(err, &appErr) || appErr.Code != 400 {
+		t.Fatalf("expected bad request, got %v", err)
 	}
 }
 
 func TestMembershipUpdateRejectsOwnRoleAndOtherTenant(t *testing.T) {
 	companyID := uint(3)
-	repo := &membershipRepoFake{membership: &models.Membership{UserID: 8, CompanyID: companyID, Role: "user"}}
-	svc := NewMembershipService(repo)
-	role := "admin"
-	if _, err := svc.UpdateMembership(1, 8, companyID, false, dtos.UpdateMembershipDTO{Role: &role}); err == nil {
+	repo := &membershipRepoFake{membership: &models.Membership{UserID: 8, CompanyID: companyID, TenantRoleID: 4}}
+	svc := NewMembershipService(repo, testTenantAuthorizer())
+	adminRoleID := uint(1)
+	if _, err := svc.UpdateMembership(1, 8, companyID, false, dtos.UpdateMembershipDTO{TenantRoleID: &adminRoleID}); err == nil {
 		t.Fatal("own role change was accepted")
 	}
 	if _, err := svc.UpdateMembership(1, 9, 4, false, dtos.UpdateMembershipDTO{}); err == nil {
@@ -48,8 +48,16 @@ func TestMembershipUpdateRejectsOwnRoleAndOtherTenant(t *testing.T) {
 }
 
 func TestTenantMembershipRequiresCompany(t *testing.T) {
-	svc := NewMembershipService(&membershipRepoFake{})
-	if _, err := svc.CreateMembership(dtos.CreateMembershipDTO{UserID: 8, Role: "admin"}); err == nil {
+	svc := NewMembershipService(&membershipRepoFake{}, testTenantAuthorizer())
+	if _, err := svc.CreateMembership(dtos.CreateMembershipDTO{UserID: 8, TenantRoleID: 1}); err == nil {
 		t.Fatal("tenant membership without company was accepted")
+	}
+}
+
+func TestTenantMembershipRejectsUnknownRole(t *testing.T) {
+	companyID := uint(3)
+	svc := NewMembershipService(&membershipRepoFake{}, testTenantAuthorizer())
+	if _, err := svc.CreateMembership(dtos.CreateMembershipDTO{UserID: 8, CompanyID: &companyID, TenantRoleID: 999}); err == nil {
+		t.Fatal("unknown tenant role ID was accepted")
 	}
 }

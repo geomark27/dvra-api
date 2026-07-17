@@ -24,13 +24,15 @@ type UserService interface {
 type userService struct {
 	userRepo repositories.UserRepository
 	db       *gorm.DB
+	rbac     TenantAuthorizer
 }
 
 // NewUserService crea una nueva instancia de UserService
-func NewUserService(userRepo repositories.UserRepository, db *gorm.DB) UserService {
+func NewUserService(userRepo repositories.UserRepository, db *gorm.DB, rbac TenantAuthorizer) UserService {
 	return &userService{
 		userRepo: userRepo,
 		db:       db,
+		rbac:     rbac,
 	}
 }
 
@@ -58,6 +60,10 @@ func (s *userService) GetUserByID(id uint) (*models.User, error) {
 
 // CreateUser crea un nuevo usuario
 func (s *userService) CreateUser(dto dtos.CreateUserDTO) (*models.User, error) {
+	role, err := s.rbac.RoleByID(dto.TenantRoleID)
+	if err != nil {
+		return nil, apperr.BadRequest("invalid tenant_role_id")
+	}
 	// Aquí puedes agregar lógica de negocio adicional:
 	// - Validar que el email no exista
 	// - Hashear contraseña
@@ -90,7 +96,7 @@ func (s *userService) CreateUser(dto dtos.CreateUserDTO) (*models.User, error) {
 			return err
 		}
 		membership := &models.Membership{
-			UserID: user.ID, CompanyID: dto.CompanyID, Role: dto.Role,
+			UserID: user.ID, CompanyID: dto.CompanyID, TenantRoleID: dto.TenantRoleID, TenantRole: role,
 			Status: "active", IsDefault: true, InvitedBy: &dto.InvitedBy,
 			InvitedAt: &invitedAt, JoinedAt: &invitedAt,
 		}

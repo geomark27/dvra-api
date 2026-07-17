@@ -23,6 +23,7 @@ type JWTClaims struct {
 	Role         string `json:"role"`
 	ContextType  string `json:"context_type"`
 	MembershipID *uint  `json:"membership_id,omitempty"`
+	TenantRoleID *uint  `json:"tenant_role_id,omitempty"`
 	TokenType    string `json:"token_type,omitempty"`
 	jwt.RegisteredClaims
 }
@@ -63,13 +64,18 @@ func NewJWTService(accessSecret, refreshSecret string) JWTService {
 
 // GenerateAccessToken generates a new access token
 func (s *jwtService) GenerateAccessToken(userID uint, email string, context identity.Context) (string, error) {
+	role := context.Role
+	if context.Type == identity.ContextTenant {
+		role = "" // Tenant authorization is referenced by tenant_role_id.
+	}
 	claims := JWTClaims{
 		UserID:       userID,
 		CompanyID:    context.CompanyID,
 		Email:        email,
-		Role:         context.Role,
+		Role:         role,
 		ContextType:  context.Type,
 		MembershipID: context.MembershipID,
+		TenantRoleID: context.TenantRoleID,
 		TokenType:    "access",
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.accessTTL)),
@@ -120,7 +126,7 @@ func (s *jwtService) ValidateAccessToken(tokenString string) (*JWTClaims, error)
 	}
 
 	if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid && claims.TokenType == "access" && claims.UserID > 0 {
-		if !validTokenContext(claims.ContextType, claims.CompanyID, claims.MembershipID, claims.Role) {
+		if !validTokenContext(claims.ContextType, claims.CompanyID, claims.MembershipID, claims.TenantRoleID, claims.Role) {
 			return nil, ErrInvalidToken
 		}
 		return claims, nil
@@ -152,14 +158,14 @@ func (s *jwtService) ValidateRefreshToken(tokenString string) (*RefreshClaims, e
 	return claims, nil
 }
 
-func validTokenContext(contextType string, companyID, membershipID *uint, role string) bool {
+func validTokenContext(contextType string, companyID, membershipID, tenantRoleID *uint, role string) bool {
 	switch contextType {
 	case identity.ContextPlatform:
-		return companyID == nil && membershipID != nil && *membershipID > 0 && role != ""
+		return companyID == nil && membershipID != nil && *membershipID > 0 && tenantRoleID == nil && role != ""
 	case identity.ContextTenant:
-		return companyID != nil && *companyID > 0 && membershipID != nil && *membershipID > 0 && role != ""
+		return companyID != nil && *companyID > 0 && membershipID != nil && *membershipID > 0 && tenantRoleID != nil && *tenantRoleID > 0 && role == ""
 	case identity.ContextIdentity:
-		return companyID == nil && membershipID == nil && role == ""
+		return companyID == nil && membershipID == nil && tenantRoleID == nil && role == ""
 	default:
 		return false
 	}

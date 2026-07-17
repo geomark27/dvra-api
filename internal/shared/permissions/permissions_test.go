@@ -19,12 +19,14 @@ func TestMatrixPorRol(t *testing.T) {
 		perm string
 		want bool
 	}{
-		// admin: control total de su empresa, pero no crear/eliminar empresas
+		// admin: catálogo tenant completo. Las rutas landlord mantienen su
+		// autorización platform independiente.
 		{RoleAdmin, UsersCreate, true},
+		{RoleAdmin, UsersUpdate, true},
 		{RoleAdmin, CompaniesUpdate, true},
-		{RoleAdmin, CompaniesCreate, false},
-		{RoleAdmin, CompaniesDelete, false},
-		{RoleAdmin, MembershipsCreate, false}, // RN-MEMB-004: solo SuperAdmin en MVP
+		{RoleAdmin, CompaniesCreate, true},
+		{RoleAdmin, CompaniesDelete, true},
+		{RoleAdmin, MembershipsCreate, true},
 
 		// recruiter: gestiona jobs y candidatos, no usuarios ni billing
 		{RoleRecruiter, JobsCreate, true},
@@ -42,18 +44,55 @@ func TestMatrixPorRol(t *testing.T) {
 		{RoleHiringManager, ApplicationsMove, false},
 		{RoleHiringManager, CandidatesCreate, false},
 
-		// user: solo lectura
-		{RoleUser, JobsView, true},
-		{RoleUser, DashboardView, true},
-		{RoleUser, CandidatesView, false},
-		{RoleUser, ApplicationsView, false},
-		{RoleUser, JobsCreate, false},
-		{RoleUser, ApplicationsRate, false},
+		// interviewer: conserva el acceso de lectura del perfil legacy user
+		// hasta que exista asignación explícita de entrevistas y scorecards.
+		{RoleInterviewer, JobsView, true},
+		{RoleInterviewer, DashboardView, true},
+		{RoleInterviewer, CandidatesView, false},
+		{RoleInterviewer, ApplicationsView, false},
+		{RoleInterviewer, JobsCreate, false},
+		{RoleInterviewer, ApplicationsRate, false},
 	}
 
 	for _, tc := range cases {
 		if got := Can(tc.role, tc.perm); got != tc.want {
 			t.Errorf("Can(%q, %q) = %v, se esperaba %v", tc.role, tc.perm, got, tc.want)
+		}
+	}
+}
+
+func TestAdminHasEveryTenantPermission(t *testing.T) {
+	all := AllTenantPermissions()
+	if len(all) == 0 {
+		t.Fatal("tenant permission catalog is empty")
+	}
+	for _, permission := range all {
+		if !Can(RoleAdmin, permission) {
+			t.Errorf("admin is missing %q", permission)
+		}
+	}
+	if got := For(RoleAdmin); len(got) != len(all) {
+		t.Fatalf("admin has %d permissions, catalog has %d", len(got), len(all))
+	}
+}
+
+func TestTenantRoles(t *testing.T) {
+	want := map[string]bool{
+		RoleAdmin: true, RoleRecruiter: true,
+		RoleHiringManager: true, RoleInterviewer: true,
+	}
+	for _, role := range TenantRoles() {
+		if !want[role] {
+			t.Errorf("unexpected tenant role %q", role)
+		}
+		delete(want, role)
+	}
+	if len(want) > 0 {
+		t.Fatalf("missing tenant roles: %v", want)
+	}
+	for _, role := range []string{"", "user", RoleSuperAdmin, "intruso"} {
+		if IsTenantRole(role) {
+			t.Errorf("%q should not be a tenant role", role)
 		}
 	}
 }

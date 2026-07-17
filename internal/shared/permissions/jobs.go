@@ -11,9 +11,10 @@ const (
 )
 
 func init() {
+	define(JobsView, JobsCreate, JobsUpdate, JobsDelete, JobsPublish, JobsClose)
 	grant(RoleAdmin, JobsView, JobsCreate, JobsUpdate, JobsDelete, JobsPublish, JobsClose)
 	grant(RoleRecruiter, JobsView, JobsCreate, JobsUpdate, JobsPublish, JobsClose)
 	// El repositorio limita la lectura del hiring_manager a sus jobs asignados.
 	grant(RoleHiringManager, JobsView)
-	grant(RoleUser, JobsView)
+	grant(RoleInterviewer, JobsView)
 }

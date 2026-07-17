@@ -140,9 +140,9 @@ Hiring Manager (Nivel 20)
     └── Puede comentar y calificar
     └── No puede crear jobs
     
-User (Nivel 10)
-    └── Solo lectura
-    └── Ve reportes básicos
+Interviewer (Nivel 10)
+    └── Lectura básica
+    └── Evaluación asignada cuando exista el módulo de entrevistas
 ```
 
 ### 3.2 Matriz de Permisos
@@ -152,7 +152,7 @@ User (Nivel 10)
 > en `routes.go`. Las celdas "Solo asignados / Solo sus jobs" requieren chequeo a nivel
 > de recurso, pendiente de la tabla de asignaciones (ver RN-MEMB-007).
 
-| Acción | Super | Admin | Recruiter | Hiring Mgr | User |
+| Acción | Super | Admin | Recruiter | Hiring Mgr | Interviewer |
 |--------|-------|-------|-----------|------------|------|
 | **Company** |
 | Ver company settings | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -172,12 +172,12 @@ User (Nivel 10)
 | **Candidates** |
 | Crear candidato | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Editar candidato | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Ver todos candidatos | ✅ | ✅ | ✅ | Solo sus jobs | Solo sus jobs |
+| Ver todos candidatos | ✅ | ✅ | ✅ | Solo sus jobs | ❌ (hasta asignación) |
 | **Applications** |
 | Cambiar stage | ✅ | ✅ | ✅ | Solo sus jobs | ❌ |
 | Calificar (rating) | ✅ | ✅ | ✅ | ✅ | ❌ |
 | Agregar notas | ✅ | ✅ | ✅ | ✅ | ❌ |
-| Ver aplicaciones | ✅ | ✅ | ✅ | Solo sus jobs | Solo sus jobs |
+| Ver aplicaciones | ✅ | ✅ | ✅ | Solo sus jobs | ❌ (hasta asignación) |
 | **Red Dvra (Marketplace)** |
 | Buscar candidatos red | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Contactar candidato | ✅ | ✅ | Solo con aprobación | ❌ | ❌ |

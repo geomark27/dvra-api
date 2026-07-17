@@ -13,7 +13,8 @@ La identidad de una persona vive en `users`. El acceso landlord vive en
 Los JWT declaran un `context_type` explícito:
 
 - `platform`: incluye `membership_id` y un rol de plataforma, sin `company_id`.
-- `tenant`: incluye `membership_id`, `company_id` y el rol dentro de ese tenant.
+- `tenant`: incluye `membership_id`, `company_id` y `tenant_role_id`; no lleva
+  el nombre textual del rol como autoridad.
 - `identity`: usuario autenticado todavía sin contexto autorizado.
 
 Los permisos landlord (`platform.*`) y tenant (`jobs.*`, `candidates.*`, etc.)
@@ -30,15 +31,26 @@ tenant y un token tenant no puede consumir `/api/v1/platform/*`.
 
 ## Roles tenant
 
-Los perfiles `admin`, `recruiter`, `hiring_manager` y `user` son roles de
-producto definidos en código. No se mantiene un catálogo `roles` parcialmente
-conectado. Si se habilitan roles personalizados, se introducirán
-`tenant_roles`, `permissions` y `role_permissions` como una migración completa,
-sin mezclar esa configuración con roles landlord.
+Los perfiles incorporados son `admin`, `recruiter`, `hiring_manager` e
+`interviewer`. Se persisten en `tenant_roles`; las acciones atómicas viven en
+`permissions` y la relación efectiva en `tenant_role_permissions`.
+`memberships.tenant_role_id` es una FK obligatoria: las APIs de usuarios y
+membresías reciben este ID y nunca un nombre de rol libre.
+
+Las claves y grants iniciales se versionan con el release y se sincronizan por
+migración. En runtime, el middleware valida la membership activa, toma su rol
+vigente desde BD y consulta los permisos relacionales. Por ello, suspender una
+membership o cambiar su rol tiene efecto inmediato aun cuando exista un access
+token anterior.
+
+`admin` recibe siempre el catálogo tenant completo, incluidas las acciones que
+se incorporen en módulos posteriores. Esta regla no cruza el límite landlord:
+las rutas `/api/v1/platform/*` continúan exigiendo contexto y permisos platform.
 
 `hiring_manager` se restringe en repositorio a jobs asignados y a los candidatos
-y postulaciones derivados de esos jobs. `user` no recibe acceso a candidatos o
-postulaciones mientras no exista un modelo explícito de asignación para ese rol.
+y postulaciones derivados de esos jobs. `interviewer` conserva solo lectura
+básica y no recibe acceso a candidatos o postulaciones mientras no exista un
+modelo explícito de asignación de entrevistas y scorecards.
 
 ## Operación
 
@@ -50,5 +62,7 @@ go run ./cmd/console platform-admin --email admin@example.com
 ```
 
 La migración convierte memberships legacy con `company_id IS NULL` y rol
-`superadmin` en `platform_memberships`. Los tokens emitidos antes de esta
-separación dejan de ser válidos y los usuarios deben iniciar sesión nuevamente.
+`superadmin` en `platform_memberships`. También convierte `user` a
+`interviewer`, rellena `tenant_role_id`, crea sus FKs y elimina la columna
+textual `memberships.role`. Los tokens emitidos antes de esta separación dejan
+de ser válidos y los usuarios deben iniciar sesión nuevamente.
