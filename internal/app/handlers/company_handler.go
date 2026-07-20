@@ -157,7 +157,6 @@ func (h *CompanyHandler) CreateCompany(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Validation failed", "details": errors})
 		return
 	}
-
 	company, err := h.companyService.CreateCompany(dto)
 	if err != nil {
 		h.logger.Error("Failed to create company", "error", err)
@@ -214,6 +213,11 @@ func (h *CompanyHandler) UpdateCompany(c *gin.Context) {
 	if errors := helpers.ValidateStruct(&dto); len(errors) > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Validation failed", "details": errors})
 		return
+	}
+	if !authctx.IsSuperAdmin(c) {
+		// Billing is controlled exclusively from the landlord context.
+		dto.PlanTier = nil
+		dto.TrialEndsAt = nil
 	}
 
 	company, err := h.companyService.UpdateCompany(uint(id), dto)

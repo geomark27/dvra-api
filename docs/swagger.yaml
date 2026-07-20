@@ -1,6 +1,6 @@
 basePath: /api/v1
 definitions:
-  dtos.AssignPlanToCompanyDTO:
+  dvra-api_internal_app_dtos.AssignPlanToCompanyDTO:
     properties:
       company_id:
         type: integer
@@ -10,7 +10,7 @@ definitions:
     - company_id
     - plan_id
     type: object
-  dtos.AuthContextResponse:
+  dvra-api_internal_app_dtos.AuthContextResponse:
     properties:
       company_id:
         type: integer
@@ -19,13 +19,13 @@ definitions:
       role:
         type: string
       tenant_role:
-        $ref: '#/definitions/dtos.TenantRoleResponse'
+        $ref: '#/definitions/dvra-api_internal_app_dtos.TenantRoleResponse'
       tenant_role_id:
         type: integer
       type:
         type: string
     type: object
-  dtos.CityDTO:
+  dvra-api_internal_app_dtos.CityDTO:
     properties:
       id:
         type: integer
@@ -34,11 +34,11 @@ definitions:
       name:
         type: string
       state:
-        $ref: '#/definitions/dtos.StateDTO'
+        $ref: '#/definitions/dvra-api_internal_app_dtos.StateDTO'
       state_id:
         type: integer
     type: object
-  dtos.CompanyResponse:
+  dvra-api_internal_app_dtos.CompanyResponse:
     properties:
       id:
         type: integer
@@ -53,11 +53,11 @@ definitions:
       slug:
         type: string
       tenant_role:
-        $ref: '#/definitions/dtos.TenantRoleResponse'
+        $ref: '#/definitions/dvra-api_internal_app_dtos.TenantRoleResponse'
       tenant_role_id:
         type: integer
     type: object
-  dtos.CountryDTO:
+  dvra-api_internal_app_dtos.CountryDTO:
     properties:
       id:
         type: integer
@@ -75,16 +75,16 @@ definitions:
         type: string
       states:
         items:
-          $ref: '#/definitions/dtos.StateDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.StateDTO'
         type: array
       subregion:
-        $ref: '#/definitions/dtos.SubregionDTO'
+        $ref: '#/definitions/dvra-api_internal_app_dtos.SubregionDTO'
       subregion_id:
         type: integer
       timezones:
         type: string
     type: object
-  dtos.CreateApplicationDTO:
+  dvra-api_internal_app_dtos.CreateApplicationDTO:
     properties:
       candidate_id:
         minimum: 1
@@ -115,7 +115,7 @@ definitions:
     - job_id
     - stage
     type: object
-  dtos.CreateCityDTO:
+  dvra-api_internal_app_dtos.CreateCityDTO:
     properties:
       name:
         maxLength: 255
@@ -127,7 +127,7 @@ definitions:
     - name
     - state_id
     type: object
-  dtos.CreateCompanyDTO:
+  dvra-api_internal_app_dtos.CreateCompanyDTO:
     properties:
       logo_url:
         type: string
@@ -151,7 +151,7 @@ definitions:
     - slug
     - timezone
     type: object
-  dtos.CreateCountryDTO:
+  dvra-api_internal_app_dtos.CreateCountryDTO:
     properties:
       iso2:
         type: string
@@ -176,7 +176,7 @@ definitions:
     - numeric_code
     - phone_code
     type: object
-  dtos.CreateDepartmentDTO:
+  dvra-api_internal_app_dtos.CreateDepartmentDTO:
     properties:
       code:
         maxLength: 50
@@ -195,7 +195,7 @@ definitions:
     required:
     - name
     type: object
-  dtos.CreateMembershipDTO:
+  dvra-api_internal_app_dtos.CreateMembershipDTO:
     properties:
       company_id:
         description: Pointer allows reporting a missing required field.
@@ -222,7 +222,7 @@ definitions:
     - tenant_role_id
     - user_id
     type: object
-  dtos.CreatePlacementDTO:
+  dvra-api_internal_app_dtos.CreatePlacementDTO:
     properties:
       application_id:
         minimum: 1
@@ -265,7 +265,7 @@ definitions:
     - application_id
     - staffing_client_id
     type: object
-  dtos.CreateRegionDTO:
+  dvra-api_internal_app_dtos.CreateRegionDTO:
     properties:
       name:
         maxLength: 255
@@ -274,7 +274,7 @@ definitions:
     required:
     - name
     type: object
-  dtos.CreateStaffingClientDTO:
+  dvra-api_internal_app_dtos.CreateStaffingClientDTO:
     properties:
       company_id:
         type: integer
@@ -310,7 +310,7 @@ definitions:
     - name
     - slug
     type: object
-  dtos.CreateStateDTO:
+  dvra-api_internal_app_dtos.CreateStateDTO:
     properties:
       country_code:
         type: string
@@ -325,7 +325,7 @@ definitions:
     - country_id
     - name
     type: object
-  dtos.CreateSubregionDTO:
+  dvra-api_internal_app_dtos.CreateSubregionDTO:
     properties:
       name:
         maxLength: 255
@@ -337,26 +337,7 @@ definitions:
     - name
     - region_id
     type: object
-  dtos.CreateSystemValueDTO:
-    properties:
-      category:
-        type: string
-      company_id:
-        type: integer
-      description:
-        type: string
-      display_order:
-        type: integer
-      label:
-        type: string
-      value:
-        type: string
-    required:
-    - category
-    - label
-    - value
-    type: object
-  dtos.CreateUserDTO:
+  dvra-api_internal_app_dtos.CreateUserDTO:
     properties:
       email:
         type: string
@@ -377,22 +358,22 @@ definitions:
     - password
     - tenant_role_id
     type: object
-  dtos.LocationSearchDTO:
+  dvra-api_internal_app_dtos.LocationSearchDTO:
     properties:
       cities:
         items:
-          $ref: '#/definitions/dtos.CityDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.CityDTO'
         type: array
       countries:
         items:
-          $ref: '#/definitions/dtos.CountryDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.CountryDTO'
         type: array
       states:
         items:
-          $ref: '#/definitions/dtos.StateDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.StateDTO'
         type: array
     type: object
-  dtos.LoginDTO:
+  dvra-api_internal_app_dtos.LoginDTO:
     properties:
       email:
         type: string
@@ -402,7 +383,7 @@ definitions:
     - email
     - password
     type: object
-  dtos.MoveApplicationDTO:
+  dvra-api_internal_app_dtos.MoveApplicationDTO:
     properties:
       stage:
         enum:
@@ -417,13 +398,10 @@ definitions:
     required:
     - stage
     type: object
-  dtos.PlanDTO:
+  dvra-api_internal_app_dtos.PlanDTO:
     properties:
-      billing_cycle:
-        enum:
-        - monthly
-        - yearly
-        type: string
+      billing_cycle_value_id:
+        type: integer
       can_export_data:
         type: boolean
       can_use_api:
@@ -434,8 +412,8 @@ definitions:
         type: boolean
       can_use_staffing:
         type: boolean
-      currency:
-        type: string
+      currency_value_id:
+        type: integer
       description:
         type: string
       display_order:
@@ -461,27 +439,25 @@ definitions:
         type: number
       slug:
         type: string
-      support_level:
-        enum:
-        - email
-        - priority
-        - dedicated
-        type: string
+      support_level_value_id:
+        type: integer
       trial_days:
         minimum: 0
         type: integer
     required:
-    - billing_cycle
-    - currency
+    - billing_cycle_value_id
+    - currency_value_id
     - name
     - price
     - slug
-    - support_level
+    - support_level_value_id
     type: object
-  dtos.PlanResponse:
+  dvra-api_internal_app_dtos.PlanResponse:
     properties:
       billing_cycle:
         type: string
+      billing_cycle_value_id:
+        type: integer
       can_export_data:
         type: boolean
       can_use_api:
@@ -496,6 +472,8 @@ definitions:
         type: string
       currency:
         type: string
+      currency_value_id:
+        type: integer
       description:
         type: string
       display_order:
@@ -524,13 +502,17 @@ definitions:
         type: string
       support_level:
         type: string
+      support_level_value_id:
+        type: integer
       trial_days:
         type: integer
       updated_at:
         type: string
     type: object
-  dtos.PlatformSettingsFullDTO:
+  dvra-api_internal_app_dtos.PlatformSettingsFullDTO:
     properties:
+      default_plan_id:
+        type: integer
       default_plan_tier:
         type: string
       default_trial_days:
@@ -589,7 +571,7 @@ definitions:
       updated_by_id:
         type: integer
     type: object
-  dtos.PlatformSettingsPublicDTO:
+  dvra-api_internal_app_dtos.PlatformSettingsPublicDTO:
     properties:
       docs_url:
         type: string
@@ -623,7 +605,7 @@ definitions:
         description: Social media
         type: string
     type: object
-  dtos.RateApplicationDTO:
+  dvra-api_internal_app_dtos.RateApplicationDTO:
     properties:
       rating:
         maximum: 5
@@ -632,14 +614,14 @@ definitions:
     required:
     - rating
     type: object
-  dtos.RefreshTokenDTO:
+  dvra-api_internal_app_dtos.RefreshTokenDTO:
     properties:
       refresh_token:
         type: string
     required:
     - refresh_token
     type: object
-  dtos.RegionDTO:
+  dvra-api_internal_app_dtos.RegionDTO:
     properties:
       id:
         type: integer
@@ -649,10 +631,10 @@ definitions:
         type: string
       subregions:
         items:
-          $ref: '#/definitions/dtos.SubregionDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.SubregionDTO'
         type: array
     type: object
-  dtos.RegisterCompanyDTO:
+  dvra-api_internal_app_dtos.RegisterCompanyDTO:
     properties:
       admin_email:
         type: string
@@ -677,7 +659,7 @@ definitions:
     - company_name
     - company_slug
     type: object
-  dtos.RegisterDTO:
+  dvra-api_internal_app_dtos.RegisterDTO:
     properties:
       email:
         type: string
@@ -694,14 +676,14 @@ definitions:
     - last_name
     - password
     type: object
-  dtos.StateDTO:
+  dvra-api_internal_app_dtos.StateDTO:
     properties:
       cities:
         items:
-          $ref: '#/definitions/dtos.CityDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.CityDTO'
         type: array
       country:
-        $ref: '#/definitions/dtos.CountryDTO'
+        $ref: '#/definitions/dvra-api_internal_app_dtos.CountryDTO'
       country_code:
         type: string
       country_id:
@@ -713,11 +695,11 @@ definitions:
       name:
         type: string
     type: object
-  dtos.SubregionDTO:
+  dvra-api_internal_app_dtos.SubregionDTO:
     properties:
       countries:
         items:
-          $ref: '#/definitions/dtos.CountryDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.CountryDTO'
         type: array
       id:
         type: integer
@@ -726,36 +708,36 @@ definitions:
       name:
         type: string
       region:
-        $ref: '#/definitions/dtos.RegionDTO'
+        $ref: '#/definitions/dvra-api_internal_app_dtos.RegionDTO'
       region_id:
         type: integer
     type: object
-  dtos.SwitchCompanyDTO:
+  dvra-api_internal_app_dtos.SwitchCompanyDTO:
     properties:
       company_id:
         type: integer
     required:
     - company_id
     type: object
-  dtos.SwitchCompanyResponseDTO:
+  dvra-api_internal_app_dtos.SwitchCompanyResponseDTO:
     properties:
       access_token:
         type: string
       company:
-        $ref: '#/definitions/dtos.CompanyResponse'
+        $ref: '#/definitions/dvra-api_internal_app_dtos.CompanyResponse'
       refresh_token:
         type: string
     type: object
-  dtos.SwitchPlatformResponseDTO:
+  dvra-api_internal_app_dtos.SwitchPlatformResponseDTO:
     properties:
       access_token:
         type: string
       active_context:
-        $ref: '#/definitions/dtos.AuthContextResponse'
+        $ref: '#/definitions/dvra-api_internal_app_dtos.AuthContextResponse'
       refresh_token:
         type: string
     type: object
-  dtos.TenantRoleResponse:
+  dvra-api_internal_app_dtos.TenantRoleResponse:
     properties:
       description:
         type: string
@@ -768,12 +750,12 @@ definitions:
       name:
         type: string
     type: object
-  dtos.TogglePlanStatusDTO:
+  dvra-api_internal_app_dtos.TogglePlanStatusDTO:
     properties:
       is_active:
         type: boolean
     type: object
-  dtos.UpdateCityDTO:
+  dvra-api_internal_app_dtos.UpdateCityDTO:
     properties:
       is_active:
         type: boolean
@@ -784,7 +766,7 @@ definitions:
       state_id:
         type: integer
     type: object
-  dtos.UpdateCompanyDTO:
+  dvra-api_internal_app_dtos.UpdateCompanyDTO:
     properties:
       logo_url:
         type: string
@@ -803,7 +785,7 @@ definitions:
       trial_ends_at:
         type: string
     type: object
-  dtos.UpdateCountryDTO:
+  dvra-api_internal_app_dtos.UpdateCountryDTO:
     properties:
       is_active:
         type: boolean
@@ -824,7 +806,7 @@ definitions:
       timezones:
         type: string
     type: object
-  dtos.UpdateDepartmentDTO:
+  dvra-api_internal_app_dtos.UpdateDepartmentDTO:
     properties:
       code:
         maxLength: 50
@@ -843,7 +825,7 @@ definitions:
       parent_department_id:
         type: integer
     type: object
-  dtos.UpdateMembershipDTO:
+  dvra-api_internal_app_dtos.UpdateMembershipDTO:
     properties:
       is_default:
         type: boolean
@@ -861,7 +843,7 @@ definitions:
         minimum: 1
         type: integer
     type: object
-  dtos.UpdatePlacementDTO:
+  dvra-api_internal_app_dtos.UpdatePlacementDTO:
     properties:
       bill_rate_amount:
         type: number
@@ -895,13 +877,10 @@ definitions:
         - suspended
         type: string
     type: object
-  dtos.UpdatePlanDTO:
+  dvra-api_internal_app_dtos.UpdatePlanDTO:
     properties:
-      billing_cycle:
-        enum:
-        - monthly
-        - yearly
-        type: string
+      billing_cycle_value_id:
+        type: integer
       can_export_data:
         type: boolean
       can_use_api:
@@ -912,8 +891,8 @@ definitions:
         type: boolean
       can_use_staffing:
         type: boolean
-      currency:
-        type: string
+      currency_value_id:
+        type: integer
       description:
         type: string
       display_order:
@@ -937,20 +916,16 @@ definitions:
       price:
         minimum: 0
         type: number
-      support_level:
-        enum:
-        - email
-        - priority
-        - dedicated
-        type: string
+      support_level_value_id:
+        type: integer
       trial_days:
         minimum: 0
         type: integer
     type: object
-  dtos.UpdatePlatformSettingsDTO:
+  dvra-api_internal_app_dtos.UpdatePlatformSettingsDTO:
     properties:
-      default_plan_tier:
-        type: string
+      default_plan_id:
+        type: integer
       default_trial_days:
         description: Business defaults
         type: integer
@@ -1000,7 +975,7 @@ definitions:
         description: Social
         type: string
     type: object
-  dtos.UpdateRegionDTO:
+  dvra-api_internal_app_dtos.UpdateRegionDTO:
     properties:
       is_active:
         type: boolean
@@ -1009,7 +984,7 @@ definitions:
         minLength: 2
         type: string
     type: object
-  dtos.UpdateStaffingClientDTO:
+  dvra-api_internal_app_dtos.UpdateStaffingClientDTO:
     properties:
       contact_email:
         type: string
@@ -1040,7 +1015,7 @@ definitions:
       website:
         type: string
     type: object
-  dtos.UpdateStateDTO:
+  dvra-api_internal_app_dtos.UpdateStateDTO:
     properties:
       country_code:
         type: string
@@ -1053,7 +1028,7 @@ definitions:
         minLength: 2
         type: string
     type: object
-  dtos.UpdateSubregionDTO:
+  dvra-api_internal_app_dtos.UpdateSubregionDTO:
     properties:
       is_active:
         type: boolean
@@ -1064,7 +1039,7 @@ definitions:
       region_id:
         type: integer
     type: object
-  dtos.UpdateUserDTO:
+  dvra-api_internal_app_dtos.UpdateUserDTO:
     properties:
       email:
         type: string
@@ -1088,63 +1063,6 @@ info:
   title: DVRA API
   version: 1.4.0
 paths:
-  /admin/system-values:
-    get:
-      consumes:
-      - application/json
-      description: Obtiene todos los valores de sistema (solo SuperAdmin)
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Listar todos los valores de sistema
-      tags:
-      - System Values
-    post:
-      consumes:
-      - application/json
-      description: Crea un nuevo valor de sistema (solo SuperAdmin)
-      parameters:
-      - description: Datos del valor
-        in: body
-        name: value
-        required: true
-        schema:
-          $ref: '#/definitions/dtos.CreateSystemValueDTO'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Crear valor de sistema
-      tags:
-      - System Values
   /applications:
     get:
       consumes:
@@ -1184,7 +1102,7 @@ paths:
         name: application
         required: true
         schema:
-          $ref: '#/definitions/dtos.CreateApplicationDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.CreateApplicationDTO'
       produces:
       - application/json
       responses:
@@ -1229,7 +1147,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/dtos.MoveApplicationDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.MoveApplicationDTO'
       produces:
       - application/json
       responses:
@@ -1279,7 +1197,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/dtos.RateApplicationDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.RateApplicationDTO'
       produces:
       - application/json
       responses:
@@ -1352,7 +1270,7 @@ paths:
         name: credentials
         required: true
         schema:
-          $ref: '#/definitions/dtos.LoginDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.LoginDTO'
       produces:
       - application/json
       responses:
@@ -1408,7 +1326,7 @@ paths:
         name: token
         required: true
         schema:
-          $ref: '#/definitions/dtos.RefreshTokenDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.RefreshTokenDTO'
       produces:
       - application/json
       responses:
@@ -1441,7 +1359,7 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/dtos.RegisterDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.RegisterDTO'
       produces:
       - application/json
       responses:
@@ -1474,7 +1392,7 @@ paths:
         name: company
         required: true
         schema:
-          $ref: '#/definitions/dtos.RegisterCompanyDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.RegisterCompanyDTO'
       produces:
       - application/json
       responses:
@@ -1507,14 +1425,14 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/dtos.SwitchCompanyDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.SwitchCompanyDTO'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.SwitchCompanyResponseDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.SwitchCompanyResponseDTO'
       security:
       - BearerAuth: []
       summary: Switch active tenant
@@ -1529,7 +1447,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.SwitchPlatformResponseDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.SwitchPlatformResponseDTO'
       security:
       - BearerAuth: []
       summary: Switch to landlord context
@@ -1698,7 +1616,7 @@ paths:
         name: company
         required: true
         schema:
-          $ref: '#/definitions/dtos.UpdateCompanyDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.UpdateCompanyDTO'
       produces:
       - application/json
       responses:
@@ -1775,7 +1693,7 @@ paths:
         name: department
         required: true
         schema:
-          $ref: '#/definitions/dtos.CreateDepartmentDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.CreateDepartmentDTO'
       produces:
       - application/json
       responses:
@@ -1846,7 +1764,7 @@ paths:
         name: department
         required: true
         schema:
-          $ref: '#/definitions/dtos.UpdateDepartmentDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.UpdateDepartmentDTO'
       produces:
       - application/json
       responses:
@@ -1974,7 +1892,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/dtos.CityDTO'
+              $ref: '#/definitions/dvra-api_internal_app_dtos.CityDTO'
             type: array
       summary: Get all cities
       tags:
@@ -1986,12 +1904,12 @@ paths:
         name: city
         required: true
         schema:
-          $ref: '#/definitions/dtos.CreateCityDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.CreateCityDTO'
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dtos.CityDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.CityDTO'
       summary: Create city
       tags:
       - Locations
@@ -2020,7 +1938,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.CityDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.CityDTO'
       summary: Get city by ID
       tags:
       - Locations
@@ -2036,12 +1954,12 @@ paths:
         name: city
         required: true
         schema:
-          $ref: '#/definitions/dtos.UpdateCityDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.UpdateCityDTO'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.CityDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.CityDTO'
       summary: Update city
       tags:
       - Locations
@@ -2061,7 +1979,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/dtos.CountryDTO'
+              $ref: '#/definitions/dvra-api_internal_app_dtos.CountryDTO'
             type: array
       summary: Get all countries
       tags:
@@ -2073,12 +1991,12 @@ paths:
         name: country
         required: true
         schema:
-          $ref: '#/definitions/dtos.CreateCountryDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.CreateCountryDTO'
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dtos.CountryDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.CountryDTO'
       summary: Create country
       tags:
       - Locations
@@ -2111,7 +2029,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.CountryDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.CountryDTO'
       summary: Get country by ID
       tags:
       - Locations
@@ -2127,12 +2045,12 @@ paths:
         name: country
         required: true
         schema:
-          $ref: '#/definitions/dtos.UpdateCountryDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.UpdateCountryDTO'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.CountryDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.CountryDTO'
       summary: Update country
       tags:
       - Locations
@@ -2148,7 +2066,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.CountryDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.CountryDTO'
       summary: Get country by ISO code
       tags:
       - Locations
@@ -2164,7 +2082,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.CountryDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.CountryDTO'
       summary: Get complete location hierarchy for a country
       tags:
       - Locations
@@ -2180,7 +2098,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/dtos.RegionDTO'
+              $ref: '#/definitions/dvra-api_internal_app_dtos.RegionDTO'
             type: array
       summary: Get all regions
       tags:
@@ -2192,12 +2110,12 @@ paths:
         name: region
         required: true
         schema:
-          $ref: '#/definitions/dtos.CreateRegionDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.CreateRegionDTO'
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dtos.RegionDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.RegionDTO'
       summary: Create region
       tags:
       - Locations
@@ -2230,7 +2148,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.RegionDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.RegionDTO'
       summary: Get region by ID
       tags:
       - Locations
@@ -2246,12 +2164,12 @@ paths:
         name: region
         required: true
         schema:
-          $ref: '#/definitions/dtos.UpdateRegionDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.UpdateRegionDTO'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.RegionDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.RegionDTO'
       summary: Update region
       tags:
       - Locations
@@ -2267,7 +2185,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.LocationSearchDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.LocationSearchDTO'
       summary: Search across all location types
       tags:
       - Locations
@@ -2287,7 +2205,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/dtos.StateDTO'
+              $ref: '#/definitions/dvra-api_internal_app_dtos.StateDTO'
             type: array
       summary: Get all states
       tags:
@@ -2299,12 +2217,12 @@ paths:
         name: state
         required: true
         schema:
-          $ref: '#/definitions/dtos.CreateStateDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.CreateStateDTO'
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dtos.StateDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.StateDTO'
       summary: Create state
       tags:
       - Locations
@@ -2337,7 +2255,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.StateDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.StateDTO'
       summary: Get state by ID
       tags:
       - Locations
@@ -2353,12 +2271,12 @@ paths:
         name: state
         required: true
         schema:
-          $ref: '#/definitions/dtos.UpdateStateDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.UpdateStateDTO'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.StateDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.StateDTO'
       summary: Update state
       tags:
       - Locations
@@ -2374,7 +2292,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/dtos.SubregionDTO'
+              $ref: '#/definitions/dvra-api_internal_app_dtos.SubregionDTO'
             type: array
       summary: Get all subregions
       tags:
@@ -2386,12 +2304,12 @@ paths:
         name: subregion
         required: true
         schema:
-          $ref: '#/definitions/dtos.CreateSubregionDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.CreateSubregionDTO'
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dtos.SubregionDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.SubregionDTO'
       summary: Create subregion
       tags:
       - Locations
@@ -2424,7 +2342,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.SubregionDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.SubregionDTO'
       summary: Get subregion by ID
       tags:
       - Locations
@@ -2440,12 +2358,12 @@ paths:
         name: subregion
         required: true
         schema:
-          $ref: '#/definitions/dtos.UpdateSubregionDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.UpdateSubregionDTO'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.SubregionDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.SubregionDTO'
       summary: Update subregion
       tags:
       - Locations
@@ -2532,7 +2450,7 @@ paths:
         name: membership
         required: true
         schema:
-          $ref: '#/definitions/dtos.UpdateMembershipDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.UpdateMembershipDTO'
       produces:
       - application/json
       responses:
@@ -2585,7 +2503,7 @@ paths:
         name: placement
         required: true
         schema:
-          $ref: '#/definitions/dtos.CreatePlacementDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.CreatePlacementDTO'
       produces:
       - application/json
       responses:
@@ -2654,7 +2572,7 @@ paths:
         name: placement
         required: true
         schema:
-          $ref: '#/definitions/dtos.UpdatePlacementDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.UpdatePlacementDTO'
       produces:
       - application/json
       responses:
@@ -2703,7 +2621,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.PlanResponse'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.PlanResponse'
         "404":
           description: Not Found
           schema:
@@ -2758,7 +2676,7 @@ paths:
         name: company
         required: true
         schema:
-          $ref: '#/definitions/dtos.CreateCompanyDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.CreateCompanyDTO'
       produces:
       - application/json
       responses:
@@ -2856,7 +2774,7 @@ paths:
         name: company
         required: true
         schema:
-          $ref: '#/definitions/dtos.UpdateCompanyDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.UpdateCompanyDTO'
       produces:
       - application/json
       responses:
@@ -2908,7 +2826,7 @@ paths:
         name: membership
         required: true
         schema:
-          $ref: '#/definitions/dtos.CreateMembershipDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.CreateMembershipDTO'
       produces:
       - application/json
       responses:
@@ -2992,7 +2910,7 @@ paths:
         name: membership
         required: true
         schema:
-          $ref: '#/definitions/dtos.UpdateMembershipDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.UpdateMembershipDTO'
       produces:
       - application/json
       responses:
@@ -3039,14 +2957,14 @@ paths:
         name: plan
         required: true
         schema:
-          $ref: '#/definitions/dtos.PlanDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.PlanDTO'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dtos.PlanResponse'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.PlanResponse'
         "400":
           description: Bad Request
           schema:
@@ -3131,7 +3049,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.PlanResponse'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.PlanResponse'
         "404":
           description: Not Found
           schema:
@@ -3164,14 +3082,14 @@ paths:
         name: plan
         required: true
         schema:
-          $ref: '#/definitions/dtos.UpdatePlanDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.UpdatePlanDTO'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.PlanResponse'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.PlanResponse'
         "400":
           description: Bad Request
           schema:
@@ -3211,14 +3129,14 @@ paths:
         name: status
         required: true
         schema:
-          $ref: '#/definitions/dtos.TogglePlanStatusDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.TogglePlanStatusDTO'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.PlanResponse'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.PlanResponse'
         "400":
           description: Bad Request
           schema:
@@ -3253,7 +3171,7 @@ paths:
         name: assignment
         required: true
         schema:
-          $ref: '#/definitions/dtos.AssignPlanToCompanyDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.AssignPlanToCompanyDTO'
       produces:
       - application/json
       responses:
@@ -3298,7 +3216,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.PlatformSettingsFullDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.PlatformSettingsFullDTO'
         "401":
           description: Unauthorized
           schema:
@@ -3332,14 +3250,14 @@ paths:
         name: settings
         required: true
         schema:
-          $ref: '#/definitions/dtos.UpdatePlatformSettingsDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.UpdatePlatformSettingsDTO'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.PlatformSettingsFullDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.PlatformSettingsFullDTO'
         "400":
           description: Bad Request
           schema:
@@ -3533,7 +3451,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.PlatformSettingsPublicDTO'
+            $ref: '#/definitions/dvra-api_internal_app_dtos.PlatformSettingsPublicDTO'
         "500":
           description: Internal Server Error
           schema:
@@ -3574,7 +3492,7 @@ paths:
         name: staffing_client
         required: true
         schema:
-          $ref: '#/definitions/dtos.CreateStaffingClientDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.CreateStaffingClientDTO'
       produces:
       - application/json
       responses:
@@ -3643,7 +3561,7 @@ paths:
         name: staffing_client
         required: true
         schema:
-          $ref: '#/definitions/dtos.UpdateStaffingClientDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.UpdateStaffingClientDTO'
       produces:
       - application/json
       responses:
@@ -3657,31 +3575,46 @@ paths:
       summary: Actualizar cliente final
       tags:
       - StaffingClients
-  /system-values/{category}:
+  /system-values:
     get:
-      consumes:
-      - application/json
-      description: Retorna todos los valores de sistema de una categoría específica
       parameters:
-      - description: 'Categoría (ej: employment_type, contract_type)'
-        in: path
-        name: category
-        required: true
+      - description: Módulo
+        in: query
+        name: module
         type: string
-      produces:
-      - application/json
       responses:
         "200":
           description: OK
           schema:
             additionalProperties: true
             type: object
-        "500":
-          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Lista categorías de catálogos
+      tags:
+      - System Values
+  /system-values/modules/{module}/{category}:
+    get:
+      parameters:
+      - description: Módulo
+        in: path
+        name: module
+        required: true
+        type: string
+      - description: Categoría
+        in: path
+        name: category
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
           schema:
             additionalProperties: true
             type: object
-      summary: Obtener valores por categoría
+      security:
+      - BearerAuth: []
+      summary: Obtiene valores efectivos de un catálogo para el tenant activo
       tags:
       - System Values
   /tenant-roles:
@@ -3739,7 +3672,7 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/dtos.CreateUserDTO'
+          $ref: '#/definitions/dvra-api_internal_app_dtos.CreateUserDTO'
       produces:
       - application/json
       responses:

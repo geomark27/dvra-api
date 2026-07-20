@@ -12,6 +12,7 @@ import (
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
 	"dvra-api/internal/shared/apperr"
+	billingctx "dvra-api/internal/shared/billing"
 	"dvra-api/internal/shared/tenant"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -214,9 +215,12 @@ func (s *candidateService) StoreResume(id uint, scope tenant.Scope, upload Resum
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&company, candidate.CompanyID).Error; err != nil {
 			return err
 		}
-		plan, err := s.planRepo.FindBySlug(company.PlanTier)
+		plan, err := billingctx.CurrentPlan(tx, company.ID)
 		if err != nil {
 			return err
+		}
+		if plan == nil {
+			return ErrPlanNotFound
 		}
 		var used int64
 		if err := tx.Model(&models.StoredFile{}).Where("company_id = ?", company.ID).Select("COALESCE(SUM(size_bytes), 0)").Scan(&used).Error; err != nil {

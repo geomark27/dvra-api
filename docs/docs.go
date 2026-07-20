@@ -23,94 +23,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/admin/system-values": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Obtiene todos los valores de sistema (solo SuperAdmin)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "System Values"
-                ],
-                "summary": "Listar todos los valores de sistema",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Crea un nuevo valor de sistema (solo SuperAdmin)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "System Values"
-                ],
-                "summary": "Crear valor de sistema",
-                "parameters": [
-                    {
-                        "description": "Datos del valor",
-                        "name": "value",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dtos.CreateSystemValueDTO"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/applications": {
             "get": {
                 "security": [
@@ -177,7 +89,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateApplicationDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateApplicationDTO"
                         }
                     }
                 ],
@@ -288,7 +200,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.MoveApplicationDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.MoveApplicationDTO"
                         }
                     }
                 ],
@@ -363,7 +275,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.RateApplicationDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.RateApplicationDTO"
                         }
                     }
                 ],
@@ -426,7 +338,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.LoginDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.LoginDTO"
                         }
                     }
                 ],
@@ -511,7 +423,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.RefreshTokenDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.RefreshTokenDTO"
                         }
                     }
                 ],
@@ -560,7 +472,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.RegisterDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.RegisterDTO"
                         }
                     }
                 ],
@@ -609,7 +521,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.RegisterCompanyDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.RegisterCompanyDTO"
                         }
                     }
                 ],
@@ -663,7 +575,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.SwitchCompanyDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.SwitchCompanyDTO"
                         }
                     }
                 ],
@@ -671,7 +583,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.SwitchCompanyResponseDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.SwitchCompanyResponseDTO"
                         }
                     }
                 }
@@ -696,7 +608,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.SwitchPlatformResponseDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.SwitchPlatformResponseDTO"
                         }
                     }
                 }
@@ -955,7 +867,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateCompanyDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateCompanyDTO"
                         }
                     }
                 ],
@@ -1075,7 +987,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateDepartmentDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateDepartmentDTO"
                         }
                     }
                 ],
@@ -1187,7 +1099,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateDepartmentDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateDepartmentDTO"
                         }
                     }
                 ],
@@ -1378,7 +1290,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dtos.CityDTO"
+                                "$ref": "#/definitions/dvra-api_internal_app_dtos.CityDTO"
                             }
                         }
                     }
@@ -1396,7 +1308,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateCityDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateCityDTO"
                         }
                     }
                 ],
@@ -1404,7 +1316,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dtos.CityDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CityDTO"
                         }
                     }
                 }
@@ -1429,7 +1341,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.CityDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CityDTO"
                         }
                     }
                 }
@@ -1453,7 +1365,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateCityDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateCityDTO"
                         }
                     }
                 ],
@@ -1461,7 +1373,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.CityDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CityDTO"
                         }
                     }
                 }
@@ -1513,7 +1425,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dtos.CountryDTO"
+                                "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                             }
                         }
                     }
@@ -1531,7 +1443,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateCountryDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateCountryDTO"
                         }
                     }
                 ],
@@ -1539,7 +1451,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dtos.CountryDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                         }
                     }
                 }
@@ -1564,7 +1476,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.CountryDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                         }
                     }
                 }
@@ -1595,7 +1507,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.CountryDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                         }
                     }
                 }
@@ -1619,7 +1531,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateCountryDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateCountryDTO"
                         }
                     }
                 ],
@@ -1627,7 +1539,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.CountryDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                         }
                     }
                 }
@@ -1672,7 +1584,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.CountryDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                         }
                     }
                 }
@@ -1698,7 +1610,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dtos.RegionDTO"
+                                "$ref": "#/definitions/dvra-api_internal_app_dtos.RegionDTO"
                             }
                         }
                     }
@@ -1716,7 +1628,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateRegionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateRegionDTO"
                         }
                     }
                 ],
@@ -1724,7 +1636,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dtos.RegionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.RegionDTO"
                         }
                     }
                 }
@@ -1755,7 +1667,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.RegionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.RegionDTO"
                         }
                     }
                 }
@@ -1779,7 +1691,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateRegionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateRegionDTO"
                         }
                     }
                 ],
@@ -1787,7 +1699,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.RegionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.RegionDTO"
                         }
                     }
                 }
@@ -1832,7 +1744,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.LocationSearchDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.LocationSearchDTO"
                         }
                     }
                 }
@@ -1864,7 +1776,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dtos.StateDTO"
+                                "$ref": "#/definitions/dvra-api_internal_app_dtos.StateDTO"
                             }
                         }
                     }
@@ -1882,7 +1794,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateStateDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateStateDTO"
                         }
                     }
                 ],
@@ -1890,7 +1802,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dtos.StateDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.StateDTO"
                         }
                     }
                 }
@@ -1921,7 +1833,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.StateDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.StateDTO"
                         }
                     }
                 }
@@ -1945,7 +1857,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateStateDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateStateDTO"
                         }
                     }
                 ],
@@ -1953,7 +1865,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.StateDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.StateDTO"
                         }
                     }
                 }
@@ -1999,7 +1911,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dtos.SubregionDTO"
+                                "$ref": "#/definitions/dvra-api_internal_app_dtos.SubregionDTO"
                             }
                         }
                     }
@@ -2017,7 +1929,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateSubregionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateSubregionDTO"
                         }
                     }
                 ],
@@ -2025,7 +1937,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dtos.SubregionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.SubregionDTO"
                         }
                     }
                 }
@@ -2056,7 +1968,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.SubregionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.SubregionDTO"
                         }
                     }
                 }
@@ -2080,7 +1992,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateSubregionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateSubregionDTO"
                         }
                     }
                 ],
@@ -2088,7 +2000,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.SubregionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.SubregionDTO"
                         }
                     }
                 }
@@ -2220,7 +2132,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateMembershipDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateMembershipDTO"
                         }
                     }
                 ],
@@ -2335,7 +2247,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreatePlacementDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreatePlacementDTO"
                         }
                     }
                 ],
@@ -2413,7 +2325,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdatePlacementDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdatePlacementDTO"
                         }
                     }
                 ],
@@ -2513,7 +2425,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlanResponse"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlanResponse"
                         }
                     },
                     "404": {
@@ -2603,7 +2515,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateCompanyDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateCompanyDTO"
                         }
                     }
                 ],
@@ -2721,7 +2633,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateCompanyDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateCompanyDTO"
                         }
                     }
                 ],
@@ -2834,7 +2746,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateMembershipDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateMembershipDTO"
                         }
                     }
                 ],
@@ -2933,7 +2845,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateMembershipDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateMembershipDTO"
                         }
                     }
                 ],
@@ -3038,7 +2950,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlanDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlanDTO"
                         }
                     }
                 ],
@@ -3046,7 +2958,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlanResponse"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlanResponse"
                         }
                     },
                     "400": {
@@ -3104,7 +3016,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.AssignPlanToCompanyDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.AssignPlanToCompanyDTO"
                         }
                     }
                 ],
@@ -3176,7 +3088,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlanResponse"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlanResponse"
                         }
                     },
                     "404": {
@@ -3230,7 +3142,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdatePlanDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdatePlanDTO"
                         }
                     }
                 ],
@@ -3238,7 +3150,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlanResponse"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlanResponse"
                         }
                     },
                     "400": {
@@ -3374,7 +3286,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.TogglePlanStatusDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.TogglePlanStatusDTO"
                         }
                     }
                 ],
@@ -3382,7 +3294,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlanResponse"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlanResponse"
                         }
                     },
                     "400": {
@@ -3437,7 +3349,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlatformSettingsFullDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlatformSettingsFullDTO"
                         }
                     },
                     "401": {
@@ -3493,7 +3405,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdatePlatformSettingsDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdatePlatformSettingsDTO"
                         }
                     }
                 ],
@@ -3501,7 +3413,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlatformSettingsFullDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlatformSettingsFullDTO"
                         }
                     },
                     "400": {
@@ -3785,7 +3697,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlatformSettingsPublicDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlatformSettingsPublicDTO"
                         }
                     },
                     "500": {
@@ -3856,7 +3768,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateStaffingClientDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateStaffingClientDTO"
                         }
                     }
                 ],
@@ -3934,7 +3846,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateStaffingClientDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateStaffingClientDTO"
                         }
                     }
                 ],
@@ -3981,26 +3893,23 @@ const docTemplate = `{
                 }
             }
         },
-        "/system-values/{category}": {
+        "/system-values": {
             "get": {
-                "description": "Retorna todos los valores de sistema de una categoría específica",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
                 ],
                 "tags": [
                     "System Values"
                 ],
-                "summary": "Obtener valores por categoría",
+                "summary": "Lista categorías de catálogos",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Categoría (ej: employment_type, contract_type)",
-                        "name": "category",
-                        "in": "path",
-                        "required": true
+                        "description": "Módulo",
+                        "name": "module",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -4010,9 +3919,40 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    }
+                }
+            }
+        },
+        "/system-values/modules/{module}/{category}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "System Values"
+                ],
+                "summary": "Obtiene valores efectivos de un catálogo para el tenant activo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Módulo",
+                        "name": "module",
+                        "in": "path",
+                        "required": true
                     },
-                    "500": {
-                        "description": "Internal Server Error",
+                    {
+                        "type": "string",
+                        "description": "Categoría",
+                        "name": "category",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4113,7 +4053,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateUserDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateUserDTO"
                         }
                     }
                 ],
@@ -4260,7 +4200,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "dtos.AssignPlanToCompanyDTO": {
+        "dvra-api_internal_app_dtos.AssignPlanToCompanyDTO": {
             "type": "object",
             "required": [
                 "company_id",
@@ -4275,7 +4215,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.AuthContextResponse": {
+        "dvra-api_internal_app_dtos.AuthContextResponse": {
             "type": "object",
             "properties": {
                 "company_id": {
@@ -4288,7 +4228,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "tenant_role": {
-                    "$ref": "#/definitions/dtos.TenantRoleResponse"
+                    "$ref": "#/definitions/dvra-api_internal_app_dtos.TenantRoleResponse"
                 },
                 "tenant_role_id": {
                     "type": "integer"
@@ -4298,7 +4238,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.CityDTO": {
+        "dvra-api_internal_app_dtos.CityDTO": {
             "type": "object",
             "properties": {
                 "id": {
@@ -4311,14 +4251,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "state": {
-                    "$ref": "#/definitions/dtos.StateDTO"
+                    "$ref": "#/definitions/dvra-api_internal_app_dtos.StateDTO"
                 },
                 "state_id": {
                     "type": "integer"
                 }
             }
         },
-        "dtos.CompanyResponse": {
+        "dvra-api_internal_app_dtos.CompanyResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -4340,14 +4280,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "tenant_role": {
-                    "$ref": "#/definitions/dtos.TenantRoleResponse"
+                    "$ref": "#/definitions/dvra-api_internal_app_dtos.TenantRoleResponse"
                 },
                 "tenant_role_id": {
                     "type": "integer"
                 }
             }
         },
-        "dtos.CountryDTO": {
+        "dvra-api_internal_app_dtos.CountryDTO": {
             "type": "object",
             "properties": {
                 "id": {
@@ -4374,11 +4314,11 @@ const docTemplate = `{
                 "states": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dtos.StateDTO"
+                        "$ref": "#/definitions/dvra-api_internal_app_dtos.StateDTO"
                     }
                 },
                 "subregion": {
-                    "$ref": "#/definitions/dtos.SubregionDTO"
+                    "$ref": "#/definitions/dvra-api_internal_app_dtos.SubregionDTO"
                 },
                 "subregion_id": {
                     "type": "integer"
@@ -4388,7 +4328,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.CreateApplicationDTO": {
+        "dvra-api_internal_app_dtos.CreateApplicationDTO": {
             "type": "object",
             "required": [
                 "candidate_id",
@@ -4429,7 +4369,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.CreateCityDTO": {
+        "dvra-api_internal_app_dtos.CreateCityDTO": {
             "type": "object",
             "required": [
                 "name",
@@ -4446,7 +4386,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.CreateCompanyDTO": {
+        "dvra-api_internal_app_dtos.CreateCompanyDTO": {
             "type": "object",
             "required": [
                 "name",
@@ -4479,7 +4419,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.CreateCountryDTO": {
+        "dvra-api_internal_app_dtos.CreateCountryDTO": {
             "type": "object",
             "required": [
                 "iso2",
@@ -4514,7 +4454,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.CreateDepartmentDTO": {
+        "dvra-api_internal_app_dtos.CreateDepartmentDTO": {
             "type": "object",
             "required": [
                 "name"
@@ -4541,7 +4481,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.CreateMembershipDTO": {
+        "dvra-api_internal_app_dtos.CreateMembershipDTO": {
             "type": "object",
             "required": [
                 "tenant_role_id",
@@ -4578,7 +4518,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.CreatePlacementDTO": {
+        "dvra-api_internal_app_dtos.CreatePlacementDTO": {
             "type": "object",
             "required": [
                 "application_id",
@@ -4639,7 +4579,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.CreateRegionDTO": {
+        "dvra-api_internal_app_dtos.CreateRegionDTO": {
             "type": "object",
             "required": [
                 "name"
@@ -4652,7 +4592,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.CreateStaffingClientDTO": {
+        "dvra-api_internal_app_dtos.CreateStaffingClientDTO": {
             "type": "object",
             "required": [
                 "name",
@@ -4703,7 +4643,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.CreateStateDTO": {
+        "dvra-api_internal_app_dtos.CreateStateDTO": {
             "type": "object",
             "required": [
                 "country_code",
@@ -4724,7 +4664,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.CreateSubregionDTO": {
+        "dvra-api_internal_app_dtos.CreateSubregionDTO": {
             "type": "object",
             "required": [
                 "name",
@@ -4741,35 +4681,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.CreateSystemValueDTO": {
-            "type": "object",
-            "required": [
-                "category",
-                "label",
-                "value"
-            ],
-            "properties": {
-                "category": {
-                    "type": "string"
-                },
-                "company_id": {
-                    "type": "integer"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "display_order": {
-                    "type": "integer"
-                },
-                "label": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "string"
-                }
-            }
-        },
-        "dtos.CreateUserDTO": {
+        "dvra-api_internal_app_dtos.CreateUserDTO": {
             "type": "object",
             "required": [
                 "email",
@@ -4798,30 +4710,30 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.LocationSearchDTO": {
+        "dvra-api_internal_app_dtos.LocationSearchDTO": {
             "type": "object",
             "properties": {
                 "cities": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dtos.CityDTO"
+                        "$ref": "#/definitions/dvra-api_internal_app_dtos.CityDTO"
                     }
                 },
                 "countries": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dtos.CountryDTO"
+                        "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                     }
                 },
                 "states": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dtos.StateDTO"
+                        "$ref": "#/definitions/dvra-api_internal_app_dtos.StateDTO"
                     }
                 }
             }
         },
-        "dtos.LoginDTO": {
+        "dvra-api_internal_app_dtos.LoginDTO": {
             "type": "object",
             "required": [
                 "email",
@@ -4836,7 +4748,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.MoveApplicationDTO": {
+        "dvra-api_internal_app_dtos.MoveApplicationDTO": {
             "type": "object",
             "required": [
                 "stage"
@@ -4856,23 +4768,19 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.PlanDTO": {
+        "dvra-api_internal_app_dtos.PlanDTO": {
             "type": "object",
             "required": [
-                "billing_cycle",
-                "currency",
+                "billing_cycle_value_id",
+                "currency_value_id",
                 "name",
                 "price",
                 "slug",
-                "support_level"
+                "support_level_value_id"
             ],
             "properties": {
-                "billing_cycle": {
-                    "type": "string",
-                    "enum": [
-                        "monthly",
-                        "yearly"
-                    ]
+                "billing_cycle_value_id": {
+                    "type": "integer"
                 },
                 "can_export_data": {
                     "type": "boolean"
@@ -4889,8 +4797,8 @@ const docTemplate = `{
                 "can_use_staffing": {
                     "type": "boolean"
                 },
-                "currency": {
-                    "type": "string"
+                "currency_value_id": {
+                    "type": "integer"
                 },
                 "description": {
                     "type": "string"
@@ -4929,13 +4837,8 @@ const docTemplate = `{
                 "slug": {
                     "type": "string"
                 },
-                "support_level": {
-                    "type": "string",
-                    "enum": [
-                        "email",
-                        "priority",
-                        "dedicated"
-                    ]
+                "support_level_value_id": {
+                    "type": "integer"
                 },
                 "trial_days": {
                     "type": "integer",
@@ -4943,11 +4846,14 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.PlanResponse": {
+        "dvra-api_internal_app_dtos.PlanResponse": {
             "type": "object",
             "properties": {
                 "billing_cycle": {
                     "type": "string"
+                },
+                "billing_cycle_value_id": {
+                    "type": "integer"
                 },
                 "can_export_data": {
                     "type": "boolean"
@@ -4969,6 +4875,9 @@ const docTemplate = `{
                 },
                 "currency": {
                     "type": "string"
+                },
+                "currency_value_id": {
+                    "type": "integer"
                 },
                 "description": {
                     "type": "string"
@@ -5012,6 +4921,9 @@ const docTemplate = `{
                 "support_level": {
                     "type": "string"
                 },
+                "support_level_value_id": {
+                    "type": "integer"
+                },
                 "trial_days": {
                     "type": "integer"
                 },
@@ -5020,9 +4932,12 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.PlatformSettingsFullDTO": {
+        "dvra-api_internal_app_dtos.PlatformSettingsFullDTO": {
             "type": "object",
             "properties": {
+                "default_plan_id": {
+                    "type": "integer"
+                },
                 "default_plan_tier": {
                     "type": "string"
                 },
@@ -5107,7 +5022,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.PlatformSettingsPublicDTO": {
+        "dvra-api_internal_app_dtos.PlatformSettingsPublicDTO": {
             "type": "object",
             "properties": {
                 "docs_url": {
@@ -5158,7 +5073,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.RateApplicationDTO": {
+        "dvra-api_internal_app_dtos.RateApplicationDTO": {
             "type": "object",
             "required": [
                 "rating"
@@ -5171,7 +5086,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.RefreshTokenDTO": {
+        "dvra-api_internal_app_dtos.RefreshTokenDTO": {
             "type": "object",
             "required": [
                 "refresh_token"
@@ -5182,7 +5097,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.RegionDTO": {
+        "dvra-api_internal_app_dtos.RegionDTO": {
             "type": "object",
             "properties": {
                 "id": {
@@ -5197,12 +5112,12 @@ const docTemplate = `{
                 "subregions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dtos.SubregionDTO"
+                        "$ref": "#/definitions/dvra-api_internal_app_dtos.SubregionDTO"
                     }
                 }
             }
         },
-        "dtos.RegisterCompanyDTO": {
+        "dvra-api_internal_app_dtos.RegisterCompanyDTO": {
             "type": "object",
             "required": [
                 "admin_email",
@@ -5237,7 +5152,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.RegisterDTO": {
+        "dvra-api_internal_app_dtos.RegisterDTO": {
             "type": "object",
             "required": [
                 "email",
@@ -5261,17 +5176,17 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.StateDTO": {
+        "dvra-api_internal_app_dtos.StateDTO": {
             "type": "object",
             "properties": {
                 "cities": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dtos.CityDTO"
+                        "$ref": "#/definitions/dvra-api_internal_app_dtos.CityDTO"
                     }
                 },
                 "country": {
-                    "$ref": "#/definitions/dtos.CountryDTO"
+                    "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                 },
                 "country_code": {
                     "type": "string"
@@ -5290,13 +5205,13 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.SubregionDTO": {
+        "dvra-api_internal_app_dtos.SubregionDTO": {
             "type": "object",
             "properties": {
                 "countries": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dtos.CountryDTO"
+                        "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                     }
                 },
                 "id": {
@@ -5309,14 +5224,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "region": {
-                    "$ref": "#/definitions/dtos.RegionDTO"
+                    "$ref": "#/definitions/dvra-api_internal_app_dtos.RegionDTO"
                 },
                 "region_id": {
                     "type": "integer"
                 }
             }
         },
-        "dtos.SwitchCompanyDTO": {
+        "dvra-api_internal_app_dtos.SwitchCompanyDTO": {
             "type": "object",
             "required": [
                 "company_id"
@@ -5327,35 +5242,35 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.SwitchCompanyResponseDTO": {
+        "dvra-api_internal_app_dtos.SwitchCompanyResponseDTO": {
             "type": "object",
             "properties": {
                 "access_token": {
                     "type": "string"
                 },
                 "company": {
-                    "$ref": "#/definitions/dtos.CompanyResponse"
+                    "$ref": "#/definitions/dvra-api_internal_app_dtos.CompanyResponse"
                 },
                 "refresh_token": {
                     "type": "string"
                 }
             }
         },
-        "dtos.SwitchPlatformResponseDTO": {
+        "dvra-api_internal_app_dtos.SwitchPlatformResponseDTO": {
             "type": "object",
             "properties": {
                 "access_token": {
                     "type": "string"
                 },
                 "active_context": {
-                    "$ref": "#/definitions/dtos.AuthContextResponse"
+                    "$ref": "#/definitions/dvra-api_internal_app_dtos.AuthContextResponse"
                 },
                 "refresh_token": {
                     "type": "string"
                 }
             }
         },
-        "dtos.TenantRoleResponse": {
+        "dvra-api_internal_app_dtos.TenantRoleResponse": {
             "type": "object",
             "properties": {
                 "description": {
@@ -5375,7 +5290,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.TogglePlanStatusDTO": {
+        "dvra-api_internal_app_dtos.TogglePlanStatusDTO": {
             "type": "object",
             "properties": {
                 "is_active": {
@@ -5383,7 +5298,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.UpdateCityDTO": {
+        "dvra-api_internal_app_dtos.UpdateCityDTO": {
             "type": "object",
             "properties": {
                 "is_active": {
@@ -5399,7 +5314,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.UpdateCompanyDTO": {
+        "dvra-api_internal_app_dtos.UpdateCompanyDTO": {
             "type": "object",
             "properties": {
                 "logo_url": {
@@ -5426,7 +5341,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.UpdateCountryDTO": {
+        "dvra-api_internal_app_dtos.UpdateCountryDTO": {
             "type": "object",
             "properties": {
                 "is_active": {
@@ -5457,7 +5372,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.UpdateDepartmentDTO": {
+        "dvra-api_internal_app_dtos.UpdateDepartmentDTO": {
             "type": "object",
             "properties": {
                 "code": {
@@ -5484,7 +5399,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.UpdateMembershipDTO": {
+        "dvra-api_internal_app_dtos.UpdateMembershipDTO": {
             "type": "object",
             "properties": {
                 "is_default": {
@@ -5509,7 +5424,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.UpdatePlacementDTO": {
+        "dvra-api_internal_app_dtos.UpdatePlacementDTO": {
             "type": "object",
             "properties": {
                 "bill_rate_amount": {
@@ -5558,15 +5473,11 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.UpdatePlanDTO": {
+        "dvra-api_internal_app_dtos.UpdatePlanDTO": {
             "type": "object",
             "properties": {
-                "billing_cycle": {
-                    "type": "string",
-                    "enum": [
-                        "monthly",
-                        "yearly"
-                    ]
+                "billing_cycle_value_id": {
+                    "type": "integer"
                 },
                 "can_export_data": {
                     "type": "boolean"
@@ -5583,8 +5494,8 @@ const docTemplate = `{
                 "can_use_staffing": {
                     "type": "boolean"
                 },
-                "currency": {
-                    "type": "string"
+                "currency_value_id": {
+                    "type": "integer"
                 },
                 "description": {
                     "type": "string"
@@ -5620,13 +5531,8 @@ const docTemplate = `{
                     "type": "number",
                     "minimum": 0
                 },
-                "support_level": {
-                    "type": "string",
-                    "enum": [
-                        "email",
-                        "priority",
-                        "dedicated"
-                    ]
+                "support_level_value_id": {
+                    "type": "integer"
                 },
                 "trial_days": {
                     "type": "integer",
@@ -5634,11 +5540,11 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.UpdatePlatformSettingsDTO": {
+        "dvra-api_internal_app_dtos.UpdatePlatformSettingsDTO": {
             "type": "object",
             "properties": {
-                "default_plan_tier": {
-                    "type": "string"
+                "default_plan_id": {
+                    "type": "integer"
                 },
                 "default_trial_days": {
                     "description": "Business defaults",
@@ -5711,7 +5617,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.UpdateRegionDTO": {
+        "dvra-api_internal_app_dtos.UpdateRegionDTO": {
             "type": "object",
             "properties": {
                 "is_active": {
@@ -5724,7 +5630,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.UpdateStaffingClientDTO": {
+        "dvra-api_internal_app_dtos.UpdateStaffingClientDTO": {
             "type": "object",
             "properties": {
                 "contact_email": {
@@ -5768,7 +5674,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.UpdateStateDTO": {
+        "dvra-api_internal_app_dtos.UpdateStateDTO": {
             "type": "object",
             "properties": {
                 "country_code": {
@@ -5787,7 +5693,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.UpdateSubregionDTO": {
+        "dvra-api_internal_app_dtos.UpdateSubregionDTO": {
             "type": "object",
             "properties": {
                 "is_active": {
@@ -5803,7 +5709,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.UpdateUserDTO": {
+        "dvra-api_internal_app_dtos.UpdateUserDTO": {
             "type": "object",
             "properties": {
                 "email": {

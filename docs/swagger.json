@@ -21,94 +21,6 @@
     "host": "localhost:8001",
     "basePath": "/api/v1",
     "paths": {
-        "/admin/system-values": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Obtiene todos los valores de sistema (solo SuperAdmin)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "System Values"
-                ],
-                "summary": "Listar todos los valores de sistema",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Crea un nuevo valor de sistema (solo SuperAdmin)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "System Values"
-                ],
-                "summary": "Crear valor de sistema",
-                "parameters": [
-                    {
-                        "description": "Datos del valor",
-                        "name": "value",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dtos.CreateSystemValueDTO"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/applications": {
             "get": {
                 "security": [
@@ -175,7 +87,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateApplicationDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateApplicationDTO"
                         }
                     }
                 ],
@@ -286,7 +198,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.MoveApplicationDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.MoveApplicationDTO"
                         }
                     }
                 ],
@@ -361,7 +273,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.RateApplicationDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.RateApplicationDTO"
                         }
                     }
                 ],
@@ -424,7 +336,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.LoginDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.LoginDTO"
                         }
                     }
                 ],
@@ -509,7 +421,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.RefreshTokenDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.RefreshTokenDTO"
                         }
                     }
                 ],
@@ -558,7 +470,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.RegisterDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.RegisterDTO"
                         }
                     }
                 ],
@@ -607,7 +519,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.RegisterCompanyDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.RegisterCompanyDTO"
                         }
                     }
                 ],
@@ -661,7 +573,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.SwitchCompanyDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.SwitchCompanyDTO"
                         }
                     }
                 ],
@@ -669,7 +581,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.SwitchCompanyResponseDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.SwitchCompanyResponseDTO"
                         }
                     }
                 }
@@ -694,7 +606,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.SwitchPlatformResponseDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.SwitchPlatformResponseDTO"
                         }
                     }
                 }
@@ -953,7 +865,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateCompanyDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateCompanyDTO"
                         }
                     }
                 ],
@@ -1073,7 +985,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateDepartmentDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateDepartmentDTO"
                         }
                     }
                 ],
@@ -1185,7 +1097,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateDepartmentDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateDepartmentDTO"
                         }
                     }
                 ],
@@ -1376,7 +1288,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dtos.CityDTO"
+                                "$ref": "#/definitions/dvra-api_internal_app_dtos.CityDTO"
                             }
                         }
                     }
@@ -1394,7 +1306,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateCityDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateCityDTO"
                         }
                     }
                 ],
@@ -1402,7 +1314,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dtos.CityDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CityDTO"
                         }
                     }
                 }
@@ -1427,7 +1339,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.CityDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CityDTO"
                         }
                     }
                 }
@@ -1451,7 +1363,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateCityDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateCityDTO"
                         }
                     }
                 ],
@@ -1459,7 +1371,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.CityDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CityDTO"
                         }
                     }
                 }
@@ -1511,7 +1423,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dtos.CountryDTO"
+                                "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                             }
                         }
                     }
@@ -1529,7 +1441,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateCountryDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateCountryDTO"
                         }
                     }
                 ],
@@ -1537,7 +1449,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dtos.CountryDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                         }
                     }
                 }
@@ -1562,7 +1474,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.CountryDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                         }
                     }
                 }
@@ -1593,7 +1505,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.CountryDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                         }
                     }
                 }
@@ -1617,7 +1529,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateCountryDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateCountryDTO"
                         }
                     }
                 ],
@@ -1625,7 +1537,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.CountryDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                         }
                     }
                 }
@@ -1670,7 +1582,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.CountryDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                         }
                     }
                 }
@@ -1696,7 +1608,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dtos.RegionDTO"
+                                "$ref": "#/definitions/dvra-api_internal_app_dtos.RegionDTO"
                             }
                         }
                     }
@@ -1714,7 +1626,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateRegionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateRegionDTO"
                         }
                     }
                 ],
@@ -1722,7 +1634,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dtos.RegionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.RegionDTO"
                         }
                     }
                 }
@@ -1753,7 +1665,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.RegionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.RegionDTO"
                         }
                     }
                 }
@@ -1777,7 +1689,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateRegionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateRegionDTO"
                         }
                     }
                 ],
@@ -1785,7 +1697,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.RegionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.RegionDTO"
                         }
                     }
                 }
@@ -1830,7 +1742,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.LocationSearchDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.LocationSearchDTO"
                         }
                     }
                 }
@@ -1862,7 +1774,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dtos.StateDTO"
+                                "$ref": "#/definitions/dvra-api_internal_app_dtos.StateDTO"
                             }
                         }
                     }
@@ -1880,7 +1792,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateStateDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateStateDTO"
                         }
                     }
                 ],
@@ -1888,7 +1800,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dtos.StateDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.StateDTO"
                         }
                     }
                 }
@@ -1919,7 +1831,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.StateDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.StateDTO"
                         }
                     }
                 }
@@ -1943,7 +1855,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateStateDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateStateDTO"
                         }
                     }
                 ],
@@ -1951,7 +1863,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.StateDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.StateDTO"
                         }
                     }
                 }
@@ -1997,7 +1909,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dtos.SubregionDTO"
+                                "$ref": "#/definitions/dvra-api_internal_app_dtos.SubregionDTO"
                             }
                         }
                     }
@@ -2015,7 +1927,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateSubregionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateSubregionDTO"
                         }
                     }
                 ],
@@ -2023,7 +1935,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dtos.SubregionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.SubregionDTO"
                         }
                     }
                 }
@@ -2054,7 +1966,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.SubregionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.SubregionDTO"
                         }
                     }
                 }
@@ -2078,7 +1990,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateSubregionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateSubregionDTO"
                         }
                     }
                 ],
@@ -2086,7 +1998,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.SubregionDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.SubregionDTO"
                         }
                     }
                 }
@@ -2218,7 +2130,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateMembershipDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateMembershipDTO"
                         }
                     }
                 ],
@@ -2333,7 +2245,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreatePlacementDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreatePlacementDTO"
                         }
                     }
                 ],
@@ -2411,7 +2323,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdatePlacementDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdatePlacementDTO"
                         }
                     }
                 ],
@@ -2511,7 +2423,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlanResponse"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlanResponse"
                         }
                     },
                     "404": {
@@ -2601,7 +2513,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateCompanyDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateCompanyDTO"
                         }
                     }
                 ],
@@ -2719,7 +2631,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateCompanyDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateCompanyDTO"
                         }
                     }
                 ],
@@ -2832,7 +2744,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateMembershipDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateMembershipDTO"
                         }
                     }
                 ],
@@ -2931,7 +2843,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateMembershipDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateMembershipDTO"
                         }
                     }
                 ],
@@ -3036,7 +2948,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlanDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlanDTO"
                         }
                     }
                 ],
@@ -3044,7 +2956,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlanResponse"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlanResponse"
                         }
                     },
                     "400": {
@@ -3102,7 +3014,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.AssignPlanToCompanyDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.AssignPlanToCompanyDTO"
                         }
                     }
                 ],
@@ -3174,7 +3086,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlanResponse"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlanResponse"
                         }
                     },
                     "404": {
@@ -3228,7 +3140,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdatePlanDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdatePlanDTO"
                         }
                     }
                 ],
@@ -3236,7 +3148,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlanResponse"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlanResponse"
                         }
                     },
                     "400": {
@@ -3372,7 +3284,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.TogglePlanStatusDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.TogglePlanStatusDTO"
                         }
                     }
                 ],
@@ -3380,7 +3292,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlanResponse"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlanResponse"
                         }
                     },
                     "400": {
@@ -3435,7 +3347,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlatformSettingsFullDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlatformSettingsFullDTO"
                         }
                     },
                     "401": {
@@ -3491,7 +3403,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdatePlatformSettingsDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdatePlatformSettingsDTO"
                         }
                     }
                 ],
@@ -3499,7 +3411,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlatformSettingsFullDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlatformSettingsFullDTO"
                         }
                     },
                     "400": {
@@ -3783,7 +3695,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PlatformSettingsPublicDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.PlatformSettingsPublicDTO"
                         }
                     },
                     "500": {
@@ -3854,7 +3766,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateStaffingClientDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateStaffingClientDTO"
                         }
                     }
                 ],
@@ -3932,7 +3844,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.UpdateStaffingClientDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.UpdateStaffingClientDTO"
                         }
                     }
                 ],
@@ -3979,26 +3891,23 @@
                 }
             }
         },
-        "/system-values/{category}": {
+        "/system-values": {
             "get": {
-                "description": "Retorna todos los valores de sistema de una categoría específica",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
                 ],
                 "tags": [
                     "System Values"
                 ],
-                "summary": "Obtener valores por categoría",
+                "summary": "Lista categorías de catálogos",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Categoría (ej: employment_type, contract_type)",
-                        "name": "category",
-                        "in": "path",
-                        "required": true
+                        "description": "Módulo",
+                        "name": "module",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -4008,9 +3917,40 @@
                             "type": "object",
                             "additionalProperties": true
                         }
+                    }
+                }
+            }
+        },
+        "/system-values/modules/{module}/{category}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "System Values"
+                ],
+                "summary": "Obtiene valores efectivos de un catálogo para el tenant activo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Módulo",
+                        "name": "module",
+                        "in": "path",
+                        "required": true
                     },
-                    "500": {
-                        "description": "Internal Server Error",
+                    {
+                        "type": "string",
+                        "description": "Categoría",
+                        "name": "category",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4111,7 +4051,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.CreateUserDTO"
+                            "$ref": "#/definitions/dvra-api_internal_app_dtos.CreateUserDTO"
                         }
                     }
                 ],
@@ -4258,7 +4198,7 @@
         }
     },
     "definitions": {
-        "dtos.AssignPlanToCompanyDTO": {
+        "dvra-api_internal_app_dtos.AssignPlanToCompanyDTO": {
             "type": "object",
             "required": [
                 "company_id",
@@ -4273,7 +4213,7 @@
                 }
             }
         },
-        "dtos.AuthContextResponse": {
+        "dvra-api_internal_app_dtos.AuthContextResponse": {
             "type": "object",
             "properties": {
                 "company_id": {
@@ -4286,7 +4226,7 @@
                     "type": "string"
                 },
                 "tenant_role": {
-                    "$ref": "#/definitions/dtos.TenantRoleResponse"
+                    "$ref": "#/definitions/dvra-api_internal_app_dtos.TenantRoleResponse"
                 },
                 "tenant_role_id": {
                     "type": "integer"
@@ -4296,7 +4236,7 @@
                 }
             }
         },
-        "dtos.CityDTO": {
+        "dvra-api_internal_app_dtos.CityDTO": {
             "type": "object",
             "properties": {
                 "id": {
@@ -4309,14 +4249,14 @@
                     "type": "string"
                 },
                 "state": {
-                    "$ref": "#/definitions/dtos.StateDTO"
+                    "$ref": "#/definitions/dvra-api_internal_app_dtos.StateDTO"
                 },
                 "state_id": {
                     "type": "integer"
                 }
             }
         },
-        "dtos.CompanyResponse": {
+        "dvra-api_internal_app_dtos.CompanyResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -4338,14 +4278,14 @@
                     "type": "string"
                 },
                 "tenant_role": {
-                    "$ref": "#/definitions/dtos.TenantRoleResponse"
+                    "$ref": "#/definitions/dvra-api_internal_app_dtos.TenantRoleResponse"
                 },
                 "tenant_role_id": {
                     "type": "integer"
                 }
             }
         },
-        "dtos.CountryDTO": {
+        "dvra-api_internal_app_dtos.CountryDTO": {
             "type": "object",
             "properties": {
                 "id": {
@@ -4372,11 +4312,11 @@
                 "states": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dtos.StateDTO"
+                        "$ref": "#/definitions/dvra-api_internal_app_dtos.StateDTO"
                     }
                 },
                 "subregion": {
-                    "$ref": "#/definitions/dtos.SubregionDTO"
+                    "$ref": "#/definitions/dvra-api_internal_app_dtos.SubregionDTO"
                 },
                 "subregion_id": {
                     "type": "integer"
@@ -4386,7 +4326,7 @@
                 }
             }
         },
-        "dtos.CreateApplicationDTO": {
+        "dvra-api_internal_app_dtos.CreateApplicationDTO": {
             "type": "object",
             "required": [
                 "candidate_id",
@@ -4427,7 +4367,7 @@
                 }
             }
         },
-        "dtos.CreateCityDTO": {
+        "dvra-api_internal_app_dtos.CreateCityDTO": {
             "type": "object",
             "required": [
                 "name",
@@ -4444,7 +4384,7 @@
                 }
             }
         },
-        "dtos.CreateCompanyDTO": {
+        "dvra-api_internal_app_dtos.CreateCompanyDTO": {
             "type": "object",
             "required": [
                 "name",
@@ -4477,7 +4417,7 @@
                 }
             }
         },
-        "dtos.CreateCountryDTO": {
+        "dvra-api_internal_app_dtos.CreateCountryDTO": {
             "type": "object",
             "required": [
                 "iso2",
@@ -4512,7 +4452,7 @@
                 }
             }
         },
-        "dtos.CreateDepartmentDTO": {
+        "dvra-api_internal_app_dtos.CreateDepartmentDTO": {
             "type": "object",
             "required": [
                 "name"
@@ -4539,7 +4479,7 @@
                 }
             }
         },
-        "dtos.CreateMembershipDTO": {
+        "dvra-api_internal_app_dtos.CreateMembershipDTO": {
             "type": "object",
             "required": [
                 "tenant_role_id",
@@ -4576,7 +4516,7 @@
                 }
             }
         },
-        "dtos.CreatePlacementDTO": {
+        "dvra-api_internal_app_dtos.CreatePlacementDTO": {
             "type": "object",
             "required": [
                 "application_id",
@@ -4637,7 +4577,7 @@
                 }
             }
         },
-        "dtos.CreateRegionDTO": {
+        "dvra-api_internal_app_dtos.CreateRegionDTO": {
             "type": "object",
             "required": [
                 "name"
@@ -4650,7 +4590,7 @@
                 }
             }
         },
-        "dtos.CreateStaffingClientDTO": {
+        "dvra-api_internal_app_dtos.CreateStaffingClientDTO": {
             "type": "object",
             "required": [
                 "name",
@@ -4701,7 +4641,7 @@
                 }
             }
         },
-        "dtos.CreateStateDTO": {
+        "dvra-api_internal_app_dtos.CreateStateDTO": {
             "type": "object",
             "required": [
                 "country_code",
@@ -4722,7 +4662,7 @@
                 }
             }
         },
-        "dtos.CreateSubregionDTO": {
+        "dvra-api_internal_app_dtos.CreateSubregionDTO": {
             "type": "object",
             "required": [
                 "name",
@@ -4739,35 +4679,7 @@
                 }
             }
         },
-        "dtos.CreateSystemValueDTO": {
-            "type": "object",
-            "required": [
-                "category",
-                "label",
-                "value"
-            ],
-            "properties": {
-                "category": {
-                    "type": "string"
-                },
-                "company_id": {
-                    "type": "integer"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "display_order": {
-                    "type": "integer"
-                },
-                "label": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "string"
-                }
-            }
-        },
-        "dtos.CreateUserDTO": {
+        "dvra-api_internal_app_dtos.CreateUserDTO": {
             "type": "object",
             "required": [
                 "email",
@@ -4796,30 +4708,30 @@
                 }
             }
         },
-        "dtos.LocationSearchDTO": {
+        "dvra-api_internal_app_dtos.LocationSearchDTO": {
             "type": "object",
             "properties": {
                 "cities": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dtos.CityDTO"
+                        "$ref": "#/definitions/dvra-api_internal_app_dtos.CityDTO"
                     }
                 },
                 "countries": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dtos.CountryDTO"
+                        "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                     }
                 },
                 "states": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dtos.StateDTO"
+                        "$ref": "#/definitions/dvra-api_internal_app_dtos.StateDTO"
                     }
                 }
             }
         },
-        "dtos.LoginDTO": {
+        "dvra-api_internal_app_dtos.LoginDTO": {
             "type": "object",
             "required": [
                 "email",
@@ -4834,7 +4746,7 @@
                 }
             }
         },
-        "dtos.MoveApplicationDTO": {
+        "dvra-api_internal_app_dtos.MoveApplicationDTO": {
             "type": "object",
             "required": [
                 "stage"
@@ -4854,23 +4766,19 @@
                 }
             }
         },
-        "dtos.PlanDTO": {
+        "dvra-api_internal_app_dtos.PlanDTO": {
             "type": "object",
             "required": [
-                "billing_cycle",
-                "currency",
+                "billing_cycle_value_id",
+                "currency_value_id",
                 "name",
                 "price",
                 "slug",
-                "support_level"
+                "support_level_value_id"
             ],
             "properties": {
-                "billing_cycle": {
-                    "type": "string",
-                    "enum": [
-                        "monthly",
-                        "yearly"
-                    ]
+                "billing_cycle_value_id": {
+                    "type": "integer"
                 },
                 "can_export_data": {
                     "type": "boolean"
@@ -4887,8 +4795,8 @@
                 "can_use_staffing": {
                     "type": "boolean"
                 },
-                "currency": {
-                    "type": "string"
+                "currency_value_id": {
+                    "type": "integer"
                 },
                 "description": {
                     "type": "string"
@@ -4927,13 +4835,8 @@
                 "slug": {
                     "type": "string"
                 },
-                "support_level": {
-                    "type": "string",
-                    "enum": [
-                        "email",
-                        "priority",
-                        "dedicated"
-                    ]
+                "support_level_value_id": {
+                    "type": "integer"
                 },
                 "trial_days": {
                     "type": "integer",
@@ -4941,11 +4844,14 @@
                 }
             }
         },
-        "dtos.PlanResponse": {
+        "dvra-api_internal_app_dtos.PlanResponse": {
             "type": "object",
             "properties": {
                 "billing_cycle": {
                     "type": "string"
+                },
+                "billing_cycle_value_id": {
+                    "type": "integer"
                 },
                 "can_export_data": {
                     "type": "boolean"
@@ -4967,6 +4873,9 @@
                 },
                 "currency": {
                     "type": "string"
+                },
+                "currency_value_id": {
+                    "type": "integer"
                 },
                 "description": {
                     "type": "string"
@@ -5010,6 +4919,9 @@
                 "support_level": {
                     "type": "string"
                 },
+                "support_level_value_id": {
+                    "type": "integer"
+                },
                 "trial_days": {
                     "type": "integer"
                 },
@@ -5018,9 +4930,12 @@
                 }
             }
         },
-        "dtos.PlatformSettingsFullDTO": {
+        "dvra-api_internal_app_dtos.PlatformSettingsFullDTO": {
             "type": "object",
             "properties": {
+                "default_plan_id": {
+                    "type": "integer"
+                },
                 "default_plan_tier": {
                     "type": "string"
                 },
@@ -5105,7 +5020,7 @@
                 }
             }
         },
-        "dtos.PlatformSettingsPublicDTO": {
+        "dvra-api_internal_app_dtos.PlatformSettingsPublicDTO": {
             "type": "object",
             "properties": {
                 "docs_url": {
@@ -5156,7 +5071,7 @@
                 }
             }
         },
-        "dtos.RateApplicationDTO": {
+        "dvra-api_internal_app_dtos.RateApplicationDTO": {
             "type": "object",
             "required": [
                 "rating"
@@ -5169,7 +5084,7 @@
                 }
             }
         },
-        "dtos.RefreshTokenDTO": {
+        "dvra-api_internal_app_dtos.RefreshTokenDTO": {
             "type": "object",
             "required": [
                 "refresh_token"
@@ -5180,7 +5095,7 @@
                 }
             }
         },
-        "dtos.RegionDTO": {
+        "dvra-api_internal_app_dtos.RegionDTO": {
             "type": "object",
             "properties": {
                 "id": {
@@ -5195,12 +5110,12 @@
                 "subregions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dtos.SubregionDTO"
+                        "$ref": "#/definitions/dvra-api_internal_app_dtos.SubregionDTO"
                     }
                 }
             }
         },
-        "dtos.RegisterCompanyDTO": {
+        "dvra-api_internal_app_dtos.RegisterCompanyDTO": {
             "type": "object",
             "required": [
                 "admin_email",
@@ -5235,7 +5150,7 @@
                 }
             }
         },
-        "dtos.RegisterDTO": {
+        "dvra-api_internal_app_dtos.RegisterDTO": {
             "type": "object",
             "required": [
                 "email",
@@ -5259,17 +5174,17 @@
                 }
             }
         },
-        "dtos.StateDTO": {
+        "dvra-api_internal_app_dtos.StateDTO": {
             "type": "object",
             "properties": {
                 "cities": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dtos.CityDTO"
+                        "$ref": "#/definitions/dvra-api_internal_app_dtos.CityDTO"
                     }
                 },
                 "country": {
-                    "$ref": "#/definitions/dtos.CountryDTO"
+                    "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                 },
                 "country_code": {
                     "type": "string"
@@ -5288,13 +5203,13 @@
                 }
             }
         },
-        "dtos.SubregionDTO": {
+        "dvra-api_internal_app_dtos.SubregionDTO": {
             "type": "object",
             "properties": {
                 "countries": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dtos.CountryDTO"
+                        "$ref": "#/definitions/dvra-api_internal_app_dtos.CountryDTO"
                     }
                 },
                 "id": {
@@ -5307,14 +5222,14 @@
                     "type": "string"
                 },
                 "region": {
-                    "$ref": "#/definitions/dtos.RegionDTO"
+                    "$ref": "#/definitions/dvra-api_internal_app_dtos.RegionDTO"
                 },
                 "region_id": {
                     "type": "integer"
                 }
             }
         },
-        "dtos.SwitchCompanyDTO": {
+        "dvra-api_internal_app_dtos.SwitchCompanyDTO": {
             "type": "object",
             "required": [
                 "company_id"
@@ -5325,35 +5240,35 @@
                 }
             }
         },
-        "dtos.SwitchCompanyResponseDTO": {
+        "dvra-api_internal_app_dtos.SwitchCompanyResponseDTO": {
             "type": "object",
             "properties": {
                 "access_token": {
                     "type": "string"
                 },
                 "company": {
-                    "$ref": "#/definitions/dtos.CompanyResponse"
+                    "$ref": "#/definitions/dvra-api_internal_app_dtos.CompanyResponse"
                 },
                 "refresh_token": {
                     "type": "string"
                 }
             }
         },
-        "dtos.SwitchPlatformResponseDTO": {
+        "dvra-api_internal_app_dtos.SwitchPlatformResponseDTO": {
             "type": "object",
             "properties": {
                 "access_token": {
                     "type": "string"
                 },
                 "active_context": {
-                    "$ref": "#/definitions/dtos.AuthContextResponse"
+                    "$ref": "#/definitions/dvra-api_internal_app_dtos.AuthContextResponse"
                 },
                 "refresh_token": {
                     "type": "string"
                 }
             }
         },
-        "dtos.TenantRoleResponse": {
+        "dvra-api_internal_app_dtos.TenantRoleResponse": {
             "type": "object",
             "properties": {
                 "description": {
@@ -5373,7 +5288,7 @@
                 }
             }
         },
-        "dtos.TogglePlanStatusDTO": {
+        "dvra-api_internal_app_dtos.TogglePlanStatusDTO": {
             "type": "object",
             "properties": {
                 "is_active": {
@@ -5381,7 +5296,7 @@
                 }
             }
         },
-        "dtos.UpdateCityDTO": {
+        "dvra-api_internal_app_dtos.UpdateCityDTO": {
             "type": "object",
             "properties": {
                 "is_active": {
@@ -5397,7 +5312,7 @@
                 }
             }
         },
-        "dtos.UpdateCompanyDTO": {
+        "dvra-api_internal_app_dtos.UpdateCompanyDTO": {
             "type": "object",
             "properties": {
                 "logo_url": {
@@ -5424,7 +5339,7 @@
                 }
             }
         },
-        "dtos.UpdateCountryDTO": {
+        "dvra-api_internal_app_dtos.UpdateCountryDTO": {
             "type": "object",
             "properties": {
                 "is_active": {
@@ -5455,7 +5370,7 @@
                 }
             }
         },
-        "dtos.UpdateDepartmentDTO": {
+        "dvra-api_internal_app_dtos.UpdateDepartmentDTO": {
             "type": "object",
             "properties": {
                 "code": {
@@ -5482,7 +5397,7 @@
                 }
             }
         },
-        "dtos.UpdateMembershipDTO": {
+        "dvra-api_internal_app_dtos.UpdateMembershipDTO": {
             "type": "object",
             "properties": {
                 "is_default": {
@@ -5507,7 +5422,7 @@
                 }
             }
         },
-        "dtos.UpdatePlacementDTO": {
+        "dvra-api_internal_app_dtos.UpdatePlacementDTO": {
             "type": "object",
             "properties": {
                 "bill_rate_amount": {
@@ -5556,15 +5471,11 @@
                 }
             }
         },
-        "dtos.UpdatePlanDTO": {
+        "dvra-api_internal_app_dtos.UpdatePlanDTO": {
             "type": "object",
             "properties": {
-                "billing_cycle": {
-                    "type": "string",
-                    "enum": [
-                        "monthly",
-                        "yearly"
-                    ]
+                "billing_cycle_value_id": {
+                    "type": "integer"
                 },
                 "can_export_data": {
                     "type": "boolean"
@@ -5581,8 +5492,8 @@
                 "can_use_staffing": {
                     "type": "boolean"
                 },
-                "currency": {
-                    "type": "string"
+                "currency_value_id": {
+                    "type": "integer"
                 },
                 "description": {
                     "type": "string"
@@ -5618,13 +5529,8 @@
                     "type": "number",
                     "minimum": 0
                 },
-                "support_level": {
-                    "type": "string",
-                    "enum": [
-                        "email",
-                        "priority",
-                        "dedicated"
-                    ]
+                "support_level_value_id": {
+                    "type": "integer"
                 },
                 "trial_days": {
                     "type": "integer",
@@ -5632,11 +5538,11 @@
                 }
             }
         },
-        "dtos.UpdatePlatformSettingsDTO": {
+        "dvra-api_internal_app_dtos.UpdatePlatformSettingsDTO": {
             "type": "object",
             "properties": {
-                "default_plan_tier": {
-                    "type": "string"
+                "default_plan_id": {
+                    "type": "integer"
                 },
                 "default_trial_days": {
                     "description": "Business defaults",
@@ -5709,7 +5615,7 @@
                 }
             }
         },
-        "dtos.UpdateRegionDTO": {
+        "dvra-api_internal_app_dtos.UpdateRegionDTO": {
             "type": "object",
             "properties": {
                 "is_active": {
@@ -5722,7 +5628,7 @@
                 }
             }
         },
-        "dtos.UpdateStaffingClientDTO": {
+        "dvra-api_internal_app_dtos.UpdateStaffingClientDTO": {
             "type": "object",
             "properties": {
                 "contact_email": {
@@ -5766,7 +5672,7 @@
                 }
             }
         },
-        "dtos.UpdateStateDTO": {
+        "dvra-api_internal_app_dtos.UpdateStateDTO": {
             "type": "object",
             "properties": {
                 "country_code": {
@@ -5785,7 +5691,7 @@
                 }
             }
         },
-        "dtos.UpdateSubregionDTO": {
+        "dvra-api_internal_app_dtos.UpdateSubregionDTO": {
             "type": "object",
             "properties": {
                 "is_active": {
@@ -5801,7 +5707,7 @@
                 }
             }
         },
-        "dtos.UpdateUserDTO": {
+        "dvra-api_internal_app_dtos.UpdateUserDTO": {
             "type": "object",
             "properties": {
                 "email": {

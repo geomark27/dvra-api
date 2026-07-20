@@ -50,7 +50,6 @@ func SeedPlatformSettings(db *gorm.DB) error {
 
 		// Business defaults
 		DefaultTrialDays: 14,
-		DefaultPlanTier:  "starter",
 
 		// Legal (vacío por defecto, configurable)
 		LegalCompanyName: "",
@@ -62,6 +61,10 @@ func SeedPlatformSettings(db *gorm.DB) error {
 		TwitterURL:  "",
 		LinkedinURL: "",
 		GithubURL:   "",
+	}
+	var defaultPlan models.Plan
+	if err := db.Where("slug = ?", "starter").First(&defaultPlan).Error; err == nil {
+		settings.DefaultPlanID = &defaultPlan.ID
 	}
 
 	if err := db.Create(&settings).Error; err != nil {

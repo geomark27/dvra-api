@@ -1,19 +1,22 @@
 package dtos
 
-// CreateSystemValueDTO for creating a new system value
 type CreateSystemValueDTO struct {
-	Category     string  `json:"category" binding:"required"`
-	Value        string  `json:"value" binding:"required"`
-	Label        string  `json:"label" binding:"required"`
-	Description  *string `json:"description"`
+	CategoryID   uint    `json:"category_id" binding:"required"`
+	Value        string  `json:"value" binding:"required,min=1,max=100"`
+	Label        string  `json:"label" binding:"required,min=1,max=200"`
+	Description  *string `json:"description,omitempty"`
 	DisplayOrder int     `json:"display_order"`
-	CompanyID    *uint   `json:"company_id"`
 }
 
-// UpdateSystemValueDTO for updating a system value
 type UpdateSystemValueDTO struct {
-	Label        string  `json:"label"`
-	Description  *string `json:"description"`
-	DisplayOrder int     `json:"display_order"`
-	IsActive     bool    `json:"is_active"`
+	Label        *string `json:"label,omitempty" binding:"omitempty,min=1,max=200"`
+	Description  *string `json:"description,omitempty"`
+	DisplayOrder *int    `json:"display_order,omitempty"`
+	IsActive     *bool   `json:"is_active,omitempty"`
+}
+
+type UpsertSystemValueOverrideDTO struct {
+	CustomLabel  *string `json:"custom_label,omitempty" binding:"omitempty,min=1,max=200"`
+	DisplayOrder *int    `json:"display_order,omitempty"`
+	IsEnabled    *bool   `json:"is_enabled,omitempty"`
 }

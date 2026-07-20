@@ -32,7 +32,7 @@ func (r *PlatformSettingsRepository) Get() (*models.PlatformSettings, error) {
 	var settings models.PlatformSettings
 
 	// Intentar obtener el registro existente
-	result := r.db.First(&settings)
+	result := r.db.Preload("DefaultPlan").First(&settings)
 	if result.Error != nil {
 		// Si no existe, crear uno con valores por defecto
 		if result.RowsAffected == 0 {
@@ -44,7 +44,6 @@ func (r *PlatformSettingsRepository) Get() (*models.PlatformSettings, error) {
 				SupportEmail:     "support@dvra.app",
 				MarketingURL:     "https://dvra.app",
 				DefaultTrialDays: 14,
-				DefaultPlanTier:  "free",
 			}
 			if err := r.db.Create(&settings).Error; err != nil {
 				return nil, err

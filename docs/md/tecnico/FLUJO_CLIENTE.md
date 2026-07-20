@@ -5,7 +5,7 @@
 > Describe en detalle qué puede y NO puede hacer un Cliente en el ATS
 
 > La definición canónica de los contextos está en
-> [ADR-002](ADR-002-contextos-landlord-tenant.md). Los ejemplos antiguos que
+> [ADR-002](adr/ADR-002-contextos-landlord-tenant.md). Los ejemplos antiguos que
 > contradigan ese ADR deben considerarse históricos.
 
 ---

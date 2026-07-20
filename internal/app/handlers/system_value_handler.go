@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"net/http"
+	"strconv"
+
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/services"
 	"dvra-api/internal/shared/apperr"
-	"net/http"
-	"strconv"
+	"dvra-api/internal/shared/authctx"
 
 	"github.com/geomark27/loom-go/pkg/helpers"
 	"github.com/gin-gonic/gin"
@@ -17,143 +19,174 @@ type SystemValueHandler struct {
 }
 
 func NewSystemValueHandler(service services.SystemValueService) *SystemValueHandler {
-	return &SystemValueHandler{
-		service: service,
-		logger:  helpers.NewLogger(),
-	}
+	return &SystemValueHandler{service: service, logger: helpers.NewLogger()}
 }
 
-// GetByCategory godoc
-// @Summary      Obtener valores por categoría
-// @Description  Retorna todos los valores de sistema de una categoría específica
-// @Tags         System Values
-// @Accept       json
-// @Produce      json
-// @Param        category  path  string  true  "Categoría (ej: employment_type, contract_type)"
-// @Success      200       {object}  map[string]interface{}
-// @Failure      500       {object}  map[string]interface{}
-// @Router       /system-values/{category} [get]
-func (h *SystemValueHandler) GetByCategory(c *gin.Context) {
-	category := c.Param("category")
-
-	// Get company_id from header if present
-	var companyID *uint
-	if companyIDStr := c.GetHeader("X-Company-ID"); companyIDStr != "" {
-		if id, err := strconv.ParseUint(companyIDStr, 10, 32); err == nil {
-			companyIDUint := uint(id)
-			companyID = &companyIDUint
-		}
+func tenantCompanyID(c *gin.Context) (uint, bool) {
+	companyID, ok := authctx.CompanyID(c)
+	if !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": "tenant context required"})
 	}
+	return companyID, ok
+}
 
-	values, err := h.service.GetByCategory(category, companyID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve system values"})
+// GetCategories godoc
+// @Summary Lista categorías de catálogos
+// @Tags System Values
+// @Security BearerAuth
+// @Param module query string false "Módulo"
+// @Success 200 {object} map[string]interface{}
+// @Router /system-values [get]
+func (h *SystemValueHandler) GetCategories(c *gin.Context) {
+	categories, err := h.service.GetCategories(c.Query("module"))
+	respondSystemValue(c, http.StatusOK, categories, err)
+}
+
+// GetByCategory preserves the original route while clients migrate to the
+// unambiguous /system-values/modules/:module/:category endpoint.
+func (h *SystemValueHandler) GetByCategory(c *gin.Context) {
+	companyID, ok := tenantCompanyID(c)
+	if !ok {
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"status": "success",
-		"data":   values,
-	})
+	values, err := h.service.GetByLegacyCategory(c.Param("category"), &companyID)
+	respondSystemValue(c, http.StatusOK, values, err)
 }
 
-// GetAll godoc
-// @Summary      Listar todos los valores de sistema
-// @Description  Obtiene todos los valores de sistema (solo SuperAdmin)
-// @Tags         System Values
-// @Accept       json
-// @Produce      json
-// @Success      200  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]interface{}
-// @Security     BearerAuth
-// @Router       /admin/system-values [get]
+// GetByModuleCategory godoc
+// @Summary Obtiene valores efectivos de un catálogo para el tenant activo
+// @Tags System Values
+// @Security BearerAuth
+// @Param module path string true "Módulo"
+// @Param category path string true "Categoría"
+// @Success 200 {object} map[string]interface{}
+// @Router /system-values/modules/{module}/{category} [get]
+func (h *SystemValueHandler) GetByModuleCategory(c *gin.Context) {
+	companyID, ok := tenantCompanyID(c)
+	if !ok {
+		return
+	}
+	values, err := h.service.GetByCategory(c.Param("module"), c.Param("category"), &companyID)
+	respondSystemValue(c, http.StatusOK, values, err)
+}
+
 func (h *SystemValueHandler) GetAll(c *gin.Context) {
 	values, err := h.service.GetAll()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve system values"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"status": "success",
-		"data":   values,
-	})
+	respondSystemValue(c, http.StatusOK, values, err)
 }
 
-// Create godoc
-// @Summary      Crear valor de sistema
-// @Description  Crea un nuevo valor de sistema (solo SuperAdmin)
-// @Tags         System Values
-// @Accept       json
-// @Produce      json
-// @Param        value  body      dtos.CreateSystemValueDTO  true  "Datos del valor"
-// @Success      201    {object}  map[string]interface{}
-// @Failure      400    {object}  map[string]interface{}
-// @Failure      500    {object}  map[string]interface{}
-// @Security     BearerAuth
-// @Router       /admin/system-values [post]
+// CreateTenant creates a value owned by the company in the JWT. company_id is
+// deliberately absent from the request DTO.
+func (h *SystemValueHandler) CreateTenant(c *gin.Context) {
+	companyID, ok := tenantCompanyID(c)
+	if !ok {
+		return
+	}
+	var dto dtos.CreateSystemValueDTO
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	value, err := h.service.CreateTenant(companyID, dto)
+	respondSystemValue(c, http.StatusCreated, value, err)
+}
+
+func (h *SystemValueHandler) UpdateTenant(c *gin.Context) {
+	companyID, ok := tenantCompanyID(c)
+	if !ok {
+		return
+	}
+	id, ok := systemValueID(c)
+	if !ok {
+		return
+	}
+	var dto dtos.UpdateSystemValueDTO
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	value, err := h.service.UpdateTenant(companyID, id, dto)
+	respondSystemValue(c, http.StatusOK, value, err)
+}
+
+func (h *SystemValueHandler) DeleteTenant(c *gin.Context) {
+	companyID, ok := tenantCompanyID(c)
+	if !ok {
+		return
+	}
+	id, ok := systemValueID(c)
+	if !ok {
+		return
+	}
+	err := h.service.DeleteTenant(companyID, id)
+	respondSystemValue(c, http.StatusOK, gin.H{"message": "catalog value deleted"}, err)
+}
+
+func (h *SystemValueHandler) UpsertTenantOverride(c *gin.Context) {
+	companyID, ok := tenantCompanyID(c)
+	if !ok {
+		return
+	}
+	id, ok := systemValueID(c)
+	if !ok {
+		return
+	}
+	var dto dtos.UpsertSystemValueOverrideDTO
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	err := h.service.UpsertTenantOverride(companyID, id, dto)
+	respondSystemValue(c, http.StatusOK, gin.H{"message": "catalog override saved"}, err)
+}
+
+// Create creates a landlord-owned global value.
 func (h *SystemValueHandler) Create(c *gin.Context) {
 	var dto dtos.CreateSystemValueDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	value, err := h.service.Create(dto)
-	if err != nil {
-		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusCreated, gin.H{
-		"status":  "success",
-		"message": "System value created successfully",
-		"data":    value,
-	})
+	value, err := h.service.CreateGlobal(dto)
+	respondSystemValue(c, http.StatusCreated, value, err)
 }
 
-// Update updates a system value (admin only)
 func (h *SystemValueHandler) Update(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+	id, ok := systemValueID(c)
+	if !ok {
 		return
 	}
-
 	var dto dtos.UpdateSystemValueDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	value, err := h.service.Update(uint(id), dto)
-	if err != nil {
-		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
-		"message": "System value updated successfully",
-		"data":    value,
-	})
+	value, err := h.service.UpdateGlobal(id, dto)
+	respondSystemValue(c, http.StatusOK, value, err)
 }
 
-// Delete deletes a system value (admin only)
 func (h *SystemValueHandler) Delete(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+	id, ok := systemValueID(c)
+	if !ok {
 		return
 	}
+	err := h.service.DeleteGlobal(id)
+	respondSystemValue(c, http.StatusOK, gin.H{"message": "global catalog value deleted"}, err)
+}
 
-	if err := h.service.Delete(uint(id)); err != nil {
+func systemValueID(c *gin.Context) (uint, bool) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return 0, false
+	}
+	return uint(id), true
+}
+
+func respondSystemValue(c *gin.Context, status int, data interface{}, err error) {
+	if err != nil {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
-		"message": "System value deleted successfully",
-	})
+	c.JSON(status, gin.H{"status": "success", "data": data})
 }

@@ -53,6 +53,7 @@ type PlatformSettingsFullDTO struct {
 	// Business defaults
 	DefaultTrialDays int    `json:"default_trial_days"`
 	DefaultPlanTier  string `json:"default_plan_tier"`
+	DefaultPlanID    *uint  `json:"default_plan_id,omitempty"`
 
 	// Legal
 	LegalCompanyName string `json:"legal_company_name,omitempty"`
@@ -92,8 +93,8 @@ type UpdatePlatformSettingsDTO struct {
 	PrivacyURL   *string `json:"privacy_url,omitempty"`
 
 	// Business defaults
-	DefaultTrialDays *int    `json:"default_trial_days,omitempty"`
-	DefaultPlanTier  *string `json:"default_plan_tier,omitempty"`
+	DefaultTrialDays *int  `json:"default_trial_days,omitempty"`
+	DefaultPlanID    *uint `json:"default_plan_id,omitempty"`
 
 	// Legal
 	LegalCompanyName *string `json:"legal_company_name,omitempty"`
@@ -150,7 +151,8 @@ func ToPlatformSettingsFullDTO(s *models.PlatformSettings) PlatformSettingsFullD
 		TermsURL:         s.TermsURL,
 		PrivacyURL:       s.PrivacyURL,
 		DefaultTrialDays: s.DefaultTrialDays,
-		DefaultPlanTier:  s.DefaultPlanTier,
+		DefaultPlanTier:  platformDefaultPlanSlug(s),
+		DefaultPlanID:    s.DefaultPlanID,
 		LegalCompanyName: s.LegalCompanyName,
 		LegalAddress:     s.LegalAddress,
 		LegalCountry:     s.LegalCountry,
@@ -161,4 +163,11 @@ func ToPlatformSettingsFullDTO(s *models.PlatformSettings) PlatformSettingsFullD
 		UpdatedAt:        s.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedByID:      s.UpdatedByID,
 	}
+}
+
+func platformDefaultPlanSlug(settings *models.PlatformSettings) string {
+	if settings.DefaultPlan == nil {
+		return ""
+	}
+	return settings.DefaultPlan.Slug
 }

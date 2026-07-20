@@ -127,8 +127,8 @@ func (s *PlatformSettingsService) applyUpdates(settings *models.PlatformSettings
 		}
 		settings.DefaultTrialDays = *dto.DefaultTrialDays
 	}
-	if dto.DefaultPlanTier != nil {
-		settings.DefaultPlanTier = *dto.DefaultPlanTier
+	if dto.DefaultPlanID != nil {
+		settings.DefaultPlanID = dto.DefaultPlanID
 	}
 
 	// Legal
@@ -174,5 +174,8 @@ func (s *PlatformSettingsService) GetDefaultPlanTier() (string, error) {
 	if err != nil {
 		return "basic", err // Default fallback
 	}
-	return settings.DefaultPlanTier, nil
+	if settings.DefaultPlan == nil {
+		return "", nil
+	}
+	return settings.DefaultPlan.Slug, nil
 }

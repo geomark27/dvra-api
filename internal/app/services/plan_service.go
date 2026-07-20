@@ -2,11 +2,14 @@ package services
 
 import (
 	"errors"
+	"time"
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
 	"dvra-api/internal/shared/apperr"
+	billingctx "dvra-api/internal/shared/billing"
+	"dvra-api/internal/shared/catalog"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -33,7 +36,7 @@ type PlanService interface {
 	UpdatePlan(id uint, dto *dtos.UpdatePlanDTO) (*dtos.PlanResponse, error)
 	TogglePlanStatus(id uint, isActive bool) (*dtos.PlanResponse, error)
 	DeletePlan(id uint) error
-	AssignPlanToCompany(companyID uint, planSlug string) error
+	AssignPlanToCompany(companyID uint, planID uint) error
 	CompanyHasFeature(companyID uint, feature string) (bool, error)
 	PublishJobWithinLimit(job *models.Job) error
 }
@@ -59,6 +62,9 @@ func NewPlanService(
 
 // CreatePlan creates a new plan
 func (s *planService) CreatePlan(dto *dtos.PlanDTO) (*dtos.PlanResponse, error) {
+	if err := s.validatePlanCatalogs(dto.CurrencyValueID, dto.BillingCycleValueID, dto.SupportLevelValueID); err != nil {
+		return nil, err
+	}
 	// Check if slug already exists
 	exists, err := s.planRepo.ExistsBySlug(dto.Slug)
 	if err != nil {
@@ -69,27 +75,27 @@ func (s *planService) CreatePlan(dto *dtos.PlanDTO) (*dtos.PlanResponse, error) 
 	}
 
 	plan := &models.Plan{
-		Name:               dto.Name,
-		Slug:               dto.Slug,
-		Description:        dto.Description,
-		Price:              dto.Price,
-		Currency:           dto.Currency,
-		BillingCycle:       dto.BillingCycle,
-		IsActive:           dto.IsActive,
-		IsPublic:           dto.IsPublic,
-		TrialDays:          dto.TrialDays,
-		DisplayOrder:       dto.DisplayOrder,
-		MaxUsers:           dto.MaxUsers,
-		MaxJobs:            dto.MaxJobs,
-		MaxCandidates:      dto.MaxCandidates,
-		MaxApplications:    dto.MaxApplications,
-		MaxStorageGB:       dto.MaxStorageGB,
-		CanExportData:      dto.CanExportData,
-		CanUseCustomBrand:  dto.CanUseCustomBrand,
-		CanUseAPI:          dto.CanUseAPI,
-		CanUseIntegrations: dto.CanUseIntegrations,
-		CanUseStaffing:     dto.CanUseStaffing,
-		SupportLevel:       dto.SupportLevel,
+		Name:                dto.Name,
+		Slug:                dto.Slug,
+		Description:         dto.Description,
+		Price:               dto.Price,
+		CurrencyValueID:     dto.CurrencyValueID,
+		BillingCycleValueID: dto.BillingCycleValueID,
+		IsActive:            dto.IsActive,
+		IsPublic:            dto.IsPublic,
+		TrialDays:           dto.TrialDays,
+		DisplayOrder:        dto.DisplayOrder,
+		MaxUsers:            dto.MaxUsers,
+		MaxJobs:             dto.MaxJobs,
+		MaxCandidates:       dto.MaxCandidates,
+		MaxApplications:     dto.MaxApplications,
+		MaxStorageGB:        dto.MaxStorageGB,
+		CanExportData:       dto.CanExportData,
+		CanUseCustomBrand:   dto.CanUseCustomBrand,
+		CanUseAPI:           dto.CanUseAPI,
+		CanUseIntegrations:  dto.CanUseIntegrations,
+		CanUseStaffing:      dto.CanUseStaffing,
+		SupportLevelValueID: dto.SupportLevelValueID,
 	}
 
 	createdPlan, err := s.planRepo.Create(plan)
@@ -171,11 +177,11 @@ func (s *planService) UpdatePlan(id uint, dto *dtos.UpdatePlanDTO) (*dtos.PlanRe
 	if dto.Price != nil {
 		plan.Price = *dto.Price
 	}
-	if dto.Currency != nil {
-		plan.Currency = *dto.Currency
+	if dto.CurrencyValueID != nil {
+		plan.CurrencyValueID = *dto.CurrencyValueID
 	}
-	if dto.BillingCycle != nil {
-		plan.BillingCycle = *dto.BillingCycle
+	if dto.BillingCycleValueID != nil {
+		plan.BillingCycleValueID = *dto.BillingCycleValueID
 	}
 	if dto.IsActive != nil {
 		plan.IsActive = *dto.IsActive
@@ -219,8 +225,11 @@ func (s *planService) UpdatePlan(id uint, dto *dtos.UpdatePlanDTO) (*dtos.PlanRe
 	if dto.CanUseStaffing != nil {
 		plan.CanUseStaffing = *dto.CanUseStaffing
 	}
-	if dto.SupportLevel != nil {
-		plan.SupportLevel = *dto.SupportLevel
+	if dto.SupportLevelValueID != nil {
+		plan.SupportLevelValueID = *dto.SupportLevelValueID
+	}
+	if err := s.validatePlanCatalogs(plan.CurrencyValueID, plan.BillingCycleValueID, plan.SupportLevelValueID); err != nil {
+		return nil, err
 	}
 
 	updatedPlan, err := s.planRepo.Update(plan)
@@ -263,7 +272,7 @@ func (s *planService) DeletePlan(id uint) error {
 
 	// Check if plan is in use by companies
 	var count int64
-	err = s.db.Model(&models.Company{}).Where("plan_tier = ?", id).Count(&count).Error
+	err = s.db.Model(&models.CompanySubscription{}).Where("plan_id = ?", id).Count(&count).Error
 	if err != nil {
 		return err
 	}
@@ -275,9 +284,9 @@ func (s *planService) DeletePlan(id uint) error {
 }
 
 // AssignPlanToCompany assigns a plan to a company
-func (s *planService) AssignPlanToCompany(companyID uint, planSlug string) error {
+func (s *planService) AssignPlanToCompany(companyID uint, planID uint) error {
 	// Verify plan exists and is active
-	plan, err := s.planRepo.FindBySlug(planSlug)
+	plan, err := s.planRepo.FindByID(planID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrPlanNotFound
@@ -295,10 +304,30 @@ func (s *planService) AssignPlanToCompany(companyID uint, planSlug string) error
 		return ErrCompanyNotFound
 	}
 
-	// Update company plan
-	company.PlanTier = planSlug
-	_, err = s.companyRepo.Update(company)
-	return err
+	status, err := catalog.ResolveGlobal(s.db, "billing", "subscription_status", "active")
+	if err != nil {
+		return err
+	}
+	if status == nil {
+		return apperr.Conflict("billing catalogs are not seeded")
+	}
+	now := time.Now().UTC()
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&models.Company{}, company.ID).Error; err != nil {
+			return err
+		}
+		endedAt := now
+		canceled, err := catalog.ResolveGlobal(tx, "billing", "subscription_status", "canceled")
+		if err != nil || canceled == nil {
+			return apperr.Conflict("billing catalogs are not seeded")
+		}
+		if err := tx.Model(&models.CompanySubscription{}).Where("company_id = ? AND ended_at IS NULL", company.ID).
+			Updates(map[string]interface{}{"status_value_id": canceled.ID, "ended_at": &endedAt}).Error; err != nil {
+			return err
+		}
+		subscription := models.CompanySubscription{CompanyID: company.ID, PlanID: plan.ID, StatusValueID: status.ID, CurrencyValueID: plan.CurrencyValueID, BillingCycleValueID: plan.BillingCycleValueID, PriceSnapshot: plan.Price, StartedAt: now, CurrentPeriodStart: now}
+		return tx.Create(&subscription).Error
+	})
 }
 
 // CompanyHasFeature reporta si el plan de la empresa habilita un feature
@@ -313,12 +342,12 @@ func (s *planService) CompanyHasFeature(companyID uint, feature string) (bool, e
 		return false, ErrCompanyNotFound
 	}
 
-	plan, err := s.planRepo.FindBySlug(company.PlanTier)
+	plan, err := billingctx.CurrentPlan(s.db, company.ID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, ErrPlanNotFound
-		}
 		return false, err
+	}
+	if plan == nil {
+		return false, ErrPlanNotFound
 	}
 
 	return plan.HasFeature(feature), nil
@@ -333,12 +362,12 @@ func (s *planService) PublishJobWithinLimit(job *models.Job) error {
 			}
 			return err
 		}
-		var plan models.Plan
-		if err := tx.Where("slug = ?", company.PlanTier).First(&plan).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return ErrPlanNotFound
-			}
+		plan, err := billingctx.CurrentPlan(tx, company.ID)
+		if err != nil {
 			return err
+		}
+		if plan == nil {
+			return ErrPlanNotFound
 		}
 		if plan.MaxJobs >= 0 {
 			var count int64
@@ -367,31 +396,58 @@ func (s *planService) PublishJobWithinLimit(job *models.Job) error {
 // Helper functions
 func (s *planService) toPlanResponse(plan *models.Plan) *dtos.PlanResponse {
 	return &dtos.PlanResponse{
-		ID:                 plan.ID,
-		Name:               plan.Name,
-		Slug:               plan.Slug,
-		Description:        plan.Description,
-		Price:              plan.Price,
-		Currency:           plan.Currency,
-		BillingCycle:       plan.BillingCycle,
-		IsActive:           plan.IsActive,
-		IsPublic:           plan.IsPublic,
-		TrialDays:          plan.TrialDays,
-		DisplayOrder:       plan.DisplayOrder,
-		MaxUsers:           plan.MaxUsers,
-		MaxJobs:            plan.MaxJobs,
-		MaxCandidates:      plan.MaxCandidates,
-		MaxApplications:    plan.MaxApplications,
-		MaxStorageGB:       plan.MaxStorageGB,
-		CanExportData:      plan.CanExportData,
-		CanUseCustomBrand:  plan.CanUseCustomBrand,
-		CanUseAPI:          plan.CanUseAPI,
-		CanUseIntegrations: plan.CanUseIntegrations,
-		CanUseStaffing:     plan.CanUseStaffing,
-		SupportLevel:       plan.SupportLevel,
-		CreatedAt:          plan.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt:          plan.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		ID:                  plan.ID,
+		Name:                plan.Name,
+		Slug:                plan.Slug,
+		Description:         plan.Description,
+		Price:               plan.Price,
+		Currency:            valueKey(plan.Currency),
+		CurrencyValueID:     plan.CurrencyValueID,
+		BillingCycle:        valueKey(plan.BillingCycle),
+		BillingCycleValueID: plan.BillingCycleValueID,
+		IsActive:            plan.IsActive,
+		IsPublic:            plan.IsPublic,
+		TrialDays:           plan.TrialDays,
+		DisplayOrder:        plan.DisplayOrder,
+		MaxUsers:            plan.MaxUsers,
+		MaxJobs:             plan.MaxJobs,
+		MaxCandidates:       plan.MaxCandidates,
+		MaxApplications:     plan.MaxApplications,
+		MaxStorageGB:        plan.MaxStorageGB,
+		CanExportData:       plan.CanExportData,
+		CanUseCustomBrand:   plan.CanUseCustomBrand,
+		CanUseAPI:           plan.CanUseAPI,
+		CanUseIntegrations:  plan.CanUseIntegrations,
+		CanUseStaffing:      plan.CanUseStaffing,
+		SupportLevel:        valueKey(plan.SupportLevel),
+		SupportLevelValueID: plan.SupportLevelValueID,
+		CreatedAt:           plan.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:           plan.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
+}
+
+func valueKey(value *models.SystemValue) string {
+	if value == nil {
+		return ""
+	}
+	return value.Key
+}
+
+func (s *planService) validatePlanCatalogs(currencyID, cycleID, supportID uint) error {
+	checks := []struct {
+		id       uint
+		category string
+	}{{currencyID, "currency"}, {cycleID, "billing_cycle"}, {supportID, "support_level"}}
+	for _, check := range checks {
+		valid, err := catalog.IsGlobalValue(s.db, check.id, "billing", check.category)
+		if err != nil {
+			return err
+		}
+		if !valid {
+			return apperr.BadRequest("invalid billing catalog value for " + check.category)
+		}
+	}
+	return nil
 }
 
 func (s *planService) toPlanResponseList(plans []models.Plan) []dtos.PlanResponse {

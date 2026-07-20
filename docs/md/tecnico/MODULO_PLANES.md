@@ -1,5 +1,7 @@
 # 📋 Módulo de Planes (Plans) - Documentación Completa
 
+> **Contrato actualizado:** `companies.plan_tier` fue reemplazado por `company_subscriptions.plan_id`; moneda, ciclo y soporte usan IDs de catálogo. Consulta [ADR-003](adr/ADR-003-catalogos-modulares-y-suscripciones.md) y Swagger para el contrato vigente.
+
 ## 🎯 Descripción General
 
 Módulo completo de gestión de planes de suscripción para Dvra ATS. Permite al SuperAdmin crear, editar, activar/desactivar planes y asignarlos a empresas. Los clientes pueden ver los planes públicos disponibles.

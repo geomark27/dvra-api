@@ -8,6 +8,7 @@ const (
 	PlatformMembershipsManage = "platform.memberships.manage"
 	PlatformPlansManage       = "platform.plans.manage"
 	PlatformSettingsManage    = "platform.settings.manage"
+	PlatformCatalogsManage    = "platform.catalogs.manage"
 )
 
 var platformRolePermissions = map[string]map[string]bool{
@@ -16,6 +17,7 @@ var platformRolePermissions = map[string]map[string]bool{
 		PlatformUsersView: true, PlatformMembershipsView: true,
 		PlatformMembershipsManage: true, PlatformPlansManage: true,
 		PlatformSettingsManage: true,
+		PlatformCatalogsManage: true,
 	},
 }
 

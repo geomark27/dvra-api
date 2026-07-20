@@ -2,6 +2,7 @@ package seeders
 
 import (
 	"dvra-api/internal/app/models"
+	"dvra-api/internal/shared/catalog"
 	"dvra-api/internal/shared/permissions"
 	"fmt"
 	"log"
@@ -37,13 +38,32 @@ func (s *CompanySeeder) Run(db *gorm.DB) error {
 			Name:        "Azentic Sys",
 			Slug:        "azentic-sys",
 			LogoURL:     "",
-			PlanTier:    "free",
 			TrialEndsAt: nil,
 			Timezone:    "America/Bogota",
 		}
 
 		if err := db.Create(&company).Error; err != nil {
 			log.Printf("❌ Error creating company: %v", err)
+			return err
+		}
+		var plan models.Plan
+		if err := db.Where("slug = ?", "free").First(&plan).Error; err != nil {
+			return err
+		}
+		status, err := catalog.ResolveGlobal(db, "billing", "subscription_status", "active")
+		if err != nil || status == nil {
+			return fmt.Errorf("resolve subscription status: %w", err)
+		}
+		if plan.CurrencyValueID == 0 || plan.BillingCycleValueID == 0 {
+			return fmt.Errorf("plan billing catalogs are missing")
+		}
+		now := time.Now().UTC()
+		subscription := models.CompanySubscription{CompanyID: company.ID, PlanID: plan.ID, StatusValueID: status.ID, CurrencyValueID: plan.CurrencyValueID, BillingCycleValueID: plan.BillingCycleValueID, PriceSnapshot: plan.Price, StartedAt: now, CurrentPeriodStart: now}
+		if err := db.Create(&subscription).Error; err != nil {
+			return err
+		}
+		settings := models.CompanySettings{CompanyID: company.ID, DisplayName: company.Name, PrimaryColor: "#2563eb", SecondaryColor: "#0f172a", Locale: "es", CareerPageEnabled: true}
+		if err := db.Create(&settings).Error; err != nil {
 			return err
 		}
 

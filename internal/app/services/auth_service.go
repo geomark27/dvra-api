@@ -2,11 +2,14 @@ package services
 
 import (
 	"errors"
+	"time"
 
 	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
 	"dvra-api/internal/shared/apperr"
+	billingctx "dvra-api/internal/shared/billing"
+	"dvra-api/internal/shared/catalog"
 	"dvra-api/internal/shared/identity"
 	"dvra-api/internal/shared/permissions"
 
@@ -260,13 +263,30 @@ func (s *AuthService) RegisterCompany(dto *dtos.RegisterCompanyDTO) (*dtos.Regis
 	}
 
 	company := models.Company{
-		Name:     dto.CompanyName,
-		Slug:     dto.CompanySlug,
-		PlanTier: freePlan.Slug, // Use validated free plan slug
-		Timezone: timezone,
+		Name: dto.CompanyName, Slug: dto.CompanySlug, Timezone: timezone,
 	}
 
 	if err := tx.Create(&company).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	status, err := catalog.ResolveGlobal(tx, "billing", "subscription_status", "active")
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	if status == nil || freePlan.CurrencyValueID == 0 || freePlan.BillingCycleValueID == 0 {
+		tx.Rollback()
+		return nil, errors.New("billing catalogs are not configured")
+	}
+	now := time.Now().UTC()
+	subscription := models.CompanySubscription{CompanyID: company.ID, PlanID: freePlan.ID, StatusValueID: status.ID, CurrencyValueID: freePlan.CurrencyValueID, BillingCycleValueID: freePlan.BillingCycleValueID, PriceSnapshot: freePlan.Price, StartedAt: now, CurrentPeriodStart: now}
+	if err := tx.Create(&subscription).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	settings := models.CompanySettings{CompanyID: company.ID, DisplayName: company.Name, LogoURL: company.LogoURL, PrimaryColor: "#2563eb", SecondaryColor: "#0f172a", Locale: "es", CareerPageEnabled: true}
+	if err := tx.Create(&settings).Error; err != nil {
 		tx.Rollback()
 		return nil, err
 	}
@@ -326,7 +346,7 @@ func (s *AuthService) RegisterCompany(dto *dtos.RegisterCompanyDTO) (*dtos.Regis
 			ID:       company.ID,
 			Name:     company.Name,
 			Slug:     company.Slug,
-			PlanTier: company.PlanTier,
+			PlanTier: freePlan.Slug,
 		},
 		Admin: dtos.UserResponse{
 			ID:        admin.ID,
@@ -350,12 +370,16 @@ func (s *AuthService) GetUserCompanies(userID uint) ([]dtos.CompanyResponse, err
 	companies := make([]dtos.CompanyResponse, 0, len(memberships))
 	for _, membership := range memberships {
 		if membership.Company != nil {
+			planTier, err := s.companyPlanTier(membership.Company.ID)
+			if err != nil {
+				return nil, err
+			}
 			role := dtos.ToTenantRoleResponse(membership.TenantRole)
 			companies = append(companies, dtos.CompanyResponse{
 				ID:           membership.Company.ID,
 				Name:         membership.Company.Name,
 				Slug:         membership.Company.Slug,
-				PlanTier:     membership.Company.PlanTier,
+				PlanTier:     planTier,
 				MembershipID: membership.ID,
 				TenantRoleID: membership.TenantRoleID,
 				TenantRole:   role,
@@ -385,6 +409,10 @@ func (s *AuthService) SwitchCompany(userID uint, dto *dtos.SwitchCompanyDTO) (*d
 	if membership.Company == nil {
 		return nil, ErrCompanyNotFound
 	}
+	planTier, err := s.companyPlanTier(membership.Company.ID)
+	if err != nil {
+		return nil, err
+	}
 
 	// Get user email
 	user, err := s.userRepo.FindByID(int(userID))
@@ -407,13 +435,21 @@ func (s *AuthService) SwitchCompany(userID uint, dto *dtos.SwitchCompanyDTO) (*d
 			ID:           membership.Company.ID,
 			Name:         membership.Company.Name,
 			Slug:         membership.Company.Slug,
-			PlanTier:     membership.Company.PlanTier,
+			PlanTier:     planTier,
 			MembershipID: membership.ID,
 			TenantRoleID: membership.TenantRoleID,
 			TenantRole:   dtos.ToTenantRoleResponse(membership.TenantRole),
 			Role:         membership.TenantRole.Key,
 		},
 	}, nil
+}
+
+func (s *AuthService) companyPlanTier(companyID uint) (string, error) {
+	plan, err := billingctx.CurrentPlan(s.db, companyID)
+	if err != nil || plan == nil {
+		return "", err
+	}
+	return plan.Slug, nil
 }
 
 func (s *AuthService) SwitchToPlatform(userID uint) (*dtos.SwitchPlatformResponseDTO, error) {

@@ -1,7 +1,10 @@
 # ADR-002: Separación de contextos landlord y tenant
 
-**Estado:** Aceptado  
-**Fecha:** 2026-07-15
+- **Estado:** Aceptado
+- **Fecha:** 2026-07-15
+- **Tipo:** Decisión arquitectónica
+- **Reemplaza:** Ninguno
+- **Reemplazado por:** Ninguno
 
 ## Decisión
 

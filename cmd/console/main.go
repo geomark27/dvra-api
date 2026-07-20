@@ -35,6 +35,7 @@ func main() {
 	}
 	migrateCmd.Flags().Bool("seed", false, "Run seeders after migration")
 	migrateCmd.Flags().Bool("fresh", false, "Drop all tables and migrate from scratch")
+	migrateCmd.Flags().String("module", "", "Migrate one module (core, identity, recruitment, staffing, billing)")
 
 	// seed command
 	seedCmd := &cobra.Command{
@@ -43,6 +44,7 @@ func main() {
 		Long:  `Populate database with initial or test data`,
 		Run:   runSeed,
 	}
+	seedCmd.Flags().String("module", "", "Seed one module (core, identity, recruitment, staffing, billing, demo)")
 	platformAdminCmd := &cobra.Command{
 		Use:   "platform-admin",
 		Short: "Grant landlord superadmin access to an existing user",
@@ -100,6 +102,11 @@ func runMigrate(cmd *cobra.Command, args []string) {
 
 	// Check for fresh flag
 	fresh, _ := cmd.Flags().GetBool("fresh")
+	module, _ := cmd.Flags().GetString("module")
+	module = strings.TrimSpace(module)
+	if fresh && module != "" {
+		log.Fatal("❌ --fresh cannot be combined with --module because it would invalidate migration history for other modules")
+	}
 	if fresh {
 		log.Println("🗑️  Dropping all tables...")
 		modelsToDrop := make([]interface{}, 0, len(database.AllModels)+1)
@@ -122,14 +129,31 @@ func runMigrate(cmd *cobra.Command, args []string) {
 		if err := db.AutoMigrate(&models.PlatformMembership{}); err != nil {
 			log.Fatalf("❌ Platform membership migration error: %v", err)
 		}
-		if err := migrations.RunBeforeSchema(db); err != nil {
-			log.Fatalf("❌ Pre-schema data migration error: %v", err)
+	}
+	if module == "" {
+		err = migrations.RunBeforeSchema(db)
+	} else {
+		err = migrations.RunBeforeSchemaModule(db, module)
+	}
+	if err != nil {
+		log.Fatalf("❌ Pre-schema data migration error: %v", err)
+	}
+	modelsToMigrate := database.AllModels
+	if module != "" {
+		modelsToMigrate, err = database.ModelsForModule(module)
+		if err != nil {
+			log.Fatalf("❌ %v", err)
 		}
 	}
-	if err := db.AutoMigrate(database.AllModels...); err != nil {
+	if err := db.AutoMigrate(modelsToMigrate...); err != nil {
 		log.Fatalf("❌ Migration error: %v", err)
 	}
-	if err := migrations.Run(db); err != nil {
+	if module == "" {
+		err = migrations.Run(db)
+	} else {
+		err = migrations.RunModule(db, module)
+	}
+	if err != nil {
 		log.Fatalf("❌ Data migration error: %v", err)
 	}
 	log.Println("✅ Migrations completed successfully")
@@ -137,7 +161,7 @@ func runMigrate(cmd *cobra.Command, args []string) {
 	// Check for seed flag
 	withSeed, _ := cmd.Flags().GetBool("seed")
 	if withSeed {
-		runSeedLogic(db)
+		runSeedLogic(db, module)
 	}
 }
 
@@ -155,12 +179,19 @@ func runSeed(cmd *cobra.Command, args []string) {
 	}
 	defer func() { _ = database.CloseDB() }()
 
-	runSeedLogic(db)
+	module, _ := cmd.Flags().GetString("module")
+	runSeedLogic(db, strings.TrimSpace(module))
 }
 
-func runSeedLogic(db *gorm.DB) {
+func runSeedLogic(db *gorm.DB, module string) {
 	seeder := &seeders.DatabaseSeeder{}
-	if err := seeder.Run(db); err != nil {
+	var err error
+	if module == "" {
+		err = seeder.Run(db)
+	} else {
+		err = seeder.RunModule(db, module)
+	}
+	if err != nil {
 		log.Fatalf("❌ Seeder error: %v", err)
 	}
 }

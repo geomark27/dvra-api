@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"dvra-api/internal/app/models"
+	billingctx "dvra-api/internal/shared/billing"
 
 	"gorm.io/gorm"
 )
@@ -30,6 +31,11 @@ func (r *companyRepository) GetAll() ([]models.Company, error) {
 	if err := r.db.Find(&companies).Error; err != nil {
 		return nil, err
 	}
+	for i := range companies {
+		if err := r.attachPlan(&companies[i]); err != nil {
+			return nil, err
+		}
+	}
 	return companies, nil
 }
 
@@ -39,6 +45,9 @@ func (r *companyRepository) GetByID(id uint) (*models.Company, error) {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
+		return nil, err
+	}
+	if err := r.attachPlan(&company); err != nil {
 		return nil, err
 	}
 	return &company, nil
@@ -52,7 +61,21 @@ func (r *companyRepository) GetBySlug(slug string) (*models.Company, error) {
 		}
 		return nil, err
 	}
+	if err := r.attachPlan(&company); err != nil {
+		return nil, err
+	}
 	return &company, nil
+}
+
+func (r *companyRepository) attachPlan(company *models.Company) error {
+	plan, err := billingctx.CurrentPlan(r.db, company.ID)
+	if err != nil {
+		return err
+	}
+	if plan != nil {
+		company.PlanTier = plan.Slug
+	}
+	return nil
 }
 
 func (r *companyRepository) Create(company *models.Company) (*models.Company, error) {

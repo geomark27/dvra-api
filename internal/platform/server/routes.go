@@ -35,6 +35,7 @@ func registerRoutes(
 	dashboardHandler *handlers.DashboardHandler,
 	publicHandler *handlers.PublicHandler,
 	platformSettingsHandler *handlers.PlatformSettingsHandler,
+	companySettingsHandler *handlers.CompanySettingsHandler,
 	tenantRoleHandler *handlers.TenantRoleHandler,
 	jwtService services.JWTService,
 	rbac services.TenantAuthorizer,
@@ -106,6 +107,10 @@ func registerRoutes(
 		protected.Use(middleware.AuthMiddleware(jwtService, rbac))
 		{
 			protected.GET("/tenant-roles", middleware.RequirePermission(rbac, permissions.UsersView), tenantRoleHandler.GetTenantRoles)
+			protected.GET("/settings", middleware.RequirePermission(rbac, permissions.SettingsView), companySettingsHandler.Get)
+			protected.PUT("/settings", middleware.RequirePermission(rbac, permissions.SettingsUpdate), companySettingsHandler.Update)
+			protected.GET("/subscription", middleware.RequirePermission(rbac, permissions.BillingView), companySettingsHandler.Subscription)
+			protected.GET("/subscription/usage", middleware.RequirePermission(rbac, permissions.BillingView), companySettingsHandler.Usage)
 
 			// User routes
 			users := protected.Group("/users")
@@ -190,10 +195,16 @@ func registerRoutes(
 				dashboard.GET("/stats", middleware.RequirePermission(rbac, permissions.DashboardView), dashboardHandler.GetStats)
 			}
 
-			// System Values routes (read only)
-			systemValues := api.Group("/system-values")
+			// Tenant catalog routes. The company scope always comes from the JWT.
+			systemValues := protected.Group("/system-values")
 			{
-				systemValues.GET("/:category", systemValueHandler.GetByCategory)
+				systemValues.GET("", middleware.RequirePermission(rbac, permissions.CatalogsView), systemValueHandler.GetCategories)
+				systemValues.GET("/:category", middleware.RequirePermission(rbac, permissions.CatalogsView), systemValueHandler.GetByCategory)
+				systemValues.GET("/modules/:module/:category", middleware.RequirePermission(rbac, permissions.CatalogsView), systemValueHandler.GetByModuleCategory)
+				systemValues.POST("", middleware.RequirePermission(rbac, permissions.CatalogsManage), systemValueHandler.CreateTenant)
+				systemValues.PUT("/:id", middleware.RequirePermission(rbac, permissions.CatalogsManage), systemValueHandler.UpdateTenant)
+				systemValues.DELETE("/:id", middleware.RequirePermission(rbac, permissions.CatalogsManage), systemValueHandler.DeleteTenant)
+				systemValues.PUT("/:id/override", middleware.RequirePermission(rbac, permissions.CatalogsManage), systemValueHandler.UpsertTenantOverride)
 			}
 		}
 
@@ -227,6 +238,11 @@ func registerRoutes(
 
 			platform.GET("/settings", middleware.RequirePlatformPermission(permissions.PlatformSettingsManage), platformSettingsHandler.GetFullSettings)
 			platform.PUT("/settings", middleware.RequirePlatformPermission(permissions.PlatformSettingsManage), platformSettingsHandler.UpdateSettings)
+
+			platform.GET("/system-values", middleware.RequirePlatformPermission(permissions.PlatformCatalogsManage), systemValueHandler.GetAll)
+			platform.POST("/system-values", middleware.RequirePlatformPermission(permissions.PlatformCatalogsManage), systemValueHandler.Create)
+			platform.PUT("/system-values/:id", middleware.RequirePlatformPermission(permissions.PlatformCatalogsManage), systemValueHandler.Update)
+			platform.DELETE("/system-values/:id", middleware.RequirePlatformPermission(permissions.PlatformCatalogsManage), systemValueHandler.Delete)
 		}
 
 		// Public Plans routes (no auth required)

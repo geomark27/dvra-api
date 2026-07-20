@@ -3,7 +3,7 @@
 > **Aviso:** este documento conserva secciones históricas del flujo v1.3. La
 > autenticación vigente usa contextos JWT `platform`, `tenant` e `identity`; el
 > landlord opera en `/api/v1/platform/*`. Consulte
-> [ADR-002](md/tecnico/ADR-002-contextos-landlord-tenant.md) y Swagger para el
+> [ADR-002](md/tecnico/adr/ADR-002-contextos-landlord-tenant.md) y Swagger para el
 > contrato actual.
 
 > **Cómo se usa el sistema de punta a punta, por actor y por proceso**

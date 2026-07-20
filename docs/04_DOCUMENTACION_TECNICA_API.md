@@ -193,7 +193,7 @@ type JWTClaims struct {
 Los perfiles tenant incorporados son `admin`, `recruiter`, `hiring_manager` e
 `interviewer`, relacionados por ID. El rol `superadmin` existe únicamente en
 `platform_memberships`. Las rutas landlord viven bajo `/api/v1/platform/*`; no
-heredan permisos tenant. Ver ADR-002.
+heredan permisos tenant. Ver [ADR-002](md/tecnico/adr/ADR-002-contextos-landlord-tenant.md).
 
 ---
 

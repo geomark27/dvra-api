@@ -24,6 +24,10 @@ type planRepository struct {
 	db *gorm.DB
 }
 
+func withPlanCatalogs(db *gorm.DB) *gorm.DB {
+	return db.Preload("Currency").Preload("BillingCycle").Preload("SupportLevel")
+}
+
 // NewPlanRepository creates a new plan repository
 func NewPlanRepository(db *gorm.DB) PlanRepository {
 	return &planRepository{db: db}
@@ -35,13 +39,13 @@ func (r *planRepository) Create(plan *models.Plan) (*models.Plan, error) {
 	if err != nil {
 		return nil, err
 	}
-	return plan, nil
+	return r.FindByID(plan.ID)
 }
 
 // FindByID finds a plan by ID
 func (r *planRepository) FindByID(id uint) (*models.Plan, error) {
 	var plan models.Plan
-	err := r.db.First(&plan, id).Error
+	err := withPlanCatalogs(r.db).First(&plan, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +55,7 @@ func (r *planRepository) FindByID(id uint) (*models.Plan, error) {
 // FindBySlug finds a plan by slug
 func (r *planRepository) FindBySlug(slug string) (*models.Plan, error) {
 	var plan models.Plan
-	err := r.db.Where("slug = ?", slug).First(&plan).Error
+	err := withPlanCatalogs(r.db).Where("slug = ?", slug).First(&plan).Error
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +65,7 @@ func (r *planRepository) FindBySlug(slug string) (*models.Plan, error) {
 // FindActiveBySlug finds an active plan by slug
 func (r *planRepository) FindActiveBySlug(slug string) (*models.Plan, error) {
 	var plan models.Plan
-	err := r.db.Where("slug = ? AND is_active = ?", slug, true).First(&plan).Error
+	err := withPlanCatalogs(r.db).Where("slug = ? AND is_active = ?", slug, true).First(&plan).Error
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +75,7 @@ func (r *planRepository) FindActiveBySlug(slug string) (*models.Plan, error) {
 // FindAll retrieves all plans
 func (r *planRepository) FindAll() ([]models.Plan, error) {
 	var plans []models.Plan
-	err := r.db.Order("display_order ASC, name ASC").Find(&plans).Error
+	err := withPlanCatalogs(r.db).Order("display_order ASC, name ASC").Find(&plans).Error
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +85,7 @@ func (r *planRepository) FindAll() ([]models.Plan, error) {
 // FindActive retrieves all active plans
 func (r *planRepository) FindActive() ([]models.Plan, error) {
 	var plans []models.Plan
-	err := r.db.Where("is_active = ?", true).
+	err := withPlanCatalogs(r.db).Where("is_active = ?", true).
 		Order("display_order ASC, name ASC").
 		Find(&plans).Error
 	if err != nil {
@@ -93,7 +97,7 @@ func (r *planRepository) FindActive() ([]models.Plan, error) {
 // FindPublic retrieves all public plans (for pricing page)
 func (r *planRepository) FindPublic() ([]models.Plan, error) {
 	var plans []models.Plan
-	err := r.db.Where("is_active = ? AND is_public = ?", true, true).
+	err := withPlanCatalogs(r.db).Where("is_active = ? AND is_public = ?", true, true).
 		Order("display_order ASC, name ASC").
 		Find(&plans).Error
 	if err != nil {
@@ -108,7 +112,7 @@ func (r *planRepository) Update(plan *models.Plan) (*models.Plan, error) {
 	if err != nil {
 		return nil, err
 	}
-	return plan, nil
+	return r.FindByID(plan.ID)
 }
 
 // Delete soft deletes a plan

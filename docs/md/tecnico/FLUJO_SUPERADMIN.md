@@ -1,7 +1,7 @@
 # Flujo landlord (SuperAdmin)
 
 > Documento operativo vigente desde 2026-07-15. La decisión arquitectónica se
-> detalla en [ADR-002](ADR-002-contextos-landlord-tenant.md).
+> detalla en [ADR-002](adr/ADR-002-contextos-landlord-tenant.md).
 
 ## Modelo de acceso
 

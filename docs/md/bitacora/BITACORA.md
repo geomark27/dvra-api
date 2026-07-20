@@ -6,6 +6,21 @@
 
 ---
 
+## 2026-07-20 — Catálogos modulares, suscripciones y archivo de ADR
+
+Se reemplazó el catálogo plano por la jerarquía módulo → categoría → valor,
+con valores globales, valores tenant y overrides aislados por empresa. Se
+incorporaron suscripciones relacionales empresa → plan, settings propios del
+tenant y ejecución de migraciones/seeders por módulo.
+
+Los Architecture Decision Records se separaron de la documentación técnica
+operativa y ahora viven en `docs/md/tecnico/adr/`. Su `README.md` actúa como
+índice histórico con fecha y estado. La bitácora conserva el hito de
+implementación; los ADR conservan el contexto y la justificación de las
+decisiones.
+
+**Referencia vigente:** `docs/md/tecnico/adr/ADR-003-catalogos-modulares-y-suscripciones.md`.
+
 ## 2026-07-20 — Estructura organizacional para el ATS
 
 Se incorporó `departments` con jerarquía autorreferenciada, responsable
@@ -52,7 +67,7 @@ Se agregó migración para perfiles legacy, comando `console platform-admin`,
 respuesta de contexto en `/auth/me` y filtros por recurso para que
 `hiring_manager` solo vea jobs asignados y sus candidatos/postulaciones.
 
-**Referencia vigente:** `docs/md/tecnico/ADR-002-contextos-landlord-tenant.md`.
+**Referencia vigente:** `docs/md/tecnico/adr/ADR-002-contextos-landlord-tenant.md`.
 
 ## 2026-07-15 — Remediación de seguridad, tenancy, JWT y storage
 
@@ -95,7 +110,7 @@ Se introdujo `tenant.Scope` fail-closed y se migraron repositorios ATS críticos
 - [ ] Tests del módulo `staffing` (ya es trivial: repos con `db` inyectado + services mockeables vía puertos).
 - [ ] Replicar el patrón al resto de dominios (recruitment, iam, billing, platform), uno por uno con build/tests verdes.
 
-**Referencia vigente:** `docs/md/tecnico/ADR-001-arquitectura-modular.md`, `internal/modules/staffing/`
+**Referencia vigente:** `docs/md/tecnico/adr/ADR-001-arquitectura-modular.md`, `internal/modules/staffing/`
 
 ---
 

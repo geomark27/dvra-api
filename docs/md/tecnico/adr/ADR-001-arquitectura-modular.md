@@ -1,7 +1,13 @@
 # ADR-001 — Monolito modular con hexagonal-lite
 
-> **Estado:** Aceptado · **Fecha:** 2026-06-20 · **Piloto:** módulo `staffing`
-> Architecture Decision Record. Registra la decisión, no la implementación detallada.
+- **Estado:** Aceptado
+- **Fecha:** 2026-06-20
+- **Tipo:** Decisión arquitectónica
+- **Reemplaza:** Ninguno
+- **Reemplazado por:** Ninguno
+- **Piloto:** módulo `staffing`
+
+Este Architecture Decision Record registra la decisión, no la implementación detallada.
 
 ## Contexto
 

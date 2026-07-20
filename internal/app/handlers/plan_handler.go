@@ -319,15 +319,7 @@ func (h *PlanHandler) AssignPlanToCompany(c *gin.Context) {
 		return
 	}
 
-	// Get plan by ID to get slug
-	plan, err := h.planService.GetPlanByID(dto.PlanID)
-	if err != nil {
-		h.logger.Error("Failed to retrieve plan", "error", err)
-		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
-		return
-	}
-
-	err = h.planService.AssignPlanToCompany(dto.CompanyID, plan.Slug)
+	err := h.planService.AssignPlanToCompany(dto.CompanyID, dto.PlanID)
 	if err != nil {
 		h.logger.Error("Failed to assign plan to company", "error", err)
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})

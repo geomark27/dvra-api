@@ -32,8 +32,9 @@ type PlatformSettings struct {
 	// =========================================================================
 	// BUSINESS DEFAULTS
 	// =========================================================================
-	DefaultTrialDays int    `gorm:"type:int;default:14" json:"default_trial_days"`
-	DefaultPlanTier  string `gorm:"type:varchar(50);default:'free'" json:"default_plan_tier"`
+	DefaultTrialDays int   `gorm:"type:int;default:14" json:"default_trial_days"`
+	DefaultPlanID    *uint `gorm:"index" json:"default_plan_id,omitempty"`
+	DefaultPlan      *Plan `gorm:"foreignKey:DefaultPlanID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"default_plan,omitempty"`
 
 	// =========================================================================
 	// LEGAL / COMPANY INFO
