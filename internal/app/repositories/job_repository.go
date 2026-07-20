@@ -34,7 +34,10 @@ func NewJobRepository(db *gorm.DB) JobRepository {
 
 func (r *jobRepository) GetAll() ([]models.Job, error) {
 	var jobs []models.Job
-	if err := r.db.Preload("Company").Find(&jobs).Error; err != nil {
+	if err := r.db.Preload("Company").Preload("Department.Manager").Find(&jobs).Error; err != nil {
+		return nil, err
+	}
+	if err := attachJobDepartmentPaths(r.db, jobs); err != nil {
 		return nil, err
 	}
 	return jobs, nil
@@ -42,7 +45,7 @@ func (r *jobRepository) GetAll() ([]models.Job, error) {
 
 func (r *jobRepository) GetAllWithFilters(filters dtos.JobFilters) ([]models.Job, error) {
 	var jobs []models.Job
-	query := r.db.Preload("Company").Preload("City.State.Country")
+	query := r.db.Preload("Company").Preload("City.State.Country").Preload("Department.Manager")
 
 	// Aplicar filtros
 	if filters.Status != "" {
@@ -57,8 +60,14 @@ func (r *jobRepository) GetAllWithFilters(filters dtos.JobFilters) ([]models.Job
 	if filters.StaffingClientID != nil {
 		query = query.Where("staffing_client_id = ?", *filters.StaffingClientID)
 	}
+	if filters.DepartmentID != nil {
+		query = query.Where("department_id = ?", *filters.DepartmentID)
+	}
 
 	if err := query.Find(&jobs).Error; err != nil {
+		return nil, err
+	}
+	if err := attachJobDepartmentPaths(r.db, jobs); err != nil {
 		return nil, err
 	}
 	return jobs, nil
@@ -68,21 +77,28 @@ func (r *jobRepository) GetByID(id uint, scope tenant.Scope) (*models.Job, error
 	var job models.Job
 	query := tenant.Apply(r.db, scope, "jobs.company_id")
 	query = applyJobActorScope(query, scope)
-	if err := query.Preload("Company").Preload("City.State.Country").Preload("Applications").Where("jobs.id = ?", id).First(&job).Error; err != nil {
+	if err := query.Preload("Company").Preload("City.State.Country").Preload("Department.Manager").Preload("Applications").Where("jobs.id = ?", id).First(&job).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return &job, nil
+	jobs := []models.Job{job}
+	if err := attachJobDepartmentPaths(r.db, jobs); err != nil {
+		return nil, err
+	}
+	return &jobs[0], nil
 }
 
 func (r *jobRepository) GetByScopeWithFilters(scope tenant.Scope, filters dtos.JobFilters) ([]models.Job, error) {
 	var jobs []models.Job
-	query := tenant.Apply(r.db.Preload("City.State.Country"), scope, "jobs.company_id")
+	query := tenant.Apply(r.db.Preload("City.State.Country").Preload("Department.Manager"), scope, "jobs.company_id")
 	query = applyJobActorScope(query, scope)
 	query = applyJobFilters(query, filters)
 	if err := query.Find(&jobs).Error; err != nil {
+		return nil, err
+	}
+	if err := attachJobDepartmentPaths(r.db, jobs); err != nil {
 		return nil, err
 	}
 	return jobs, nil
@@ -90,7 +106,10 @@ func (r *jobRepository) GetByScopeWithFilters(scope tenant.Scope, filters dtos.J
 
 func (r *jobRepository) GetByCompanyID(companyID uint) ([]models.Job, error) {
 	var jobs []models.Job
-	if err := r.db.Where("company_id = ?", companyID).Find(&jobs).Error; err != nil {
+	if err := r.db.Where("company_id = ?", companyID).Preload("Department.Manager").Find(&jobs).Error; err != nil {
+		return nil, err
+	}
+	if err := attachJobDepartmentPaths(r.db, jobs); err != nil {
 		return nil, err
 	}
 	return jobs, nil
@@ -98,10 +117,13 @@ func (r *jobRepository) GetByCompanyID(companyID uint) ([]models.Job, error) {
 
 func (r *jobRepository) GetByCompanyIDWithFilters(companyID uint, filters dtos.JobFilters) ([]models.Job, error) {
 	var jobs []models.Job
-	query := r.db.Preload("City.State.Country").Where("company_id = ?", companyID)
+	query := r.db.Preload("City.State.Country").Preload("Department.Manager").Where("company_id = ?", companyID)
 	query = applyJobFilters(query, filters)
 
 	if err := query.Find(&jobs).Error; err != nil {
+		return nil, err
+	}
+	if err := attachJobDepartmentPaths(r.db, jobs); err != nil {
 		return nil, err
 	}
 	return jobs, nil
@@ -120,6 +142,9 @@ func applyJobFilters(query *gorm.DB, filters dtos.JobFilters) *gorm.DB {
 	if filters.StaffingClientID != nil {
 		query = query.Where("staffing_client_id = ?", *filters.StaffingClientID)
 	}
+	if filters.DepartmentID != nil {
+		query = query.Where("department_id = ?", *filters.DepartmentID)
+	}
 	return query
 }
 
@@ -132,7 +157,10 @@ func applyJobActorScope(query *gorm.DB, scope tenant.Scope) *gorm.DB {
 
 func (r *jobRepository) GetByStatus(status string, companyID uint) ([]models.Job, error) {
 	var jobs []models.Job
-	if err := r.db.Where("status = ? AND company_id = ?", status, companyID).Find(&jobs).Error; err != nil {
+	if err := r.db.Where("status = ? AND company_id = ?", status, companyID).Preload("Department.Manager").Find(&jobs).Error; err != nil {
+		return nil, err
+	}
+	if err := attachJobDepartmentPaths(r.db, jobs); err != nil {
 		return nil, err
 	}
 	return jobs, nil
@@ -145,8 +173,12 @@ func (r *jobRepository) GetPublishedByCompanyID(companyID uint) ([]models.Job, e
 		Where("company_id = ? AND status = ?", companyID, "published").
 		Preload("Company").
 		Preload("City.State.Country").
+		Preload("Department").
 		Order("created_at DESC").
 		Find(&jobs).Error; err != nil {
+		return nil, err
+	}
+	if err := attachJobDepartmentPaths(r.db, jobs); err != nil {
 		return nil, err
 	}
 	return jobs, nil

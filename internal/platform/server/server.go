@@ -43,6 +43,7 @@ func New(cfg *config.Config, db *gorm.DB) (*Server, error) {
 	// Create repositories (injecting DB connection)
 	userRepo := repositories.NewUserRepository(db)
 	companyRepo := repositories.NewCompanyRepository(db)
+	departmentRepo := repositories.NewDepartmentRepository(db)
 	membershipRepo := repositories.NewMembershipRepository(db)
 	candidateRepo := repositories.NewCandidateRepository(db)
 	applicationRepo := repositories.NewApplicationRepository(db)
@@ -58,6 +59,7 @@ func New(cfg *config.Config, db *gorm.DB) (*Server, error) {
 	authService := services.NewAuthService(userRepo, planRepo, jwtService, rbacService, db)
 	userService := services.NewUserService(userRepo, db, rbacService)
 	companyService := services.NewCompanyService(companyRepo)
+	departmentService := services.NewDepartmentService(departmentRepo)
 	membershipService := services.NewMembershipService(membershipRepo, rbacService)
 	candidateService := services.NewCandidateService(candidateRepo, planRepo, db, fileStorage)
 	applicationService := services.NewApplicationService(applicationRepo, jobRepo, candidateRepo)
@@ -66,7 +68,7 @@ func New(cfg *config.Config, db *gorm.DB) (*Server, error) {
 	staffingModule := staffing.New(db, staffingAppFinder{repo: applicationRepo})
 
 	planService := services.NewPlanService(planRepo, companyRepo, db)
-	jobService := services.NewJobService(jobRepo, staffingModule.ClientRepo, planService)
+	jobService := services.NewJobService(jobRepo, staffingModule.ClientRepo, planService, departmentRepo)
 	systemValueService := services.NewSystemValueService(systemValueRepo)
 	locationService := services.NewLocationService(locationRepo)
 	dashboardService := services.NewDashboardService(dashboardRepo)
@@ -78,6 +80,7 @@ func New(cfg *config.Config, db *gorm.DB) (*Server, error) {
 	authHandler := handlers.NewAuthHandler(authService)
 	userHandler := handlers.NewUserHandler(userService)
 	companyHandler := handlers.NewCompanyHandler(companyService)
+	departmentHandler := handlers.NewDepartmentHandler(departmentService)
 	membershipHandler := handlers.NewMembershipHandler(membershipService)
 	candidateHandler := handlers.NewCandidateHandler(candidateService)
 	applicationHandler := handlers.NewApplicationHandler(applicationService)
@@ -97,7 +100,7 @@ func New(cfg *config.Config, db *gorm.DB) (*Server, error) {
 	router.Use(corsMiddleware(cfg.CorsAllowedOrigins))
 
 	// Register routes (passing config for dynamic Swagger host)
-	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, staffingModule, planHandler, planService, systemValueHandler, locationHandler, dashboardHandler, publicHandler, platformSettingsHandler, tenantRoleHandler, jwtService, rbacService, cfg)
+	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, departmentHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, staffingModule, planHandler, planService, systemValueHandler, locationHandler, dashboardHandler, publicHandler, platformSettingsHandler, tenantRoleHandler, jwtService, rbacService, cfg)
 
 	// Configure HTTP server
 	httpServer := &http.Server{

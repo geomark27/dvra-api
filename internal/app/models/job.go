@@ -19,10 +19,12 @@ type Job struct {
 
 	AssignedRecruiter *uint `gorm:"" json:"assigned_recruiter,omitempty"`
 	HiringManager     *uint `gorm:"" json:"hiring_manager,omitempty"`
+	DepartmentID      *uint `gorm:"index" json:"department_id,omitempty"`
 
 	// Relations
 	Company      *Company      `gorm:"foreignKey:CompanyID" json:"company,omitempty"`
 	City         *City         `gorm:"foreignKey:CityID" json:"city,omitempty"`
+	Department   *Department   `gorm:"foreignKey:DepartmentID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"department,omitempty"`
 	Applications []Application `gorm:"foreignKey:JobID" json:"applications,omitempty"`
 
 	StaffingClientID *uint           `gorm:"index" json:"staffing_client_id,omitempty"`

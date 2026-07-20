@@ -164,6 +164,9 @@ Interviewer (Nivel 10)
 | Asignar roles | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Remover usuarios | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Ver team members | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Estructura organizacional** |
+| Ver departamentos | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Crear/editar/desactivar departamentos | ✅ | ✅ | ❌ | ❌ | ❌ |
 | **Jobs** |
 | Crear job | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Editar job | ✅ | ✅ | ✅ | Solo asignados | ❌ |
@@ -310,7 +313,25 @@ para moverse entre ellas.
 - Razón: Mantener historial de applications
 - Hard delete solo por SuperAdmin en casos extremos
 
-### 4.3 Gestión de Candidatos
+**RN-JOB-005: Departamento**
+- Una vacante puede pertenecer a un departamento activo de su tenant
+- Una vacante nunca referencia la estructura de otra empresa
+
+### 4.3 Estructura Organizacional
+
+**RN-DEPT-001: Jerarquía abierta**
+- Departamentos y subdepartamentos comparten la tabla `departments`
+- `parent_department_id` permite cualquier profundidad
+
+**RN-DEPT-002: Aislamiento e integridad**
+- Padre, responsable y vacantes vinculadas pertenecen al mismo tenant
+- Se rechazan ciclos, nombres duplicados por nivel y códigos duplicados por empresa
+
+**RN-DEPT-003: Lifecycle**
+- Los departamentos se desactivan; no se eliminan físicamente
+- Antes de desactivar un nodo deben desactivarse sus hijos activos
+
+### 4.4 Gestión de Candidatos
 
 **RN-CAND-001: Unicidad de Candidato**
 - Único por email dentro de la misma empresa
@@ -332,7 +353,7 @@ para moverse entre ellas.
 - Si candidato ya existe: Enriquecer perfil, no duplicar
 - Evita spam y múltiples perfiles del mismo dev
 
-### 4.4 Gestión de Applications
+### 4.5 Gestión de Applications
 
 **RN-APP-001: Pipeline Stages**
 - `applied`: Candidato aplicó

@@ -29,6 +29,7 @@ type PublicJobResponseDTO struct {
 	SalaryMax    *float64               `json:"salary_max,omitempty"`
 	LocationType string                 `json:"location_type"`
 	City         *PublicCityDTO         `json:"city,omitempty"`
+	Department   *PublicDepartmentDTO   `json:"department,omitempty"`
 	CreatedAt    time.Time              `json:"created_at"`
 	Company      *PublicCompanyShortDTO `json:"company,omitempty"`
 }
@@ -37,6 +38,13 @@ type PublicJobResponseDTO struct {
 type PublicCityDTO struct {
 	ID   uint   `json:"id"`
 	Name string `json:"name"`
+}
+
+type PublicDepartmentDTO struct {
+	ID   uint                        `json:"id"`
+	Name string                      `json:"name"`
+	Code string                      `json:"code,omitempty"`
+	Path []models.DepartmentPathItem `json:"path"`
 }
 
 // PublicCompanyShortDTO for nested responses in jobs
@@ -104,6 +112,16 @@ func ToPublicJobResponse(job *models.Job) PublicJobResponseDTO {
 		dto.City = &PublicCityDTO{
 			ID:   job.City.ID,
 			Name: job.City.Name,
+		}
+	}
+	if job.Department != nil {
+		dto.Department = &PublicDepartmentDTO{
+			ID: job.Department.ID, Name: job.Department.Name, Code: job.Department.Code, Path: job.Department.Path,
+		}
+		if len(dto.Department.Path) == 0 {
+			dto.Department.Path = []models.DepartmentPathItem{{
+				ID: job.Department.ID, Name: job.Department.Name, Code: job.Department.Code,
+			}}
 		}
 	}
 

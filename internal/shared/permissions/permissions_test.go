@@ -27,6 +27,7 @@ func TestMatrixPorRol(t *testing.T) {
 		{RoleAdmin, CompaniesCreate, true},
 		{RoleAdmin, CompaniesDelete, true},
 		{RoleAdmin, MembershipsCreate, true},
+		{RoleAdmin, DepartmentsCreate, true},
 
 		// recruiter: gestiona jobs y candidatos, no usuarios ni billing
 		{RoleRecruiter, JobsCreate, true},
@@ -36,6 +37,8 @@ func TestMatrixPorRol(t *testing.T) {
 		{RoleRecruiter, UsersCreate, false},
 		{RoleRecruiter, CompaniesView, false},
 		{RoleRecruiter, JobsDelete, false},
+		{RoleRecruiter, DepartmentsView, true},
+		{RoleRecruiter, DepartmentsCreate, false},
 
 		// hiring_manager: lectura + calificar
 		{RoleHiringManager, JobsView, true},
@@ -43,6 +46,7 @@ func TestMatrixPorRol(t *testing.T) {
 		{RoleHiringManager, JobsCreate, false},
 		{RoleHiringManager, ApplicationsMove, false},
 		{RoleHiringManager, CandidatesCreate, false},
+		{RoleHiringManager, DepartmentsView, true},
 
 		// interviewer: conserva el acceso de lectura del perfil legacy user
 		// hasta que exista asignación explícita de entrevistas y scorecards.
@@ -52,6 +56,7 @@ func TestMatrixPorRol(t *testing.T) {
 		{RoleInterviewer, ApplicationsView, false},
 		{RoleInterviewer, JobsCreate, false},
 		{RoleInterviewer, ApplicationsRate, false},
+		{RoleInterviewer, DepartmentsView, true},
 	}
 
 	for _, tc := range cases {

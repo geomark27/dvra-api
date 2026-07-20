@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/app/models"
 	"dvra-api/internal/app/repositories"
 	"dvra-api/internal/shared/apperr"
@@ -12,11 +13,26 @@ import (
 
 type jobRepoStub struct {
 	repositories.JobRepository
-	job *models.Job
+	job     *models.Job
+	created *models.Job
 }
 
 func (f *jobRepoStub) GetByID(uint, tenant.Scope) (*models.Job, error) {
 	return f.job, nil
+}
+
+func (f *jobRepoStub) Create(job *models.Job) (*models.Job, error) {
+	f.created = job
+	return job, nil
+}
+
+type departmentReaderStub struct{ department *models.Department }
+
+func (f departmentReaderStub) GetByID(_, companyID uint) (*models.Department, error) {
+	if f.department == nil || f.department.CompanyID != companyID {
+		return nil, nil
+	}
+	return f.department, nil
 }
 
 type planServiceStub struct {
@@ -33,7 +49,7 @@ func (f *planServiceStub) PublishJobWithinLimit(*models.Job) error {
 func TestPublishJobUsesPlanLimitAndCanonicalStatus(t *testing.T) {
 	plans := &planServiceStub{}
 	job := &models.Job{CompanyID: 2, Title: "Backend", Description: "Build APIs", Status: "draft"}
-	svc := NewJobService(&jobRepoStub{job: job}, nil, plans)
+	svc := NewJobService(&jobRepoStub{job: job}, nil, plans, nil)
 
 	published, err := svc.PublishJob(1, tenant.ForCompany(2))
 	if err != nil {
@@ -50,7 +66,7 @@ func TestPublishJobUsesPlanLimitAndCanonicalStatus(t *testing.T) {
 func TestPublishJobPropagatesPlanLimitConflict(t *testing.T) {
 	plans := &planServiceStub{err: apperr.Conflict("job limit reached")}
 	job := &models.Job{CompanyID: 2, Title: "Backend", Description: "Build APIs", Status: "draft"}
-	svc := NewJobService(&jobRepoStub{job: job}, nil, plans)
+	svc := NewJobService(&jobRepoStub{job: job}, nil, plans, nil)
 
 	_, err := svc.PublishJob(1, tenant.ForCompany(2))
 	var appErr *apperr.AppError
@@ -59,5 +75,24 @@ func TestPublishJobPropagatesPlanLimitConflict(t *testing.T) {
 	}
 	if job.Status != "draft" {
 		t.Fatal("in-memory status changed after plan limit rejection")
+	}
+}
+
+func TestCreateJobRequiresActiveDepartmentFromTenant(t *testing.T) {
+	departmentID := uint(9)
+	repo := &jobRepoStub{}
+	svc := NewJobService(repo, nil, &planServiceStub{}, departmentReaderStub{
+		department: &models.Department{BaseModel: models.BaseModel{ID: departmentID}, CompanyID: 99, IsActive: true},
+	})
+	_, err := svc.CreateJob(dtos.CreateJobDTO{
+		CompanyID: 7, Title: "Backend Engineer", Description: "Build APIs",
+		LocationType: "remote", DepartmentID: &departmentID,
+	})
+	var appErr *apperr.AppError
+	if !errors.As(err, &appErr) || appErr.Code != 400 {
+		t.Fatalf("expected invalid department, got %v", err)
+	}
+	if repo.created != nil {
+		t.Fatal("job was persisted with a cross-tenant department")
 	}
 }

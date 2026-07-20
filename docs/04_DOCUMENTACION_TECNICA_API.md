@@ -114,9 +114,16 @@ configuración inicial se versiona en `internal/shared/permissions`, pero las
 peticiones se autorizan consultando BD. `GET /api/v1/tenant-roles` devuelve los
 IDs válidos para formularios de usuarios y membresías.
 
+**`departments`** — estructura organizacional jerárquica del tenant. Cada nodo
+tiene `company_id`, `name`, `code`, `manager_user_id`, `is_active` y un
+`parent_department_id` opcional hacia la misma tabla. Un subdepartamento es un
+departamento con padre; se impiden ciclos y referencias entre tenants. Las
+respuestas incluyen `path` desde la raíz hasta el nodo actual, también en
+vacantes públicas.
+
 ### 3.2 Core ATS
 
-**`jobs`** — `CompanyID` (FK, índice compuesto con Status), `Title` (not null), `Description`, `SalaryMin/Max`, `Requirements`, `Benefits`, `Status` (`draft`/`published`/`closed`), `LocationType` (`remote`/`onsite`/`hybrid`), `CityID` (FK nullable → catálogo de ubicaciones), `AssignedRecruiter`, `HiringManager` (FK nullable → users). Relaciones: Company, City, Applications 1:N.
+**`jobs`** — `CompanyID` (FK, índice compuesto con Status), `Title` (not null), `Description`, `SalaryMin/Max`, `Requirements`, `Benefits`, `Status` (`draft`/`published`/`closed`), `LocationType` (`remote`/`onsite`/`hybrid`), `CityID` (FK nullable → catálogo de ubicaciones), `DepartmentID` (FK nullable), `AssignedRecruiter`, `HiringManager` (FK nullable → users). Relaciones: Company, Department, City, Applications 1:N.
 
 **`candidates`** — `CompanyID` + `Email` con **unique compuesto** (mismo email puede existir en otra empresa), `FirstName`, `LastName`, `Phone`, `ResumeURL`, `GithubURL`, `LinkedinURL`, `Source` (linkedin/referral/direct_apply/agency/...). Relaciones: Company, Applications 1:N.
 
@@ -223,7 +230,8 @@ heredan permisos tenant. Ver ADR-002.
 | **Users** | `GET /users` · `POST /users` (crea User + Membership en la empresa del token) · `GET /users/:id` · `DELETE /users/:id` (remueve solo la membership activa) |
 | **Companies** | `GET /companies` (cliente: solo la suya) · `POST /companies` · `GET/PUT/DELETE /companies/:id` |
 | **Memberships** | `GET /memberships` · `GET/PUT/DELETE /memberships/:id`; crear usuarios nuevos genera su membership tenant en transacción |
-| **Jobs** | `GET /jobs` · `POST /jobs` (nace `draft`) · `GET/PUT/DELETE /jobs/:id` · `PATCH /jobs/:id/publish` · `PATCH /jobs/:id/close` |
+| **Departments** | `GET/POST /departments` · `GET /departments/tree` · `GET/PUT/DELETE /departments/:id`; DELETE desactiva |
+| **Jobs** | `GET /jobs` (filtro `department_id`) · `POST /jobs` (nace `draft`) · `GET/PUT/DELETE /jobs/:id` · `PATCH /jobs/:id/publish` · `PATCH /jobs/:id/close` |
 | **Candidates** | `GET /candidates` · `POST /candidates` (email único por empresa) · `GET/PUT/DELETE /candidates/:id` · `POST /candidates/:id/upload-resume` (multipart) |
 | **Applications** | `GET /applications` · `GET /applications/by-stage` (agrupado para Kanban) · `POST /applications` · `GET/PUT/DELETE /applications/:id` · `PATCH /applications/:id/move` (cambia stage + timestamps automáticos) · `PATCH /applications/:id/rate` (1–5) |
 | **Dashboard** | `GET /dashboard/stats` (estadísticas completas de la empresa, ver §7.7) |
@@ -308,34 +316,40 @@ añade además un filtro por `jobs.hiring_manager = scope.UserID` en repositorio
 - **`RefreshToken`** — revalida la membership o perfil platform en base de datos antes de renovar; **`GetMe`** expone contexto y permisos efectivos.
 
 ### 7.2 JobService
-- `CreateJob` (status default `draft`), `GetJobsByCompanyID`, `GetJobsByStatus`, `UpdateJob`, `DeleteJob` (soft).
+- `CreateJob` (status default `draft`), `GetJobsByCompanyID`, `GetJobsByStatus`, `UpdateJob`, `DeleteJob` (soft). `department_id` debe pertenecer al tenant y estar activo.
 - **`PublishJob`** — exige `title` y `description` antes de pasar a publicado.
 - **`CloseJob`** — transición a `closed`.
 
-### 7.3 CandidateService
+### 7.3 DepartmentService
+- Jerarquía ilimitada mediante `parent_department_id`, con validación anti-ciclos.
+- Responsable opcional, siempre miembro activo del mismo tenant.
+- Nombres únicos por nivel y códigos únicos por empresa, sin distinguir mayúsculas.
+- `DELETE` desactiva y exige desactivar primero los hijos activos.
+
+### 7.4 CandidateService
 - CRUD scoped por empresa; unicidad `(company_id, email)`.
 - **`UploadResume`** — guarda CVs privados mediante la interfaz de storage, valida firma/extensión y 10 MB, aplica cuota y registra metadatos. La descarga usa `GET /candidates/:id/resume` con JWT, permiso y scope de empresa.
 
-### 7.4 ApplicationService
+### 7.5 ApplicationService
 - `CreateApplication` (stage inicial `applied`, `applied_at` auto).
 - **`MoveToStage`** — setea automáticamente `RejectedAt` al pasar a `rejected` y `HiredAt` al pasar a `hired`.
 - **`RateApplication`** (1–5), `GetApplicationsGroupedByStage` (Kanban), filtros por job/empresa/stage.
 
-### 7.5 PlanService
+### 7.6 PlanService
 - CRUD con validaciones: **slug único** (409), precio ≥ 0, currency de 3 letras, `billing_cycle ∈ {monthly, yearly}`, `support_level ∈ {email, priority, dedicated}`.
 - `GetPublicPlans` (pricing page: `is_public AND is_active`), `GetActivePlans`, `GetAllPlans`.
 - `TogglePlanStatus` — desactivar oculta el plan de `/plans` pero **no afecta** a empresas que ya lo tienen.
 - `DeletePlan` — bloqueado (409) si alguna empresa usa el plan; soft delete.
 - `AssignPlanToCompany` — valida plan activo → `company.plan_tier = plan.slug`.
 
-### 7.6 PublicService (career page)
+### 7.7 PublicService (career page)
 - `GetCompanyBySlug`, `GetPublishedJobsByCompanySlug`, `GetPublishedJobByID` (solo jobs `published`).
 - **`ApplyToJob`** — crea/reusa Candidate por email dentro de la empresa + crea Application sin autenticación.
 
-### 7.7 DashboardService (+ `dashboard_repository.go`, ~246 líneas de queries)
+### 7.8 DashboardService (+ `dashboard_repository.go`, ~246 líneas de queries)
 `GET /dashboard/stats` devuelve: totales de jobs por estado, total de candidatos, aplicaciones por stage, métricas del mes (nuevos candidatos/aplicaciones/contratados), **time-to-hire promedio**, **conversion rate**, tendencias diarias de 30 días, top jobs por aplicaciones y distribución por fuente.
 
-### 7.8 Otros
+### 7.9 Otros
 - **SystemValueService** — `GetByCategory` y `GetByCategoryAndCompanyID` (globales + específicos de empresa vía `X-Company-ID`).
 - **PlatformSettingsService** — lectura del singleton para branding público.
 - **LocationService** — lecturas jerárquicas con preload selectivo (`include_states=true`...), búsqueda ILIKE case-insensitive, `GetLocationHierarchy`, `GetCountryByISO` (iso2/iso3). Tiempos típicos: países ~50ms, estados ~10ms, jerarquía completa ~150ms.

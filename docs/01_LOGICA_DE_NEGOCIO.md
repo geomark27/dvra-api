@@ -108,6 +108,9 @@ Interviewer (Nivel 10)  → Lectura básica; evaluación asignada cuando exista 
 | **Usuarios y equipo** |
 | Ver team members | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Crear usuarios / asignar roles / remover | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Estructura organizacional** |
+| Ver departamentos | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Crear / editar / desactivar | — | ✅ | ❌ | ❌ | ❌ |
 | **Jobs** |
 | Ver jobs | ✅ todos | ✅ | ✅ | Solo asignados | ✅ |
 | Crear / editar / publicar / cerrar | — | ✅ | ✅ | Editar solo asignados | ❌ |
@@ -147,15 +150,22 @@ Interviewer (Nivel 10)  → Lectura básica; evaluación asignada cuando exista 
 - **RN-JOB-002 — Ownership:** `AssignedRecruiter` (responsable, opcional) y `HiringManager` (decisión final, opcional). Sin asignados, cualquier recruiter puede gestionar.
 - **RN-JOB-003 — Límite de jobs activos:** aplica a jobs `published` (`draft` y `closed` no cuentan). Al alcanzar el límite del plan no se pueden publicar más jobs (upgrade o cerrar existentes).
 - **RN-JOB-004 — Jobs no se eliminan:** soft delete siempre, para conservar el historial de aplicaciones. Hard delete solo SuperAdmin en casos extremos.
+- **RN-JOB-005 — Departamento:** una vacante puede pertenecer a un departamento activo del mismo tenant.
 
-### 4.3 Candidatos
+### 4.3 Estructura organizacional
+
+- **RN-DEPT-001 — Jerarquía abierta:** departamentos y subdepartamentos comparten `departments`; `parent_department_id` permite cualquier profundidad.
+- **RN-DEPT-002 — Integridad:** padre, responsable y vacantes pertenecen al mismo tenant; se rechazan ciclos y duplicados.
+- **RN-DEPT-003 — Lifecycle:** se desactivan, no se eliminan físicamente; primero deben desactivarse los hijos activos.
+
+### 4.4 Candidatos
 
 - **RN-CAND-001 — Unicidad:** único por email **dentro de la misma empresa** (`UNIQUE(company_id, email)`). El mismo email puede existir como candidato en varias empresas.
 - **RN-CAND-002 — Source tracking:** `source` (linkedin, website, referral, job_board, direct, other) + detalles. Clave para analítica de canales.
 - **RN-CAND-003 — Datos mínimos:** Email, FirstName, LastName. Recomendado: CV (resume). Valioso: GithubURL para evaluación técnica.
 - **RN-CAND-004 — Deduplicación en Red Dvra (futuro):** email y GitHub username únicos globalmente en la red; si ya existe, se enriquece el perfil en vez de duplicar.
 
-### 4.4 Aplicaciones (pipeline)
+### 4.5 Aplicaciones (pipeline)
 
 - **RN-APP-001 — Stages:** `applied` → `screening` → `technical` → `interview` → `offer` → `hired` | `rejected`.
 - **RN-APP-002 — Transiciones permitidas:**

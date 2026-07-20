@@ -176,6 +176,25 @@ definitions:
     - numeric_code
     - phone_code
     type: object
+  dtos.CreateDepartmentDTO:
+    properties:
+      code:
+        maxLength: 50
+        type: string
+      description:
+        maxLength: 2000
+        type: string
+      manager_user_id:
+        type: integer
+      name:
+        maxLength: 150
+        minLength: 2
+        type: string
+      parent_department_id:
+        type: integer
+    required:
+    - name
+    type: object
   dtos.CreateMembershipDTO:
     properties:
       company_id:
@@ -804,6 +823,25 @@ definitions:
         type: integer
       timezones:
         type: string
+    type: object
+  dtos.UpdateDepartmentDTO:
+    properties:
+      code:
+        maxLength: 50
+        type: string
+      description:
+        maxLength: 2000
+        type: string
+      is_active:
+        type: boolean
+      manager_user_id:
+        type: integer
+      name:
+        maxLength: 150
+        minLength: 2
+        type: string
+      parent_department_id:
+        type: integer
     type: object
   dtos.UpdateMembershipDTO:
     properties:
@@ -1702,6 +1740,146 @@ paths:
       summary: Get dashboard statistics
       tags:
       - Dashboard
+  /departments:
+    get:
+      description: Devuelve la estructura organizacional del tenant en formato plano
+        o árbol
+      parameters:
+      - description: Construir jerarquía
+        in: query
+        name: tree
+        type: boolean
+      - description: Incluir departamentos inactivos
+        in: query
+        name: include_inactive
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar departamentos
+      tags:
+      - Departments
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Departamento
+        in: body
+        name: department
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateDepartmentDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Crear departamento o subdepartamento
+      tags:
+      - Departments
+  /departments/{id}:
+    delete:
+      parameters:
+      - description: Department ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Desactivar departamento
+      tags:
+      - Departments
+    get:
+      parameters:
+      - description: Department ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Obtener departamento
+      tags:
+      - Departments
+    put:
+      consumes:
+      - application/json
+      description: Use parent_department_id=0 para moverlo a la raíz y manager_user_id=0
+        para quitar responsable
+      parameters:
+      - description: Department ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cambios
+        in: body
+        name: department
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdateDepartmentDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Actualizar departamento
+      tags:
+      - Departments
+  /departments/tree:
+    get:
+      parameters:
+      - description: Incluir departamentos inactivos
+        in: query
+        name: include_inactive
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Obtener árbol de departamentos
+      tags:
+      - Departments
   /jobs/{id}/close:
     patch:
       consumes:

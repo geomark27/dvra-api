@@ -6,6 +6,15 @@
 
 ---
 
+## 2026-07-20 — Estructura organizacional para el ATS
+
+Se incorporó `departments` con jerarquía autorreferenciada, responsable
+opcional, lifecycle activo/inactivo y aislamiento por empresa. Las vacantes
+aceptan y filtran `department_id`. Se añadieron permisos `departments.*`, CRUD,
+vista plana y árbol, constraints case-insensitive, pruebas y Swagger. Los jobs
+tenant y públicos incluyen `department.path`, calculado mediante una consulta
+recursiva sin exponer endpoints privados en la career page.
+
 ## 2026-07-17 — RBAC tenant relacional y perfil `interviewer`
 
 El perfil genérico `user` se renombró a `interviewer`. Las memberships

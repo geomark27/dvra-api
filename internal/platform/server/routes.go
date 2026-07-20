@@ -22,6 +22,7 @@ func registerRoutes(
 	authHandler *handlers.AuthHandler,
 	userHandler *handlers.UserHandler,
 	companyHandler *handlers.CompanyHandler,
+	departmentHandler *handlers.DepartmentHandler,
 	membershipHandler *handlers.MembershipHandler,
 	candidateHandler *handlers.CandidateHandler,
 	applicationHandler *handlers.ApplicationHandler,
@@ -51,6 +52,7 @@ func registerRoutes(
 				"auth":             "/api/v1/auth",
 				"users":            "/api/v1/users",
 				"companies":        "/api/v1/companies",
+				"departments":      "/api/v1/departments",
 				"memberships":      "/api/v1/memberships",
 				"jobs":             "/api/v1/jobs",
 				"staffing_clients": "/api/v1/staffing-clients",
@@ -129,6 +131,16 @@ func registerRoutes(
 				memberships.GET("/:id", middleware.RequirePermission(rbac, permissions.MembershipsView), membershipHandler.GetMembership)
 				memberships.PUT("/:id", middleware.RequirePermission(rbac, permissions.MembershipsUpdate), membershipHandler.UpdateMembership)
 				memberships.DELETE("/:id", middleware.RequirePermission(rbac, permissions.MembershipsDelete), membershipHandler.DeleteMembership)
+			}
+
+			departments := protected.Group("/departments")
+			{
+				departments.GET("", middleware.RequirePermission(rbac, permissions.DepartmentsView), departmentHandler.ListDepartments)
+				departments.POST("", middleware.RequirePermission(rbac, permissions.DepartmentsCreate), departmentHandler.CreateDepartment)
+				departments.GET("/tree", middleware.RequirePermission(rbac, permissions.DepartmentsView), departmentHandler.GetDepartmentTree)
+				departments.GET("/:id", middleware.RequirePermission(rbac, permissions.DepartmentsView), departmentHandler.GetDepartment)
+				departments.PUT("/:id", middleware.RequirePermission(rbac, permissions.DepartmentsUpdate), departmentHandler.UpdateDepartment)
+				departments.DELETE("/:id", middleware.RequirePermission(rbac, permissions.DepartmentsDelete), departmentHandler.DeactivateDepartment)
 			}
 
 			// Job routes

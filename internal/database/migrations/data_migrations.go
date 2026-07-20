@@ -47,6 +47,24 @@ var dataMigrations = []migration{
 			return seedTenantRBAC(tx)
 		},
 	},
+	{
+		id: "20260720_departments_module",
+		run: func(tx *gorm.DB) error {
+			if err := seedTenantRBAC(tx); err != nil {
+				return err
+			}
+			statements := []string{
+				"CREATE UNIQUE INDEX IF NOT EXISTS idx_departments_company_parent_name ON departments (company_id, COALESCE(parent_department_id, 0), LOWER(name)) WHERE deleted_at IS NULL",
+				"CREATE UNIQUE INDEX IF NOT EXISTS idx_departments_company_code ON departments (company_id, LOWER(code)) WHERE deleted_at IS NULL AND code <> ''",
+			}
+			for _, statement := range statements {
+				if err := tx.Exec(statement).Error; err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	},
 }
 
 var beforeSchemaMigrations = []migration{

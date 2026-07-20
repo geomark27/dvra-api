@@ -31,14 +31,30 @@ type staffingClientReader interface {
 	GetByID(id uint) (*models.StaffingClient, error)
 }
 
+type departmentReader interface {
+	GetByID(id, companyID uint) (*models.Department, error)
+}
+
 type jobService struct {
 	jobRepo      repositories.JobRepository
 	staffingRepo staffingClientReader
 	planService  PlanService
+	departments  departmentReader
 }
 
-func NewJobService(jobRepo repositories.JobRepository, staffingRepo staffingClientReader, planService PlanService) JobService {
-	return &jobService{jobRepo: jobRepo, staffingRepo: staffingRepo, planService: planService}
+func NewJobService(jobRepo repositories.JobRepository, staffingRepo staffingClientReader, planService PlanService, departments departmentReader) JobService {
+	return &jobService{jobRepo: jobRepo, staffingRepo: staffingRepo, planService: planService, departments: departments}
+}
+
+func (s *jobService) validateDepartment(companyID, departmentID uint) error {
+	department, err := s.departments.GetByID(departmentID, companyID)
+	if err != nil {
+		return err
+	}
+	if department == nil || !department.IsActive {
+		return apperr.BadRequest("department does not exist or is inactive")
+	}
+	return nil
 }
 
 // validateStaffingClient asegura que el cliente final exista y pertenezca a la
@@ -108,6 +124,11 @@ func (s *jobService) CreateJob(dto dtos.CreateJobDTO) (*models.Job, error) {
 			return nil, err
 		}
 	}
+	if dto.DepartmentID != nil && *dto.DepartmentID > 0 {
+		if err := s.validateDepartment(dto.CompanyID, *dto.DepartmentID); err != nil {
+			return nil, err
+		}
+	}
 
 	job := &models.Job{
 		CompanyID:         dto.CompanyID,
@@ -122,6 +143,7 @@ func (s *jobService) CreateJob(dto dtos.CreateJobDTO) (*models.Job, error) {
 		Status:            status,
 		AssignedRecruiter: dto.AssignedRecruiter,
 		HiringManager:     dto.HiringManager,
+		DepartmentID:      normalizeOptionalID(dto.DepartmentID),
 		StaffingClientID:  dto.StaffingClientID,
 	}
 
@@ -172,6 +194,16 @@ func (s *jobService) UpdateJob(id uint, scope tenant.Scope, dto dtos.UpdateJobDT
 	}
 	if dto.HiringManager != nil {
 		job.HiringManager = dto.HiringManager
+	}
+	if dto.DepartmentID != nil {
+		if *dto.DepartmentID == 0 {
+			job.DepartmentID = nil
+		} else {
+			if err := s.validateDepartment(job.CompanyID, *dto.DepartmentID); err != nil {
+				return nil, err
+			}
+			job.DepartmentID = dto.DepartmentID
+		}
 	}
 	if dto.StaffingClientID != nil {
 		if err := s.validateStaffingClient(job.CompanyID, *dto.StaffingClientID); err != nil {
