@@ -3,7 +3,6 @@ package middleware
 import (
 	"net/http"
 
-	"dvra-api/internal/app/services"
 	"dvra-api/internal/shared/authctx"
 	"dvra-api/internal/shared/permissions"
 
@@ -14,7 +13,7 @@ import (
 // token tienen el permiso indicado. Debe aplicarse después de AuthMiddleware:
 //
 //	jobs.POST("", middleware.RequirePermission(rbac, permissions.JobsCreate), h.CreateJob)
-func RequirePermission(rbac services.TenantAuthorizer, permission string) gin.HandlerFunc {
+func RequirePermission(rbac PermissionChecker, permission string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !authctx.IsTenantContext(c) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})

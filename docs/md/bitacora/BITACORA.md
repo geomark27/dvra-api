@@ -6,6 +6,359 @@
 
 ---
 
+## 2026-08-28 — Migración modular completada: `billing`, `iam`, `recruitment`, `dashboard`, `publicapi`
+
+**Contexto:** cierre de la migración por dominios iniciada con el ADR-001. En esta tanda entraron
+los cinco dominios restantes, incluidos los dos más grandes (`iam`, con toda la superficie de
+autenticación, y `recruitment`, el núcleo del ATS) y los dos agregadores.
+
+**Qué se hizo:**
+- **`billing`**: planes, suscripciones y configuración de empresa. Absorbió `internal/shared/billing`
+  (hallazgo P10, ahora cerrado del todo). Expone `Plans()`, que satisface directamente
+  `middleware.FeatureChecker`: así llega el gating por plan a las rutas premium.
+- **`iam`**: auth, JWT, usuarios, empresas, membresías y RBAC relacional. `jwtService` y
+  `rbacService` ganaron `Session()` y `ResolveRole()` nativos, con lo que **se eliminó el adaptador
+  temporal que el composition root arrastraba desde la Fase A**.
+- **`recruitment`**: departamentos, vacantes, candidatos y pipeline. Es el módulo mayor.
+- **`dashboard`**: **eliminados sus 15 usos del global `database.DB`**, último reducto del estado
+  global. Además `.Table("jobs")` pasó a `.Model(&models.Job{})`, para que el nombre de la tabla
+  venga de `TableName()` y no de una cadena.
+- **`publicapi`** (career page): agregador puro, sin datos propios. Consume cinco puertos hacia iam
+  y recruitment.
+- **Retrofit de `staffing`**: sus DTOs salieron de `internal/app/dtos` al módulo; los filtros de
+  consulta pasaron a `domain/` (no son formato de cable); y **por fin tiene tests** — 5 casos sobre
+  su regla de negocio real: una colocación solo nace de una postulación en etapa `hired`, del mismo
+  `company_id` tanto en el cliente final como en la postulación, y solo una vez por postulación.
+- **`internal/app/` ELIMINADO.** Los modelos GORM pasaron a `internal/shared/models`: el nombre
+  `app/models` mentía sobre una capa que ya no existe.
+- `registerRoutes` quedó reducido a su esqueleto: arma los tres grupos y deja que cada módulo monte
+  lo suyo. Ya no contiene un solo endpoint de dominio.
+- **ADR-004** con las decisiones que la ejecución obligó a concretar y que el ADR-001 no cubría.
+- `depguard` actualizado a las fronteras reales del código final.
+
+**Decisiones clave:**
+- **Los DTOs viven en `service/`, no en `transport/`**, porque el service los devuelve y ponerlos en
+  transport crea un ciclo. La regla general —`transport` importa `service`, nunca al revés— quedó
+  en §3.5 y en el ADR-004.
+- **`staffing` y `recruitment` se construyen en dos fases.** Cada uno necesita algo del otro: no es
+  un ciclo de importación (cada uno declara su puerto) pero sí de construcción. Se resuelve con
+  `BindApplications` tras construir ambos, en lugar de inicialización perezosa, para que un fallo
+  se vea al arrancar y no en la primera petición.
+- **Un adaptador donde los tipos coinciden en forma pero no en nombre**: `ResumeUpload` existe en
+  recruitment y en publicapi, y Go no los unifica. Traducir en el composition root es el precio de
+  que ninguno dependa de los tipos del otro.
+- **Cada módulo declara sus propias variables de error.** `ErrPlanNotFound` y `ErrCompanyNotFound`
+  están duplicadas a propósito, con el mismo mensaje: un módulo no toma prestadas las de otro. Se
+  comprobó antes que nadie las comparaba por identidad.
+
+**Verificado:**
+- `TestRouteContract` → **121 rutas idénticas** tras mover los diez dominios
+- `gofmt`, `go vet ./...`, `go build ./...`, `go build ./cmd/...`, `go test ./...` → limpios
+  (15 paquetes con tests)
+- `make swagger`: **61 paths idénticos**; las 49 definiciones son las mismas, solo renombradas al
+  paquete de su módulo
+- Fronteras comprobadas por grep: ningún módulo importa `internal/app`; `shared` no importa
+  `modules`; `platform` (salvo el composition root) no importa `modules`; `shared/tenant` no
+  importa gorm
+
+**Pendientes:**
+- [ ] ⚠️ `golangci-lint` local sigue sin poder ejecutarse (compilado con go1.24, el proyecto apunta
+      a go1.26.1). **Las reglas `depguard` están sin verificar por la herramienta**; se comprobaron
+      a mano por grep. Confirmar en CI o actualizando el binario.
+- [ ] ⚠️ `go run ./cmd/console migrate --fresh --seed` sigue sin ejecutarse: no hay PostgreSQL ni
+      Docker en este entorno. Arrastrado desde la migración de `catalog`.
+- [ ] `PublishJobWithinLimit` y `AssignPlanToCompany` conservan `*gorm.DB` en el service por
+      necesitar transacción con bloqueo de fila (excepción documentada en ADR-004)
+- [ ] Empezar las épicas de beta (E0-E9) del plan de desarrollo
+
+**Referencia vigente:** `tecnico/adr/ADR-004-plantilla-de-modulo.md`,
+`tecnico/ESTANDARES_DESARROLLO.md` §3
+
+---
+
+## 2026-08-28 — Migración del módulo `catalog`
+
+**Contexto:** cuarto dominio migrado, y el primero con dos particularidades: tiene **scoping
+multi-tenant real** (valores propios de cada empresa y overrides sobre los globales) y tiene
+**consumidores internos** — `internal/shared/catalog` lo usaban 5 sitios: los seeders de planes y
+empresas, y los services de `plan`, `company` y `auth`.
+
+**Qué se hizo:**
+- `internal/modules/catalog/` con la plantilla de módulo. Sus 11 rutas (7 de tenant y 4 de
+  landlord) salieron de `server/routes.go`. Es el primer módulo que usa a la vez los grupos
+  **protegido y landlord**, con lo que `httpx.Router` queda validado en sus tres grupos entre este
+  módulo y `platformsettings`.
+- **Hallazgo P10 cerrado**: `internal/shared/catalog` no era una utilidad transversal, era lógica
+  de este dominio con consultas GORM propias. Se movió a
+  `internal/modules/catalog/repository/resolver.go` y el paquete `shared/catalog` desapareció.
+- La interfaz del repositorio pasó al consumidor (`service/ports.go`), §3.3 regla 3.
+- **Tests nuevos** (13 casos, incluidos subtests). Los importantes son los de **aislamiento
+  multi-tenant**, obligatorios en este módulo por ser el primero con datos de empresa: que la
+  empresa A no pueda editar ni borrar un valor de la empresa B, ni uno global, ni uno inexistente
+  — y que en los tres casos responda `404` y no `403`, porque un `403` confirmaría que el valor
+  existe. Verificado por mutación: al quitar el guard, los tests fallan.
+
+**Decisiones clave:**
+- El resolver sigue siendo funciones sin estado que reciben la conexión, y sus 5 consumidores solo
+  cambiaron la ruta del import. Es deliberado y **transitorio**: esos consumidores pertenecen a
+  `billing` e `iam`, que aún no son módulos y pasan el `*gorm.DB` que ya tienen. Cuando migren,
+  declararán su puerto mínimo y recibirán el resolver inyectado.
+
+**Bugs corregidos:**
+- Ninguno en producción, pero el test destapó un supuesto equivocado **mío** sobre el dominio: dar
+  de alta un valor de tenant exige `IsExtensible` **y** `AllowTenantValues`, no solo el segundo.
+  Son cosas distintas: una categoría puede ser extensible solo por el landlord. El test se corrigió
+  y ahora cubre las tres combinaciones que deben rechazarse.
+
+**Verificado:**
+- `TestRouteContract` → **121 rutas idénticas**
+- `gofmt`, `go vet ./...`, `go build ./...`, `go test ./...` → limpios (13 paquetes con tests)
+- `make swagger`: 61 paths **y** 49 definiciones idénticas — este módulo no movió ningún tipo
+  referenciado desde las anotaciones
+- El cuerpo del resolver es byte a byte el mismo que en `shared/catalog`: solo cambió el paquete
+- Fronteras: el módulo no importa `app/*`; su `service` no conoce gin ni gorm
+
+**Pendientes:**
+- [ ] ⚠️ **`go run ./cmd/console migrate --fresh --seed` NO se pudo ejecutar**: no hay PostgreSQL
+      accesible ni Docker en este entorno. Era el criterio de aceptación de esta fase por el
+      cambio de import en los seeders. El riesgo real es bajo (las llamadas se resuelven en
+      compilación, el build pasa y el cuerpo del resolver no cambió), pero **queda por confirmar
+      en un entorno con base**.
+- [ ] Siguiente dominio: `billing` (planes, suscripciones, company settings)
+
+**Referencia vigente:** `tecnico/adr/ADR-003-catalogos-modulares-y-suscripciones.md`,
+`tecnico/ESTANDARES_DESARROLLO.md` §3.7
+
+---
+
+## 2026-08-28 — Migración de `platformsettings` y `health`
+
+**Contexto:** segundo y tercer dominio tras la Fase A. `platformsettings` es la configuración
+global del SaaS (marca, contacto, URLs, textos legales, días de prueba y plan por defecto): un
+singleton que se sirve **público** al frontend antes del login y solo edita el SuperAdmin. Es el
+primer módulo que usa dos grupos de rutas distintos, lo que valida el diseño de `httpx.Router`.
+
+**Qué se hizo:**
+- `internal/modules/platformsettings/` con la plantilla de módulo. Se movió con `git mv`
+  (repositorio, service, DTOs y handler), y sus 3 rutas salieron de `server/routes.go`.
+- **Deuda P7 cerrada en este dominio**: el service dependía del *struct concreto* del
+  repositorio, lo que impedía probarlo sin base. Ahora depende de un puerto declarado en
+  `service/ports.go` (§3.3 regla 3).
+- `health` **no** se llevó a `modules/`: es infraestructura, no dominio de negocio. Vive en
+  `internal/platform/health/`.
+- **Violación de capas corregida en `health`**: el handler recibía `*gorm.DB` crudo y hacía el
+  ping él mismo. Ahora depende del puerto `Pinger`, con el adaptador `gormPinger` en el
+  composition root.
+- Se separó el significado de las dos sondas: `/health` (vida) **ya no depende de la base**. Antes
+  sí, y eso hacía que un problema de base provocara reinicios del proceso, que es justo lo que no
+  hay que hacer. `/health/ready` (disponibilidad) sí la comprueba, con timeout de 2 s.
+- **Tests nuevos**: 4 en `platformsettings/service` (campos de marca vacíos rechazados, días de
+  prueba negativos, actualización parcial que conserva lo no enviado y registra al autor,
+  propagación de errores) y 2 en `health` (que la sonda de vida sobrevive a la base caída y que la
+  de disponibilidad refleja su estado). Verificados por mutación.
+
+**Decisiones clave:**
+- El módulo se llama `platformsettings` y **no** `platform`, para no confundirse con
+  `internal/platform/`, que es infraestructura (config, servidor, almacenamiento, httpx) y no un
+  dominio de negocio. El mapa de migración (§3.7) se actualizó con ese nombre.
+
+**Verificado:**
+- `TestRouteContract` → **121 rutas idénticas**: el contrato HTTP no cambió
+- `gofmt`, `go vet ./...`, `go build ./...`, `go test ./...` → limpios (12 paquetes con tests)
+- `make swagger`: 61 paths idénticos; solo cambian de paquete los 3 DTOs de platform settings
+- Fronteras comprobadas: ningún módulo importa `app/*`; sus `service` no conocen gin ni gorm;
+  `health` no conoce gorm
+- `internal/app/{handlers,services,repositories,dtos}` ya no contienen nada de locations,
+  platform settings ni health
+
+**Pendientes:**
+- [ ] Siguiente dominio: `catalog` (system-values), luego `billing`
+- [ ] `PlatformSettingsService` sigue siendo un struct concreto: quien lo consuma desde otro
+      módulo debe declarar su propio puerto mínimo, no depender del tipo
+
+**Referencia vigente:** `tecnico/ESTANDARES_DESARROLLO.md` §3.7
+
+---
+
+## 2026-08-27 — Migración del módulo `locations`
+
+**Contexto:** primer dominio migrado tras la Fase A. Se eligió `locations` por ser el más simple
+de los pendientes: catálogo de referencia global, solo lectura, sin scoping por empresa y sin
+dependencias salientes. Sirve para calibrar la plantilla de módulo con volumen real (1.787 líneas)
+y riesgo bajo.
+
+**Qué se hizo:**
+- Movido a `internal/modules/locations/` con `git mv` (se conserva la historia):
+  `repository/`, `service/`, `transport/` y `module.go`.
+- **Eliminados los 30 usos del global `database.DB`**: `NewLocationRepository()` pasa a recibir
+  `*gorm.DB` inyectado, con lo que el repositorio queda mockeable.
+- La interfaz del repositorio se movió al **consumidor** (`service/ports.go`), según §3.3 regla 3.
+- El módulo se registra por `httpx.Module`; sus 14 rutas salieron de `server/routes.go`.
+- **Tests nuevos** (`service/location_service_test.go`, 6 casos) sobre la lógica real:
+  normalización de ISO a mayúsculas en consulta y en alta, `404` en no encontrado, integridad
+  referencial al crear una subregión, y propagación de errores del repositorio. Se verificaron por
+  mutación: introducir el bug hace fallar el test.
+- No lleva test de aislamiento tenant **a propósito**: el catálogo es global, no pertenece a
+  ninguna empresa. Queda anotado en `module.go`.
+
+**Decisiones clave:**
+- Los DTOs quedan en `service/` y no en `transport/`: el service los devuelve, así que ponerlos en
+  `transport` crearía un ciclo (`transport → service → transport`). Se documentó la regla general
+  en §3.5, con `transport` importando a `service` y nunca al revés.
+
+**Bugs corregidos:**
+- **`make swagger` no reproducía el `swagger.json` commiteado**: al target le faltaban
+  `--parseDependency --parseInternal`, así que regenerar renombraba **todas** las definiciones
+  (`dvra-api_internal_app_dtos.X` → `dtos.X`). Corregido en el Makefile. Sin esto, cualquier
+  regeneración habría producido un diff global espurio.
+
+**Verificado:**
+- `TestRouteContract` → **121 rutas idénticas**: el contrato HTTP no cambió
+- `gofmt`, `go vet ./...`, `go build ./...`, `go test ./...` → limpios
+- `make swagger`: 61 paths idénticos; el único cambio son los 16 DTOs de locations moviéndose de
+  `app_dtos` a `modules_locations_service`
+- Fronteras comprobadas: el módulo no importa `app/*`, su `service` no conoce gin ni gorm, su
+  `transport` no conoce gorm
+
+**Operación:**
+- `swag` debe ser la versión de `go.mod` (v1.16.6). Ojo: esa versión **reporta mal su propio
+  número** (`const Version = "v1.16.4"` upstream), así que `swag --version` no sirve para
+  verificarla; instálala con `go install github.com/swaggo/swag/cmd/swag@v1.16.6`.
+
+**Pendientes:**
+- [ ] Siguiente dominio: `platform` (settings + health), luego `catalog`
+- [ ] Fijar la versión de `swag` en el target `install-tools` para evitar la deriva
+
+**Referencia vigente:** `tecnico/ESTANDARES_DESARROLLO.md` §3.5 y §3.7
+
+---
+
+## 2026-08-27 — Fase A: plataforma de migración modular
+
+**Contexto:** `internal/shared/middleware` importaba `internal/app/services`, así que la cadena
+`staffing/transport → shared/middleware → app/services` metía **todos** los servicios en el grafo
+de cualquier módulo. Mientras eso existiera, ningún módulo podía ser autocontenido y cada fase de
+migración habría repetido el mismo trabajo. Esta fase no migra ningún dominio: construye el
+terreno.
+
+**Qué se hizo:**
+- **Puertos de middleware** (`shared/middleware/ports.go`): `Authenticator`, `PermissionChecker`,
+  `FeatureChecker`, definidos en el consumidor. `TenantRBACService.Can` y
+  `PlanService.CompanyHasFeature` los satisfacen tal cual, sin adaptador. Solo `Authenticator`
+  necesita uno, temporal, en el composition root: desaparece cuando se migre `iam`.
+- **Tipos neutrales** (`shared/identity/session.go`): `SessionClaims`, `TenantRole` y los errores
+  de token. `services.ErrExpiredToken` pasa a ser un alias del de `identity`, de modo que el
+  código existente sigue compilando.
+- `authctx.SetSession` es ahora el **único escritor** de las keys del contexto; `AuthMiddleware`
+  dejó de usar literales.
+- **Helpers de scoping** (`authctx/scope.go` + `tenant.Scope.Guard`): `RequireScope`,
+  `RequireCompanyScope`, `RequireCompanyID`. Son el reemplazo del patrón `IsSuperAdmin` repetido a
+  mano, que se irá aplicando al migrar `iam` y `billing`.
+- **`shared/tenant` ya no importa gorm**: `Apply` se movió al subpaquete `tenant/tenantgorm`, así
+  el núcleo de la frontera de datos puede usarse desde la lógica de negocio de cualquier módulo.
+- **`platform/httpx`**: `Router` (tres grupos de rutas + RBAC + Plans) y la interfaz `Module`.
+  `staffing` ya se registra por ese contrato.
+- **Composition root**: `registerRoutes` pasa de **22 parámetros posicionales a 3**; el cableado
+  vive en `buildDeps` (`server/deps.go`), con una lista `[]httpx.Module` para los dominios ya
+  migrados.
+- **`depguard`** en `.golangci.yml` con 4 reglas: `platform !→ modules` (salvo el composition
+  root), fronteras de módulo, `shared !→ services`, y `tenant` sin gorm. Es el equivalente en Go a
+  las pruebas ArchUnit de Terra.
+- **Golden de rutas** (`server/routes_test.go` + `testdata/routes.golden`, **121 rutas**): congela
+  el contrato HTTP. Se verificó que detecta altas y bajas de rutas.
+- **Código muerto eliminado**: `database/scoped_db.go` y `middleware/cors_middleware.go` (0 usos
+  ambos), `RequireCompany()`, `OptionalAuth()`. `go mod tidy` quitó `gin-contrib/cors` y
+  `uber/mock`.
+- Tests de `shared/middleware` reescritos con un `Authenticator` falso: el paquete ya no depende de
+  `app/services` **ni siquiera en sus tests**. Se añadieron los casos de token expirado, token
+  desconocido, header mal formado y rol revocado.
+
+**Decisiones clave:**
+- El adaptador `authenticator` vive en el composition root y es explícitamente temporal.
+- `platform/httpx` va en `platform/` y no en `platform/server` para evitar el ciclo
+  `server → modules → server`.
+- El golden de rutas **no se toca durante la migración**: si una fase lo cambia, es un bug de esa
+  fase, no un cambio legítimo.
+
+**Verificado:**
+- `gofmt -l internal/ cmd/` → vacío
+- `go vet ./...` → limpio
+- `go build ./...` → OK
+- `go test ./...` → todo verde, incluido el nuevo `TestRouteContract`
+- Las 4 reglas de frontera comprobadas por grep sobre el código real
+- ⚠️ `golangci-lint` local no ejecutable: está compilado con go1.24 y el proyecto apunta a
+  go1.26.1. El YAML se validó por separado; **falta confirmar `depguard` en CI**.
+
+**Pendientes:**
+- [ ] Actualizar `golangci-lint` local a una versión compilada con Go ≥1.26 y correr `make lint`
+- [ ] Migrar los dominios pendientes (§3.7), empezando por `locations`
+- [ ] Aplicar los helpers de scoping a los ~15 `IsSuperAdmin` restantes al migrar `iam` y `billing`
+- [ ] ADR-004 con las decisiones que esta fase añade al ADR-001
+
+**Referencia vigente:** `tecnico/ESTANDARES_DESARROLLO.md` §3.3 y §3.7, `AGENTS.md`
+
+---
+
+## 2026-08-26 — Gobernanza de la migración modular y plan de beta
+
+**Contexto:** `ESTANDARES_DESARROLLO.md` §3 seguía describiendo la arquitectura **por capas** como
+norma vigente, en contradicción con ADR-001 (aceptado, con `staffing` ya migrado). Como las skills
+`hu-a-ht` y `validar-estandares` leen ese documento como fuente de verdad, todo el código nuevo se
+generaba y validaba en la arquitectura que se está abandonando. Además no existía convención de
+commits (4 de 34 usaban Conventional Commits) ni bitácora en el frontend.
+
+Se tomó como referencia el patrón de `terra-api-purchasing`, que resultó **más simple** que el
+hexagonal-lite que prescribía el ADR-001: dos mitades `modules/` y `platform/`, sin `ports/`,
+`adapters/` ni `usecase/`, y con las fronteras verificadas por análisis estático en lugar de
+artefactos separados.
+
+**Qué se hizo:**
+- `AGENTS.md` en la raíz: resumen operativo con la anatomía de módulo y las 7 reglas de
+  modularidad.
+- `ESTANDARES_DESARROLLO.md` §3 reescrito con la arquitectura por dominios
+  (`modules/<dominio>/{transport,service,repository}` + `module.go` + `ports.go`). La estructura
+  por capas pasa al **Anexo A**, marcada como legacy en retirada.
+- Nuevo **§3.7 Mapa de migración**: tabla dominio → migrado/pendiente que indica dónde va el
+  código nuevo mientras dura la transición. Un dominio nuevo nace siempre como módulo.
+- §2.6 reescrito con el envelope definitivo (`data` como payload directo, `meta` de paginación,
+  errores con `code` y `errors` por campo) y las reglas de qué colecciones se paginan.
+- §4 corregido: la brecha de scoping manual son ~15 usos de `IsSuperAdmin` en `iam` y `billing`,
+  no 41 — los handlers de jobs, candidates y applications ya migraron a `authctx.TenantScope`. Se
+  documentan los helpers a usar.
+- §2.4 corregido: las tags `validate:` inertes ya no existen en el repo (138 tags `binding:`
+  activas); deja de ser una brecha y pasa a ser una prohibición.
+- §6 actualizado: la cobertura ya no es "solo `permissions_test.go`"; se añade el test de
+  aislamiento tenant como obligatorio por módulo.
+- Skills `hu-a-ht` y `validar-estandares` actualizadas: la primera pregunta el módulo antes que
+  nada y emite rutas según §3.7; la segunda añade checks de frontera entre módulos.
+- Formato de bitácora formalizado con las secciones que ya se usaban de facto (`Contexto`,
+  `Decisiones clave`, `Bugs corregidos`, `Verificado`, `Operación`) y el campo `Contraparte`.
+
+**Decisiones clave:**
+- La migración modular se ejecuta **intercalada** con el camino a beta, congelando cada dominio en
+  las semanas en que las épicas de producto lo tocan. Cero refactor durante la entrada de los
+  primeros clientes.
+- El aislamiento por **base de datos por empresa** se pospone a v2 (post-beta): hoy hay 31 de 64
+  `Preload` cruzando la frontera landlord/tenant y claves foráneas entre dominios que no
+  sobrevivirían a bases separadas. La migración modular es su prerrequisito, no una tarea
+  paralela.
+- Los modelos GORM siguen compartidos (ADR-001 regla 2). Es deliberado, no deuda.
+
+**Pendientes:**
+- [ ] Convención de commits: hook `commit-msg` + protección de `main` en los targets del Makefile
+- [ ] Consolidar los dos árboles de documentación (`docs/01..04` → `docs/md/_archivo/`)
+- [ ] Fase A: desacoplar `shared/middleware` de `app/services`, `platform/httpx`, helpers de
+      scoping, `depguard`, golden de rutas
+- [ ] Migrar los 8 dominios pendientes (§3.7)
+- [ ] ADR-004 con las decisiones que este plan añade al ADR-001
+
+**Referencia vigente:** `tecnico/ESTANDARES_DESARROLLO.md` §3 y §3.7,
+`tecnico/adr/ADR-001-arquitectura-modular.md`, `AGENTS.md`
+
+**Contraparte:** dvra-web — entrada `2026-08-26 — Bitácora, estándares y alcance de beta`
+
+---
+
 ## 2026-07-20 — Catálogos modulares, suscripciones y archivo de ADR
 
 Se reemplazó el catálogo plano por la jerarquía módulo → categoría → valor,
@@ -372,14 +725,45 @@ Se introdujo `tenant.Scope` fail-closed y se migraron repositorios ATS críticos
 
 ## Formato para nuevas entradas
 
+Tres secciones **obligatorias** (`Qué se hizo`, `Pendientes`, `Referencia vigente`) y cinco
+opcionales que se usan cuando aportan. Entradas nuevas **al inicio** del archivo.
+
 ```markdown
 ## AAAA-MM-DD — Título corto
 
+**Contexto:** (opcional — 1-3 líneas: qué problema motivó el cambio)
+
 **Qué se hizo:**
+- ...
+
+**Decisiones clave:** (opcional — solo si condicionan código futuro; si la decisión
+es arquitectónica, aquí va el enlace al ADR, no la argumentación)
+- ...
+
+**Bugs corregidos:** (opcional)
+- ...
+
+**Verificado:** (opcional — comandos ejecutados y su resultado)
+- `make check` → OK
+
+**Operación:** (opcional — migraciones, variables de entorno, pasos de despliegue)
 - ...
 
 **Pendientes:**
 - [ ] ...
 
 **Referencia vigente:** `tecnico/...`
+
+**Contraparte:** dvra-web — entrada `AAAA-MM-DD — <mismo título>`
+  (obligatorio solo si el cambio toca ambos repositorios)
 ```
+
+### Reglas
+
+- Una entrada por **feature o decisión técnica**, no por commit.
+- **Bitácora vs ADR:** la bitácora dice *qué se hizo y cuándo*; el ADR dice *por qué se decidió
+  así y qué se descartó*. Si una entrada tiene "Decisiones clave" que restringen código futuro,
+  debe enlazar un ADR existente o crear uno.
+- Cuando el cambio toca también el frontend, ambas bitácoras llevan una entrada con la **misma
+  fecha y el mismo título**, cada una describiendo su lado, y el campo `Contraparte` relleno.
+- La bitácora del frontend vive en la ruta espejo: `dvra-web/docs/md/bitacora/BITACORA.md`.

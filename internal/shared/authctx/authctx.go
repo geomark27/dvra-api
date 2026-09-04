@@ -23,6 +23,26 @@ const (
 	KeyContextType  = "context_type"
 )
 
+// SetSession es el ÚNICO lugar del proyecto que escribe claims en el contexto
+// de Gin. Los middlewares la usan en lugar de c.Set(...) con literales, de modo
+// que las keys tengan un solo dueño.
+func SetSession(c *gin.Context, claims *identity.SessionClaims) {
+	c.Set(KeyUserID, claims.UserID)
+	c.Set(KeyEmail, claims.Email)
+	c.Set(KeyRole, claims.Role)
+	c.Set(KeyContextType, claims.ContextType)
+
+	if claims.CompanyID != nil {
+		c.Set(KeyCompanyID, *claims.CompanyID)
+	}
+	if claims.MembershipID != nil {
+		c.Set(KeyMembershipID, *claims.MembershipID)
+	}
+	if claims.TenantRoleID != nil {
+		c.Set(KeyTenantRoleID, *claims.TenantRoleID)
+	}
+}
+
 // Role devuelve el rol del token, o cadena vacía si no hay sesión.
 func Role(c *gin.Context) string {
 	role, ok := c.Get(KeyRole)

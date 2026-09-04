@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"dvra-api/internal/app/models"
+	"dvra-api/internal/shared/models"
 )
 
 const (

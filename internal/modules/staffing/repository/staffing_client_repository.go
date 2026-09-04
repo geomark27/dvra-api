@@ -4,8 +4,8 @@
 package repository
 
 import (
-	"dvra-api/internal/app/models"
 	"dvra-api/internal/modules/staffing/domain"
+	"dvra-api/internal/shared/models"
 
 	"gorm.io/gorm"
 )

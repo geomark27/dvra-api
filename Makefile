@@ -81,7 +81,7 @@ help: ## Muestra esta ayuda
 	@echo "    clean              Limpia archivos generados"
 	@echo "    deps               Descarga las dependencias"
 	@echo "    install-tools      Instala herramientas de desarrollo (air, golangci-lint, swag)"
-	@echo "    hooks-install      Instala el git hook de pre-commit"
+	@echo "    hooks-install      Instala los git hooks (pre-commit y commit-msg)"
 	@echo "    swagger            Genera documentacion Swagger"
 	@echo ""
 	@echo "================================================================================"
@@ -155,10 +155,12 @@ check: ## Gate de calidad: fmt-check + vet + lint + test + build
 	@$(MAKE) build
 	@echo "Todos los checks pasaron"
 
-hooks-install: ## Instala el git hook de pre-commit
+hooks-install: ## Instala los git hooks (pre-commit y commit-msg)
 	@cp scripts/git-hooks/pre-commit .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit
-	@echo "Hook pre-commit instalado en .git/hooks/pre-commit"
+	@cp scripts/git-hooks/commit-msg .git/hooks/commit-msg
+	@chmod +x .git/hooks/commit-msg
+	@echo "Hooks instalados: .git/hooks/pre-commit, .git/hooks/commit-msg"
 
 deps: ## Descarga las dependencias
 	@echo "Descargando dependencias..."
@@ -197,7 +199,10 @@ install-tools: ## Instala herramientas de desarrollo
 	@echo "Instalando herramientas de desarrollo..."
 	@go install github.com/cosmtrek/air@latest
 	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
-	@go install github.com/swaggo/swag/cmd/swag@latest
+	@# Fijado a la version de go.mod: con @latest, regenerar el Swagger renombra
+	@# todas las definiciones y produce un diff global espurio.
+	@# Ojo: v1.16.6 reporta "v1.16.4" en --version (constante mal puesta upstream).
+	@go install github.com/swaggo/swag/cmd/swag@v1.16.6
 
 # ============================================
 # COMANDOS DOCKER (API + DB) - PRODUCCION
@@ -318,6 +323,11 @@ push: ## Push rapido: make push m='mensaje'
 		echo "   Uso: make push m='tu mensaje de commit'"; \
 		exit 1; \
 	fi
+	@if [ "$(BRANCH)" = "main" ]; then \
+		echo "Error: no se commitea directo a main."; \
+		echo "   Crea una rama: git switch -c feat/<scope>-<slug>"; \
+		exit 1; \
+	fi
 	@echo "Agregando archivos..."
 	@git add .
 	@echo "Commiteando: $(m)"
@@ -343,6 +353,11 @@ sync: ## Sincronizar (pull + push): make sync m='mensaje'
 		echo "   Uso: make sync m='tu mensaje de commit'"; \
 		exit 1; \
 	fi
+	@if [ "$(BRANCH)" = "main" ]; then \
+		echo "Error: no se commitea directo a main."; \
+		echo "   Crea una rama: git switch -c feat/<scope>-<slug>"; \
+		exit 1; \
+	fi
 	@echo "Pulling cambios..."
 	@git pull origin $(BRANCH)
 	@echo "Agregando archivos..."
@@ -359,6 +374,6 @@ sync: ## Sincronizar (pull + push): make sync m='mensaje'
 
 swagger: ## Genera documentacion Swagger/OpenAPI
 	@echo "Generando documentacion Swagger..."
-	@~/go/bin/swag init -g cmd/dvra-api/main.go -o docs
+	@~/go/bin/swag init -g cmd/dvra-api/main.go -o docs --parseDependency --parseInternal
 	@echo "Documentacion generada en docs/"
 	@echo "Accede a http://localhost:$(PORT)/swagger/index.html"

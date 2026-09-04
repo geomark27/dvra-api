@@ -1,7 +1,7 @@
 package seeders
 
 import (
-	"dvra-api/internal/app/models"
+	"dvra-api/internal/shared/models"
 	"log"
 
 	"gorm.io/gorm"

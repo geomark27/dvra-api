@@ -12,6 +12,8 @@ docs/md/
 │   ├── LOGICA_DE_NEGOCIO.md
 │   └── PLAN_DE_NEGOCIO_ANO1.md
 ├── tecnico/                           ← Detalles técnicos y desarrollo
+│   ├── ESTANDARES_DESARROLLO.md       ← FUENTE DE VERDAD del cómo se programa
+│   ├── AUDITORIA_ESTANDARES.md
 │   ├── ARQUITECTURA.md
 │   ├── adr/                           ← Registro histórico de decisiones
 │   │   ├── README.md
@@ -23,12 +25,17 @@ docs/md/
 │   ├── FLUJO_SUPERADMIN.md
 │   ├── MODULO_PLANES.md
 │   └── MODULO_UBICACIONES.md
+├── historias/                         ← Historias Técnicas (HT) de cada tarea
+│   └── README.md
 ├── frontend/                          ← Contratos e indicaciones para el frontend
 │   ├── README.md
 │   └── AJUSTES_CATALOGOS_SUSCRIPCIONES_SETTINGS.md
 └── bitacora/                          ← Registro cronológico de actividades
     └── BITACORA.md
 ```
+
+> El resumen operativo para agentes y desarrolladores está en **`AGENTS.md`** (raíz del repo):
+> anatomía de módulo y las 7 reglas de modularidad.
 
 ## 💼 Negocio
 
@@ -41,7 +48,9 @@ docs/md/
 
 | Documento | Contenido | Úsalo para |
 |-----------|-----------|------------|
-| [ARQUITECTURA.md](tecnico/ARQUITECTURA.md) | Tech stack (Go/Gin/GORM/PostgreSQL), arquitectura de capas, multi-tenancy, modelos de datos, seguridad JWT, infraestructura AWS | Entender la estructura del sistema antes de tocar código |
+| [ESTANDARES_DESARROLLO.md](tecnico/ESTANDARES_DESARROLLO.md) | **Fuente de verdad**: cómo se escribe, estructura, verifica y documenta el código. Arquitectura por dominios, mapa de migración (§3.7), envelope HTTP (§2.6), multi-tenancy (§4), Definición de Done (§9) | **Antes de escribir cualquier línea.** Las skills `hu-a-ht` y `validar-estandares` lo leen como fuente de verdad |
+| [AUDITORIA_ESTANDARES.md](tecnico/AUDITORIA_ESTANDARES.md) | Brechas del código frente al estándar, con severidad y evidencia | Priorizar deuda técnica |
+| [ARQUITECTURA.md](tecnico/ARQUITECTURA.md) | Tech stack (Go/Gin/GORM/PostgreSQL), multi-tenancy, modelos de datos, seguridad JWT, infraestructura AWS | Entender la estructura del sistema antes de tocar código |
 | [Índice de ADR](tecnico/adr/README.md) | Decisiones arquitectónicas aceptadas, reemplazadas u obsoletas | Entender por qué existe la arquitectura actual |
 | [API_ENDPOINTS.md](tecnico/API_ENDPOINTS.md) | **Referencia completa de todos los endpoints** con requests/responses de ejemplo | Consulta diaria durante el desarrollo e integración frontend |
 | [FLUJO_CLIENTE.md](tecnico/FLUJO_CLIENTE.md) | Flujo completo del cliente (admin de empresa): registro, multi-empresa, permisos por rol, aislamiento multi-tenant, casos de uso | Entender el recorrido y permisos de un usuario de empresa |
@@ -64,6 +73,10 @@ docs/md/
 
 ## ⚠️ Notas importantes
 
-- **Precios:** la fuente de verdad de los planes actuales es el seeder (`internal/database/seeders/plan_seeder.go`): Free $0, Starter $39.99, Professional $79.99, Enterprise $159.99. Los precios en `negocio/` ($49/$149/$399) son el **objetivo comercial** del plan de negocio, aún no reflejado en el código.
+- **Precios:** la fuente de verdad de lo que está **desplegado** es el seeder (`internal/database/seeders/plan_seeder.go`): Free $0, Starter $39.99, Professional $79.99, Enterprise $159.99.
+
+  La tabla **aprobada** (2026-08-26), aún pendiente de implementar, es: Free $0 · Starter $49 · Growth $99 · **Agency $149** · Enterprise a convenir (`is_public: false`). Precio **por empresa, no por asiento**; `can_use_staffing` pasa de Professional a Agency. Los precios de `negocio/` ($49/$149/$399) quedan obsoletos.
+
+  ⚠️ Al implementarla: `plan_seeder.go` **omite los planes que ya existen**, así que sobre una BD poblada el seeder no cambia nada. Hace falta una migración de datos en `internal/database/migrations/data_migrations.go`. El `PriceSnapshot` de las suscripciones vivas conserva el precio anterior, así que el grandfathering es automático.
 - **Credenciales por defecto del SuperAdmin:** deben cambiarse en producción (ver bitácora).
 - Al completar un hito relevante, agregar una entrada al inicio de `bitacora/BITACORA.md` con el formato indicado al final de ese archivo.

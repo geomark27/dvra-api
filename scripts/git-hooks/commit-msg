@@ -1,0 +1,72 @@
+#!/bin/sh
+# Commit-msg hook de Dvra: exige Conventional Commits con scope de módulo.
+# Instalar con: make hooks-install
+#
+# Formato:  <tipo>(<scope>): <resumen en imperativo, minúscula, sin punto final>
+# Ejemplo:  feat(recruitment): validar la etapa contra el catálogo del tenant
+#
+# El scope es el módulo tocado, de modo que `git log --oneline` diga qué dominio se movió.
+
+set -e
+
+msg_file="$1"
+first_line="$(head -n1 "$msg_file")"
+
+# Los merges y los revert generados por git pasan sin validar.
+case "$first_line" in
+	"Merge "*|"Revert "*|"fixup! "*|"squash! "*) exit 0 ;;
+esac
+
+# Las líneas de comentario no cuentan (commit abortado por mensaje vacío).
+case "$first_line" in
+	"#"*|"") exit 0 ;;
+esac
+
+tipos='feat|fix|refactor|perf|docs|test|build|ci|chore|style'
+scopes='iam|recruitment|staffing|billing|catalog|locations|platform|dashboard|public|httpx|shared|docs|infra|deps'
+
+# tipo(scope): resumen   — el "!" opcional marca breaking change
+if ! echo "$first_line" | grep -qE "^($tipos)\(($scopes)\)!?: .+"; then
+	cat >&2 <<EOF
+
+[commit-msg] Mensaje rechazado:
+
+    $first_line
+
+Formato esperado:  <tipo>(<scope>): <resumen>
+
+  tipos:   $tipos
+  scopes:  $scopes
+
+Ejemplos:
+  feat(billing): fijar current_period_end al asignar un plan
+  fix(iam): forzar company_id desde el token al crear usuario
+  docs(staffing): documentar el gating por plan
+  refactor(catalog)!: mover shared/catalog al módulo
+
+Un "!" antes de los dos puntos marca un cambio incompatible.
+
+EOF
+	exit 1
+fi
+
+# El resumen no lleva punto final ni empieza en mayúscula.
+resumen="$(echo "$first_line" | sed 's/^[^:]*: //')"
+
+case "$resumen" in
+	*.) echo "[commit-msg] El resumen no lleva punto final." >&2; exit 1 ;;
+esac
+
+if echo "$resumen" | grep -qE '^[A-ZÁÉÍÓÚÑ]'; then
+	echo "[commit-msg] El resumen empieza en minúscula (es una frase, no un título)." >&2
+	exit 1
+fi
+
+# 72 caracteres es lo que git muestra sin truncar en la mayoría de vistas.
+if [ "${#first_line}" -gt 72 ]; then
+	echo "[commit-msg] La primera línea tiene ${#first_line} caracteres (máximo 72)." >&2
+	echo "             El detalle va en el cuerpo del mensaje, tras una línea en blanco." >&2
+	exit 1
+fi
+
+exit 0

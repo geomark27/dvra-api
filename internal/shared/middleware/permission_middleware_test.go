@@ -1,99 +1,174 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"dvra-api/internal/app/models"
-	"dvra-api/internal/app/services"
 	"dvra-api/internal/shared/identity"
 	"dvra-api/internal/shared/permissions"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-type middlewareTenantAuthorizer struct {
-	roleID uint
-	role   *models.TenantRole
+// fakeAuth implementa Authenticator sin tocar el emisor real de tokens: el
+// paquete de middlewares no debe depender de los servicios de la aplicación.
+// El round-trip real de firma y expiración lo cubre jwt_service_test.go.
+type fakeAuth struct {
+	sessions map[string]*identity.SessionClaims
+
+	// rol vigente que devuelve ResolveRole; si roleErr != nil, falla (rol
+	// revocado o membresía suspendida).
+	role    identity.TenantRole
+	roleErr error
+
+	// permiso que Can concede al rol vigente.
+	granted string
 }
 
-func (f middlewareTenantAuthorizer) Can(roleID uint, permission string) (bool, error) {
-	return roleID == f.roleID && permission == permissions.JobsView, nil
+func (f fakeAuth) Session(token string) (*identity.SessionClaims, error) {
+	claims, ok := f.sessions[token]
+	if !ok {
+		return nil, identity.ErrInvalidToken
+	}
+	if token == "expired" {
+		return nil, identity.ErrExpiredToken
+	}
+	// Copia: el middleware sobrescribe Role/TenantRoleID con el rol vigente.
+	copied := *claims
+	return &copied, nil
 }
-func (f middlewareTenantAuthorizer) Permissions(uint) ([]string, error) { return nil, nil }
-func (f middlewareTenantAuthorizer) RoleByID(id uint) (*models.TenantRole, error) {
-	if id != f.roleID {
-		return nil, gorm.ErrRecordNotFound
+
+func (f fakeAuth) ResolveRole(_, _, _ uint) (identity.TenantRole, error) {
+	if f.roleErr != nil {
+		return identity.TenantRole{}, f.roleErr
 	}
 	return f.role, nil
 }
-func (f middlewareTenantAuthorizer) RoleByKey(string) (*models.TenantRole, error) {
-	return nil, gorm.ErrRecordNotFound
+
+func (f fakeAuth) Can(roleID uint, permission string) (bool, error) {
+	return roleID == f.role.ID && permission == f.granted, nil
 }
-func (f middlewareTenantAuthorizer) RoleForMembership(_, _, _ uint) (*models.TenantRole, error) {
-	return f.role, nil
+
+func platformClaims() *identity.SessionClaims {
+	membershipID := uint(1)
+	return &identity.SessionClaims{
+		UserID:       7,
+		Email:        "root@example.com",
+		Role:         permissions.RoleSuperAdmin,
+		ContextType:  identity.ContextPlatform,
+		MembershipID: &membershipID,
+	}
+}
+
+func tenantClaims() *identity.SessionClaims {
+	companyID, membershipID, tokenRoleID := uint(9), uint(2), uint(1)
+	return &identity.SessionClaims{
+		UserID:       8,
+		Email:        "admin@example.com",
+		ContextType:  identity.ContextTenant,
+		CompanyID:    &companyID,
+		MembershipID: &membershipID,
+		TenantRoleID: &tokenRoleID,
+	}
 }
 
 func TestPlatformAndTenantPermissionsCannotCrossContexts(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	jwt := services.NewJWTService("access-secret-with-more-than-32-chars", "refresh-secret-with-more-than-32-chars")
-	platformMembershipID := uint(1)
-	platformToken, err := jwt.GenerateAccessToken(7, "root@example.com", identity.Context{
-		Type: identity.ContextPlatform, MembershipID: &platformMembershipID, Role: permissions.RoleSuperAdmin,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	companyID, tenantMembershipID := uint(9), uint(2)
-	tenantRoleID := uint(1)
-	tenantToken, err := jwt.GenerateAccessToken(8, "admin@example.com", identity.Context{
-		Type: identity.ContextTenant, CompanyID: &companyID, MembershipID: &tenantMembershipID, TenantRoleID: &tenantRoleID,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	rbac := middlewareTenantAuthorizer{
-		roleID: tenantRoleID,
-		role:   &models.TenantRole{BaseModel: models.BaseModel{ID: tenantRoleID}, Key: permissions.RoleAdmin, IsActive: true},
+
+	auth := fakeAuth{
+		sessions: map[string]*identity.SessionClaims{
+			"platform": platformClaims(),
+			"tenant":   tenantClaims(),
+		},
+		role:    identity.TenantRole{ID: 1, Key: permissions.RoleAdmin},
+		granted: permissions.JobsView,
 	}
 
 	router := gin.New()
-	router.GET("/tenant", AuthMiddleware(jwt, rbac), RequirePermission(rbac, permissions.JobsView), okHandler)
-	router.GET("/platform", AuthMiddleware(jwt, rbac), RequirePlatformPermission(permissions.PlatformCompaniesView), okHandler)
+	router.GET("/tenant", AuthMiddleware(auth), RequirePermission(auth, permissions.JobsView), okHandler)
+	router.GET("/platform", AuthMiddleware(auth), RequirePlatformPermission(permissions.PlatformCompaniesView), okHandler)
 
-	assertStatus(t, router, "/tenant", platformToken, http.StatusForbidden)
-	assertStatus(t, router, "/platform", tenantToken, http.StatusForbidden)
-	assertStatus(t, router, "/tenant", tenantToken, http.StatusOK)
-	assertStatus(t, router, "/platform", platformToken, http.StatusOK)
+	assertStatus(t, router, "/tenant", "platform", http.StatusForbidden)
+	assertStatus(t, router, "/platform", "tenant", http.StatusForbidden)
+	assertStatus(t, router, "/tenant", "tenant", http.StatusOK)
+	assertStatus(t, router, "/platform", "platform", http.StatusOK)
 }
 
+// El rol efectivo se resuelve contra la base en cada petición, no se lee del
+// token: el token dice rol 1 y el vigente es el 4.
 func TestTenantMiddlewareUsesCurrentMembershipRole(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	jwt := services.NewJWTService("access-secret-with-more-than-32-chars", "refresh-secret-with-more-than-32-chars")
-	companyID, membershipID, tokenRoleID := uint(9), uint(2), uint(1)
-	token, err := jwt.GenerateAccessToken(8, "user@example.com", identity.Context{
-		Type: identity.ContextTenant, CompanyID: &companyID, MembershipID: &membershipID, TenantRoleID: &tokenRoleID,
-	})
-	if err != nil {
-		t.Fatal(err)
+
+	currentRole := identity.TenantRole{ID: 4, Key: permissions.RoleInterviewer}
+	auth := fakeAuth{
+		sessions: map[string]*identity.SessionClaims{"tenant": tenantClaims()},
+		role:     currentRole,
 	}
-	currentRoleID := uint(4)
-	rbac := middlewareTenantAuthorizer{
-		roleID: currentRoleID,
-		role:   &models.TenantRole{BaseModel: models.BaseModel{ID: currentRoleID}, Key: permissions.RoleInterviewer, IsActive: true},
-	}
+
 	router := gin.New()
-	router.GET("/current-role", AuthMiddleware(jwt, rbac), func(c *gin.Context) {
+	router.GET("/current-role", AuthMiddleware(auth), func(c *gin.Context) {
 		roleID, exists := c.Get("tenant_role_id")
-		if !exists || roleID != currentRoleID {
+		if !exists || roleID != currentRole.ID {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+		if c.GetString("role") != permissions.RoleInterviewer {
 			c.Status(http.StatusInternalServerError)
 			return
 		}
 		c.Status(http.StatusOK)
 	})
-	assertStatus(t, router, "/current-role", token, http.StatusOK)
+
+	assertStatus(t, router, "/current-role", "tenant", http.StatusOK)
+}
+
+// Un rol revocado o una membresía suspendida cortan la petición aunque el token
+// siga siendo válido.
+func TestTenantSessionIsRejectedWhenRoleIsRevoked(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	auth := fakeAuth{
+		sessions: map[string]*identity.SessionClaims{"tenant": tenantClaims()},
+		roleErr:  errors.New("membership is not active"),
+	}
+
+	router := gin.New()
+	router.GET("/tenant", AuthMiddleware(auth), okHandler)
+
+	assertStatus(t, router, "/tenant", "tenant", http.StatusUnauthorized)
+}
+
+func TestAuthMiddlewareRejectsBadTokens(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	auth := fakeAuth{
+		sessions: map[string]*identity.SessionClaims{
+			"tenant":  tenantClaims(),
+			"expired": tenantClaims(),
+		},
+		role: identity.TenantRole{ID: 1, Key: permissions.RoleAdmin},
+	}
+
+	router := gin.New()
+	router.GET("/tenant", AuthMiddleware(auth), okHandler)
+
+	assertStatus(t, router, "/tenant", "expired", http.StatusUnauthorized)
+	assertStatus(t, router, "/tenant", "desconocido", http.StatusUnauthorized)
+
+	// Sin header y con header mal formado.
+	for _, header := range []string{"", "Basic abc", "Bearer"} {
+		request := httptest.NewRequest(http.MethodGet, "/tenant", nil)
+		if header != "" {
+			request.Header.Set("Authorization", header)
+		}
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+		if response.Code != http.StatusUnauthorized {
+			t.Fatalf("header %q devolvió %d, se esperaba 401", header, response.Code)
+		}
+	}
 }
 
 func okHandler(c *gin.Context) { c.Status(http.StatusOK) }

@@ -3,7 +3,6 @@ package middleware
 import (
 	"net/http"
 
-	"dvra-api/internal/app/services"
 	"dvra-api/internal/shared/authctx"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +15,7 @@ import (
 // Debe aplicarse después de AuthMiddleware:
 //
 //	staffing.Use(middleware.RequireFeature(planService, "staffing"))
-func RequireFeature(planService services.PlanService, feature string) gin.HandlerFunc {
+func RequireFeature(plans FeatureChecker, feature string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if authctx.IsSuperAdmin(c) {
 			c.Next()
@@ -30,7 +29,7 @@ func RequireFeature(planService services.PlanService, feature string) gin.Handle
 			return
 		}
 
-		enabled, err := planService.CompanyHasFeature(companyID, feature)
+		enabled, err := plans.CompanyHasFeature(companyID, feature)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify plan entitlement"})
 			c.Abort()

@@ -53,8 +53,13 @@ Dominios objetivo: `iam` (auth, users, companies, memberships), `recruitment` (j
 ## Secuencia
 
 1. Piloto: migrar `staffing` (este ADR lo acompaña). ← **hecho**
-2. Establecer red de tests (inyección de `db` ya queda lista en el módulo migrado).
-3. Replicar el patrón al resto de dominios, uno por uno, con build/tests verdes entre cada uno.
+2. Establecer red de tests (inyección de `db` ya queda lista en el módulo migrado). ← **hecho**
+3. Replicar el patrón al resto de dominios, uno por uno, con build/tests verdes entre cada uno. ← **hecho (2026-08-28)**
+
+**Secuencia completada.** Los diez dominios están en `internal/modules/` y `internal/app/` se
+eliminó. La forma exacta que tomó el patrón está en el ADR-004, que concreta lo que este ADR dejó
+abierto (dónde viven los DTOs, cómo se rompe el ciclo de construcción entre módulos, y cómo se
+verifican las fronteras).
 
 ## Referencia
 

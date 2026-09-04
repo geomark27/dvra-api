@@ -1,9 +1,8 @@
 package repository
 
 import (
-	"dvra-api/internal/app/dtos"
-	"dvra-api/internal/app/models"
 	"dvra-api/internal/modules/staffing/domain"
+	"dvra-api/internal/shared/models"
 
 	"gorm.io/gorm"
 )
@@ -17,7 +16,7 @@ func NewPlacementRepository(db *gorm.DB) domain.PlacementRepository {
 	return &placementRepository{db: db}
 }
 
-func (r *placementRepository) GetByCompanyID(companyID uint, filters dtos.PlacementFilters) ([]models.Placement, error) {
+func (r *placementRepository) GetByCompanyID(companyID uint, filters domain.PlacementFilters) ([]models.Placement, error) {
 	var placements []models.Placement
 	query := r.db.
 		Preload("StaffingClient").

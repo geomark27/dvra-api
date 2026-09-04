@@ -23,3 +23,4 @@ los manuales técnicos ni la bitácora de implementaciones.
 Los ADR aceptados no se reescriben para ocultar decisiones anteriores. Cuando
 una decisión cambia, se crea un ADR nuevo y se enlazan ambos documentos mediante
 los campos `Reemplaza` y `Reemplazado por`.
+| [ADR-004](ADR-004-plantilla-de-modulo.md) | Plantilla de módulo y fronteras entre dominios | Aceptado | 2026-08-28 |

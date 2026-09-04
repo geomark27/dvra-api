@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"dvra-api/internal/app/models"
 	"dvra-api/internal/database/seeders"
+	"dvra-api/internal/shared/models"
 	"dvra-api/internal/shared/permissions"
 
 	"gorm.io/gorm"

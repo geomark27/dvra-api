@@ -5,12 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"dvra-api/internal/app/handlers"
-	"dvra-api/internal/app/repositories"
-	"dvra-api/internal/app/services"
-	"dvra-api/internal/modules/staffing"
 	"dvra-api/internal/platform/config"
-	storagepkg "dvra-api/internal/platform/storage"
 
 	_ "dvra-api/docs" // Importar documentación generada por Swagger
 
@@ -33,67 +28,11 @@ func New(cfg *config.Config, db *gorm.DB) (*Server, error) {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Create JWT service
-	jwtService := services.NewJWTService(cfg.JWTSecret, cfg.JWTRefreshSecret)
-	fileStorage, err := storagepkg.NewFilesystem(cfg.StorageRoot)
+	// Composition root: repositorios -> servicios -> módulos -> handlers.
+	d, err := buildDeps(cfg, db)
 	if err != nil {
 		return nil, err
 	}
-
-	// Create repositories (injecting DB connection)
-	userRepo := repositories.NewUserRepository(db)
-	companyRepo := repositories.NewCompanyRepository(db)
-	departmentRepo := repositories.NewDepartmentRepository(db)
-	membershipRepo := repositories.NewMembershipRepository(db)
-	candidateRepo := repositories.NewCandidateRepository(db)
-	applicationRepo := repositories.NewApplicationRepository(db)
-	jobRepo := repositories.NewJobRepository(db)
-	planRepo := repositories.NewPlanRepository(db)
-	systemValueRepo := repositories.NewSystemValueRepository(db)
-	locationRepo := repositories.NewLocationRepository()
-	dashboardRepo := repositories.NewDashboardRepository()
-	platformSettingsRepo := repositories.NewPlatformSettingsRepository(db)
-	rbacService := services.NewTenantRBACService(db)
-
-	// Create services (injecting repositories)
-	authService := services.NewAuthService(userRepo, planRepo, jwtService, rbacService, db)
-	userService := services.NewUserService(userRepo, db, rbacService)
-	companyService := services.NewCompanyService(companyRepo, planRepo, db)
-	departmentService := services.NewDepartmentService(departmentRepo)
-	membershipService := services.NewMembershipService(membershipRepo, rbacService)
-	candidateService := services.NewCandidateService(candidateRepo, planRepo, db, fileStorage)
-	applicationService := services.NewApplicationService(applicationRepo, jobRepo, candidateRepo)
-	// Módulo staffing (monolito modular + hexagonal-lite, ver ADR-001). Se cablea
-	// con db + un adaptador del repo de applications hacia su puerto ApplicationFinder.
-	staffingModule := staffing.New(db, staffingAppFinder{repo: applicationRepo})
-
-	planService := services.NewPlanService(planRepo, companyRepo, db)
-	jobService := services.NewJobService(jobRepo, staffingModule.ClientRepo, planService, departmentRepo)
-	systemValueService := services.NewSystemValueService(systemValueRepo)
-	locationService := services.NewLocationService(locationRepo)
-	dashboardService := services.NewDashboardService(dashboardRepo)
-	publicService := services.NewPublicService(companyRepo, jobRepo, candidateRepo, applicationRepo, candidateService)
-	platformSettingsService := services.NewPlatformSettingsService(platformSettingsRepo)
-	companySettingsService := services.NewCompanySettingsService(db)
-
-	// Create handlers (injecting services)
-	healthHandler := handlers.NewHealthHandler(db)
-	authHandler := handlers.NewAuthHandler(authService)
-	userHandler := handlers.NewUserHandler(userService)
-	companyHandler := handlers.NewCompanyHandler(companyService)
-	departmentHandler := handlers.NewDepartmentHandler(departmentService)
-	membershipHandler := handlers.NewMembershipHandler(membershipService)
-	candidateHandler := handlers.NewCandidateHandler(candidateService)
-	applicationHandler := handlers.NewApplicationHandler(applicationService)
-	jobHandler := handlers.NewJobHandler(jobService)
-	planHandler := handlers.NewPlanHandler(planService)
-	systemValueHandler := handlers.NewSystemValueHandler(systemValueService)
-	locationHandler := handlers.NewLocationHandler(locationService)
-	dashboardHandler := handlers.NewDashboardHandler(dashboardService)
-	publicHandler := handlers.NewPublicHandler(publicService)
-	platformSettingsHandler := handlers.NewPlatformSettingsHandler(platformSettingsService)
-	companySettingsHandler := handlers.NewCompanySettingsHandler(companySettingsService)
-	tenantRoleHandler := handlers.NewTenantRoleHandler(rbacService)
 
 	// Create Gin router
 	router := gin.Default()
@@ -102,7 +41,7 @@ func New(cfg *config.Config, db *gorm.DB) (*Server, error) {
 	router.Use(corsMiddleware(cfg.CorsAllowedOrigins))
 
 	// Register routes (passing config for dynamic Swagger host)
-	registerRoutes(router, healthHandler, authHandler, userHandler, companyHandler, departmentHandler, membershipHandler, candidateHandler, applicationHandler, jobHandler, staffingModule, planHandler, planService, systemValueHandler, locationHandler, dashboardHandler, publicHandler, platformSettingsHandler, companySettingsHandler, tenantRoleHandler, jwtService, rbacService, cfg)
+	registerRoutes(router, d, cfg)
 
 	// Configure HTTP server
 	httpServer := &http.Server{

@@ -1,10 +1,9 @@
 package service
 
 import (
-	"dvra-api/internal/app/dtos"
-	"dvra-api/internal/app/models"
 	"dvra-api/internal/modules/staffing/domain"
 	"dvra-api/internal/shared/apperr"
+	"dvra-api/internal/shared/models"
 	"dvra-api/internal/shared/tenant"
 )
 
@@ -25,7 +24,7 @@ func NewPlacementService(
 	return &PlacementService{repo: repo, clients: clients, apps: apps}
 }
 
-func (s *PlacementService) GetByCompanyID(companyID uint, filters dtos.PlacementFilters) ([]models.Placement, error) {
+func (s *PlacementService) GetByCompanyID(companyID uint, filters domain.PlacementFilters) ([]models.Placement, error) {
 	return s.repo.GetByCompanyID(companyID, filters)
 }
 
@@ -50,7 +49,7 @@ func (s *PlacementService) GetByID(id uint, scope tenant.Scope) (*models.Placeme
 //  4. no existe ya un placement para esa application.
 //
 // CandidateID y JobID se copian de la application (no se confía en el body).
-func (s *PlacementService) Create(companyID uint, dto dtos.CreatePlacementDTO) (*models.Placement, error) {
+func (s *PlacementService) Create(companyID uint, dto CreatePlacementDTO) (*models.Placement, error) {
 	client, err := s.clients.GetByID(dto.StaffingClientID)
 	if err != nil {
 		return nil, err
@@ -109,7 +108,7 @@ func (s *PlacementService) Create(companyID uint, dto dtos.CreatePlacementDTO) (
 	return s.repo.Create(placement)
 }
 
-func (s *PlacementService) Update(id uint, scope tenant.Scope, dto dtos.UpdatePlacementDTO) (*models.Placement, error) {
+func (s *PlacementService) Update(id uint, scope tenant.Scope, dto UpdatePlacementDTO) (*models.Placement, error) {
 	placement, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -167,4 +166,11 @@ func (s *PlacementService) Delete(id uint, scope tenant.Scope) error {
 		return apperr.Forbidden("access denied")
 	}
 	return s.repo.Delete(id)
+}
+
+// BindApplications cablea el puerto hacia recruitment tras la construcción.
+// Ver el comentario de Module.BindApplications: es lo que rompe el ciclo de
+// construcción entre staffing y recruitment.
+func (s *PlacementService) BindApplications(appFinder domain.ApplicationFinder) {
+	s.apps = appFinder
 }

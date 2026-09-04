@@ -1,0 +1,267 @@
+package transport
+
+import (
+	"dvra-api/internal/shared/authctx"
+	"net/http"
+	"strconv"
+
+	"dvra-api/internal/modules/iam/service"
+	"dvra-api/internal/shared/apperr"
+
+	"github.com/geomark27/loom-go/pkg/helpers"
+	"github.com/gin-gonic/gin"
+)
+
+// CompanyHandler handles company-related routes
+type CompanyHandler struct {
+	companyService service.CompanyService
+	logger         helpers.Logger
+}
+
+// NewCompanyHandler creates a new CompanyHandler instance
+func NewCompanyHandler(companyService service.CompanyService) *CompanyHandler {
+	return &CompanyHandler{
+		companyService: companyService,
+		logger:         helpers.NewLogger(),
+	}
+}
+
+// GetCompanies godoc
+// @Summary      Listar empresas
+// @Description  Obtiene empresas (todas si es SuperAdmin, solo la actual si es usuario normal)
+// @Tags         Companies
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /companies [get]
+// @Router       /platform/companies [get]
+func (h *CompanyHandler) GetCompanies(c *gin.Context) {
+
+	// SuperAdmin puede ver todas las empresas
+	if authctx.IsSuperAdmin(c) {
+		companies, err := h.companyService.GetAllCompanies()
+		if err != nil {
+			h.logger.Error("Failed to get companies", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve companies"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "success",
+			"message": "Companies retrieved successfully",
+			"data": gin.H{
+				"companies": companies,
+				"count":     len(companies),
+			},
+		})
+		return
+	}
+
+	// Usuarios normales solo ven su empresa
+	companyIDVal, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+		return
+	}
+
+	companyID := companyIDVal.(uint)
+	company, err := h.companyService.GetCompanyByID(companyID)
+	if err != nil {
+		h.logger.Error("Failed to get company", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve company"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Company retrieved successfully",
+		"data": gin.H{
+			"companies": []interface{}{company},
+			"count":     1,
+		},
+	})
+}
+
+// GetCompany godoc
+// @Summary      Obtener empresa por ID
+// @Description  Retorna información de una empresa específica
+// @Tags         Companies
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "ID de la empresa"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /companies/{id} [get]
+// @Router       /platform/companies/{id} [get]
+func (h *CompanyHandler) GetCompany(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid company ID"})
+		return
+	}
+
+	// Validar acceso: SuperAdmin o miembro de la empresa
+	if !authctx.IsSuperAdmin(c) {
+		companyIDVal, exists := c.Get("company_id")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+			return
+		}
+		companyID := companyIDVal.(uint)
+		if uint(id) != companyID {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+			return
+		}
+	}
+
+	company, err := h.companyService.GetCompanyByID(uint(id))
+	if err != nil {
+		h.logger.Error("Failed to get company", "error", err, "company_id", id)
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Company retrieved successfully",
+		"data":    company,
+	})
+}
+
+// CreateCompany godoc
+// @Summary      Crear empresa
+// @Description  Crea una nueva empresa
+// @Tags         Companies
+// @Accept       json
+// @Produce      json
+// @Param        company  body      service.CreateCompanyDTO  true  "Datos de la empresa"
+// @Success      201      {object}  map[string]interface{}
+// @Failure      400      {object}  map[string]interface{}
+// @Failure      500      {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /platform/companies [post]
+func (h *CompanyHandler) CreateCompany(c *gin.Context) {
+	var dto service.CreateCompanyDTO
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	if errors := helpers.ValidateStruct(&dto); len(errors) > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Validation failed", "details": errors})
+		return
+	}
+	company, err := h.companyService.CreateCompany(dto)
+	if err != nil {
+		h.logger.Error("Failed to create company", "error", err)
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"status":  "success",
+		"message": "Company created successfully",
+		"data":    company,
+	})
+}
+
+// UpdateCompany godoc
+// @Summary      Actualizar empresa
+// @Description  Actualiza la empresa del tenant o una empresa desde plataforma
+// @Tags         Companies
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "ID de la empresa"
+// @Param        company body service.UpdateCompanyDTO true "Cambios de la empresa"
+// @Success      200 {object} map[string]interface{}
+// @Security     BearerAuth
+// @Router       /companies/{id} [put]
+// @Router       /platform/companies/{id} [put]
+func (h *CompanyHandler) UpdateCompany(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid company ID"})
+		return
+	}
+
+	// Validar acceso: SuperAdmin o miembro de esa empresa
+	if !authctx.IsSuperAdmin(c) {
+		companyIDVal, exists := c.Get("company_id")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "No company context"})
+			return
+		}
+		companyID := companyIDVal.(uint)
+		if uint(id) != companyID {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+			return
+		}
+	}
+
+	var dto service.UpdateCompanyDTO
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	if errors := helpers.ValidateStruct(&dto); len(errors) > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Validation failed", "details": errors})
+		return
+	}
+	if !authctx.IsSuperAdmin(c) {
+		// Billing is controlled exclusively from the landlord context.
+		dto.PlanTier = nil
+		dto.TrialEndsAt = nil
+	}
+
+	company, err := h.companyService.UpdateCompany(uint(id), dto)
+	if err != nil {
+		h.logger.Error("Failed to update company", "error", err)
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Company updated successfully",
+		"data":    company,
+	})
+}
+
+// DeleteCompany godoc
+// @Summary      Eliminar empresa desde plataforma
+// @Tags         Companies
+// @Produce      json
+// @Param        id path int true "ID de la empresa"
+// @Success      200 {object} map[string]interface{}
+// @Security     BearerAuth
+// @Router       /platform/companies/{id} [delete]
+func (h *CompanyHandler) DeleteCompany(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid company ID"})
+		return
+	}
+
+	// Validar acceso: Solo SuperAdmin puede eliminar empresas
+	if !authctx.IsSuperAdmin(c) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only superadmin can delete companies"})
+		return
+	}
+
+	if err := h.companyService.DeleteCompany(uint(id)); err != nil {
+		h.logger.Error("Failed to delete company", "error", err)
+		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Company deleted successfully",
+	})
+}

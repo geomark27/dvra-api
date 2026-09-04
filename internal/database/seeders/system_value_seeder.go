@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"dvra-api/internal/app/models"
+	"dvra-api/internal/shared/models"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

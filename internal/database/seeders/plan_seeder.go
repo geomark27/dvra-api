@@ -1,8 +1,8 @@
 package seeders
 
 import (
-	"dvra-api/internal/app/models"
-	"dvra-api/internal/shared/catalog"
+	catalog "dvra-api/internal/modules/catalog/repository"
+	"dvra-api/internal/shared/models"
 	"fmt"
 
 	"gorm.io/gorm"

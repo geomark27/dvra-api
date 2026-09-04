@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"dvra-api/internal/app/models"
+	"dvra-api/internal/shared/models"
 	"dvra-api/internal/shared/permissions"
 
 	"golang.org/x/crypto/bcrypt"

@@ -1,10 +1,10 @@
 package transport
 
 import (
+	"dvra-api/internal/modules/staffing/domain"
 	"net/http"
 	"strconv"
 
-	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/modules/staffing/service"
 	"dvra-api/internal/shared/apperr"
 	"dvra-api/internal/shared/authctx"
@@ -31,7 +31,7 @@ func NewPlacementHandler(svc *service.PlacementService) *PlacementHandler {
 // @Security     BearerAuth
 // @Router       /placements [get]
 func (h *PlacementHandler) GetPlacements(c *gin.Context) {
-	var filters dtos.PlacementFilters
+	var filters domain.PlacementFilters
 	if err := c.ShouldBindQuery(&filters); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -51,7 +51,7 @@ func (h *PlacementHandler) GetPlacements(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status": "success",
 		"data": gin.H{
-			"placements": dtos.ToPlacementResponseList(placements),
+			"placements": service.ToPlacementResponseList(placements),
 			"count":      len(placements),
 		},
 	})
@@ -83,7 +83,7 @@ func (h *PlacementHandler) GetPlacement(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "data": dtos.ToPlacementResponse(placement)})
+	c.JSON(http.StatusOK, gin.H{"status": "success", "data": service.ToPlacementResponse(placement)})
 }
 
 // CreatePlacement godoc
@@ -92,12 +92,12 @@ func (h *PlacementHandler) GetPlacement(c *gin.Context) {
 // @Tags         Placements
 // @Accept       json
 // @Produce      json
-// @Param        placement  body      dtos.CreatePlacementDTO  true  "Datos de la colocación"
+// @Param        placement  body      service.CreatePlacementDTO  true  "Datos de la colocación"
 // @Success      201        {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /placements [post]
 func (h *PlacementHandler) CreatePlacement(c *gin.Context) {
-	var dto dtos.CreatePlacementDTO
+	var dto service.CreatePlacementDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -114,7 +114,7 @@ func (h *PlacementHandler) CreatePlacement(c *gin.Context) {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": dtos.ToPlacementResponse(placement)})
+	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": service.ToPlacementResponse(placement)})
 }
 
 // UpdatePlacement godoc
@@ -123,7 +123,7 @@ func (h *PlacementHandler) CreatePlacement(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id         path      int                      true  "ID de la colocación"
-// @Param        placement  body      dtos.UpdatePlacementDTO  true  "Campos a actualizar"
+// @Param        placement  body      service.UpdatePlacementDTO  true  "Campos a actualizar"
 // @Success      200        {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /placements/{id} [put]
@@ -140,7 +140,7 @@ func (h *PlacementHandler) UpdatePlacement(c *gin.Context) {
 		return
 	}
 
-	var dto dtos.UpdatePlacementDTO
+	var dto service.UpdatePlacementDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -151,7 +151,7 @@ func (h *PlacementHandler) UpdatePlacement(c *gin.Context) {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "success", "data": dtos.ToPlacementResponse(updated)})
+	c.JSON(http.StatusOK, gin.H{"status": "success", "data": service.ToPlacementResponse(updated)})
 }
 
 // DeletePlacement godoc

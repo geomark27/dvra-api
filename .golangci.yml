@@ -18,6 +18,58 @@ linters:
     - ineffassign   # asignaciones inútiles
     - staticcheck   # análisis estático
     - unused        # código no usado
+    - depguard      # fronteras entre módulos (ADR-001)
+
+  settings:
+    # depguard impone las reglas de modularidad de ADR-001 y
+    # ESTANDARES_DESARROLLO.md §3.3. Es el equivalente en Go a las pruebas
+    # ArchUnit: sin esto, la arquitectura se degrada sola en unos meses.
+    #
+    # Los ciclos de importación no hacen falta declararlos: el compilador de Go
+    # ya los prohíbe.
+    depguard:
+      rules:
+        # Regla 1: la plataforma nunca depende de los módulos de negocio.
+        # Se exceptúa internal/platform/server: es el composition root, y su
+        # trabajo es precisamente ensamblarlos e inyectar los adaptadores que
+        # cruzan fronteras.
+        platform-no-modules:
+          files:
+            - "**/internal/platform/**"
+            - "!**/internal/platform/server/**"
+          deny:
+            - pkg: "dvra-api/internal/modules"
+              desc: "platform no puede depender de modules (ADR-001; la dirección es modules -> platform). Solo el composition root en internal/platform/server los ensambla."
+
+        # Regla 2: un módulo no importa las tripas de otro. La capa legacy
+        # internal/app/ ya no existe: la migración por dominios terminó.
+        module-boundaries:
+          files:
+            - "**/internal/modules/**"
+          deny:
+            - pkg: "dvra-api/internal/app"
+              desc: "la capa por capas se eliminó; los modelos viven en internal/shared/models"
+
+        # El núcleo compartido no depende de los servicios de la aplicación:
+        # quien necesita algo declara el puerto (así se desacopló
+        # shared/middleware, que arrastraba todos los services a cada módulo).
+        shared-no-modules:
+          files:
+            - "**/internal/shared/**"
+            - "!**/internal/shared/**/*_test.go"
+          deny:
+            - pkg: "dvra-api/internal/modules"
+              desc: "shared no depende de ningún módulo de negocio: quien necesita algo declara la interfaz mínima en el consumidor (ver internal/shared/middleware/ports.go)"
+
+        # tenant es el núcleo de la frontera de datos: razona sobre un Scope sin
+        # conocer la persistencia. El filtro sobre GORM vive en tenant/tenantgorm.
+        tenant-core-no-gorm:
+          files:
+            - "**/internal/shared/tenant/*.go"
+            - "!**/internal/shared/tenant/*_test.go"
+          deny:
+            - pkg: "gorm.io/gorm"
+              desc: "shared/tenant no importa gorm: el filtro sobre una consulta vive en shared/tenant/tenantgorm"
 
 formatters:
   enable:

@@ -4,11 +4,11 @@ import (
 	"log"
 	"strings"
 
-	"dvra-api/internal/app/models"
 	"dvra-api/internal/database"
 	"dvra-api/internal/database/migrations"
 	"dvra-api/internal/database/seeders"
 	"dvra-api/internal/platform/config"
+	"dvra-api/internal/shared/models"
 	"dvra-api/internal/shared/permissions"
 
 	"github.com/joho/godotenv"

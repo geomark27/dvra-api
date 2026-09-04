@@ -1,0 +1,625 @@
+package service
+
+import (
+	"errors"
+	"time"
+
+	billingctx "dvra-api/internal/modules/billing/repository"
+	catalog "dvra-api/internal/modules/catalog/repository"
+	"dvra-api/internal/shared/apperr"
+	"dvra-api/internal/shared/identity"
+	"dvra-api/internal/shared/models"
+	"dvra-api/internal/shared/permissions"
+
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
+)
+
+// Errores de dominio de auth. Son valores *apperr.AppError, de modo que llevan
+// su código HTTP y los handlers pueden usar apperr.StatusCode(err); las
+// comparaciones errors.Is/== siguen funcionando por identidad. Los mensajes de
+// credenciales son deliberadamente genéricos (no revelan si el email existe).
+var (
+	ErrInvalidCredentials = apperr.Unauthorized("invalid email or password")
+	ErrEmailExists        = apperr.Conflict("email already exists")
+	ErrUserNotFound       = apperr.NotFound("user not found")
+	ErrInvalidPassword    = apperr.Unauthorized("invalid password")
+	ErrCompanyNotFound    = apperr.NotFound("company not found")
+	ErrNoMembership       = apperr.Forbidden("user does not belong to this company")
+)
+
+// AuthService handles authentication business logic
+type AuthService struct {
+	userRepo   UserRepository
+	planRepo   PlanReader
+	jwtService JWTService
+	rbac       TenantAuthorizer
+	db         *gorm.DB
+}
+
+// NewAuthService creates a new auth service
+func NewAuthService(userRepo UserRepository, planRepo PlanReader, jwtService JWTService, rbac TenantAuthorizer, db *gorm.DB) *AuthService {
+	return &AuthService{
+		userRepo:   userRepo,
+		planRepo:   planRepo,
+		jwtService: jwtService,
+		rbac:       rbac,
+		db:         db,
+	}
+}
+
+// Register creates a new user account
+func (s *AuthService) Register(dto *RegisterDTO) (*LoginResponseDTO, error) {
+	// Check if email already exists
+	existingUser, _ := s.userRepo.FindByEmail(dto.Email)
+	if existingUser != nil {
+		return nil, ErrEmailExists
+	}
+
+	// Hash password
+	hashedPassword, err := HashPassword(dto.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create user
+	user := &models.User{
+		Email:        dto.Email,
+		PasswordHash: hashedPassword,
+		FirstName:    dto.FirstName,
+		LastName:     dto.LastName,
+		IsActive:     true,
+	}
+
+	createdUser, err := s.userRepo.Create(user)
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate tokens (no company yet, user just registered)
+	context := identity.Context{Type: identity.ContextIdentity}
+	accessToken, refreshToken, err := s.issueTokens(createdUser, context)
+	if err != nil {
+		return nil, err
+	}
+
+	return &LoginResponseDTO{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		User: UserResponse{
+			ID:        createdUser.ID,
+			Email:     createdUser.Email,
+			FirstName: createdUser.FirstName,
+			LastName:  createdUser.LastName,
+			IsActive:  createdUser.IsActive,
+		},
+		ActiveContext: ToAuthContextResponse(context),
+	}, nil
+}
+
+// Login authenticates a user and returns tokens
+func (s *AuthService) Login(dto *LoginDTO) (*LoginResponseDTO, error) {
+	// Find user by email
+	user, err := s.userRepo.FindByEmail(dto.Email)
+	if err != nil || user == nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	// Check if user is active
+	if !user.IsActive {
+		return nil, apperr.Forbidden("account is inactive")
+	}
+
+	// Verify password
+	if err := ComparePassword(user.PasswordHash, dto.Password); err != nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	context, err := s.resolveInitialContext(user.ID)
+	if err != nil {
+		return nil, err
+	}
+	accessToken, refreshToken, err := s.issueTokens(user, context)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update last login (best-effort: no debe bloquear el login)
+	_ = s.userRepo.UpdateLastLogin(user.ID)
+
+	return &LoginResponseDTO{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		User: UserResponse{
+			ID:        user.ID,
+			Email:     user.Email,
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+			IsActive:  user.IsActive,
+		},
+		ActiveContext: ToAuthContextResponse(context),
+	}, nil
+}
+
+// RefreshToken generates new access token from refresh token
+func (s *AuthService) RefreshToken(dto *RefreshTokenDTO) (*RefreshTokenResponseDTO, error) {
+	// Validate refresh token
+	claims, err := s.jwtService.ValidateRefreshToken(dto.RefreshToken)
+	if err != nil {
+		return nil, apperr.Unauthorized("invalid refresh token")
+	}
+
+	// Get user
+	user, err := s.userRepo.FindByID(int(claims.UserID))
+	if err != nil || user == nil {
+		return nil, ErrUserNotFound
+	}
+
+	if !user.IsActive {
+		return nil, apperr.Forbidden("account is inactive")
+	}
+
+	context, err := s.resolveRefreshContext(user.ID, claims)
+	if err != nil {
+		return nil, err
+	}
+	accessToken, newRefreshToken, err := s.issueTokens(user, context)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RefreshTokenResponseDTO{
+		AccessToken:  accessToken,
+		RefreshToken: newRefreshToken,
+	}, nil
+}
+
+// ChangePassword changes user password
+func (s *AuthService) ChangePassword(userID uint, dto *ChangePasswordDTO) error {
+	// Get user
+	user, err := s.userRepo.FindByID(int(userID))
+	if err != nil || user == nil {
+		return ErrUserNotFound
+	}
+
+	// Verify old password
+	if err := ComparePassword(user.PasswordHash, dto.OldPassword); err != nil {
+		return ErrInvalidPassword
+	}
+
+	// Hash new password
+	hashedPassword, err := HashPassword(dto.NewPassword)
+	if err != nil {
+		return err
+	}
+
+	// Update password
+	return s.userRepo.UpdatePassword(userID, hashedPassword)
+}
+
+// GetMe returns current user info
+func (s *AuthService) GetMe(userID uint) (*UserResponse, error) {
+	user, err := s.userRepo.FindByID(int(userID))
+	if err != nil || user == nil {
+		return nil, ErrUserNotFound
+	}
+
+	return &UserResponse{
+		ID:        user.ID,
+		Email:     user.Email,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		IsActive:  user.IsActive,
+	}, nil
+}
+
+func (s *AuthService) GetTenantAuthorization(tenantRoleID uint) (*models.TenantRole, []string, error) {
+	role, err := s.rbac.RoleByID(tenantRoleID)
+	if err != nil {
+		return nil, nil, err
+	}
+	rolePermissions, err := s.rbac.Permissions(tenantRoleID)
+	if err != nil {
+		return nil, nil, err
+	}
+	return role, rolePermissions, nil
+}
+
+// RegisterCompany creates a new company with its first admin user
+func (s *AuthService) RegisterCompany(dto *RegisterCompanyDTO) (*RegisterCompanyResponseDTO, error) {
+	// Check if admin email already exists
+	existingUser, _ := s.userRepo.FindByEmail(dto.AdminEmail)
+	if existingUser != nil {
+		return nil, ErrEmailExists
+	}
+
+	// Verify that the free plan exists and is active
+	freePlan, err := s.planRepo.FindActiveBySlug("free")
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("free plan is not available, please contact support")
+		}
+		return nil, err
+	}
+	adminRole, err := s.rbac.RoleByKey(permissions.RoleAdmin)
+	if err != nil {
+		return nil, errors.New("admin tenant role is not configured")
+	}
+
+	// Start transaction
+	tx := s.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 1. Create company with validated free plan
+	timezone := dto.Timezone
+	if timezone == "" {
+		timezone = "America/Bogota"
+	}
+
+	company := models.Company{
+		Name: dto.CompanyName, Slug: dto.CompanySlug, Timezone: timezone,
+	}
+
+	if err := tx.Create(&company).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	status, err := catalog.ResolveGlobal(tx, "billing", "subscription_status", "active")
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	if status == nil || freePlan.CurrencyValueID == 0 || freePlan.BillingCycleValueID == 0 {
+		tx.Rollback()
+		return nil, errors.New("billing catalogs are not configured")
+	}
+	now := time.Now().UTC()
+	subscription := models.CompanySubscription{CompanyID: company.ID, PlanID: freePlan.ID, StatusValueID: status.ID, CurrencyValueID: freePlan.CurrencyValueID, BillingCycleValueID: freePlan.BillingCycleValueID, PriceSnapshot: freePlan.Price, StartedAt: now, CurrentPeriodStart: now}
+	if err := tx.Create(&subscription).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	settings := models.CompanySettings{CompanyID: company.ID, DisplayName: company.Name, LogoURL: company.LogoURL, PrimaryColor: "#2563eb", SecondaryColor: "#0f172a", Locale: "es", CareerPageEnabled: true}
+	if err := tx.Create(&settings).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// 2. Create admin user
+	hashedPassword, err := HashPassword(dto.AdminPassword)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	admin := models.User{
+		Email:        dto.AdminEmail,
+		PasswordHash: hashedPassword,
+		FirstName:    dto.AdminFirstName,
+		LastName:     dto.AdminLastName,
+		IsActive:     true,
+	}
+
+	if err := tx.Create(&admin).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// 3. Create membership (admin → company)
+	membership := models.Membership{
+		UserID:       admin.ID,
+		CompanyID:    company.ID,
+		TenantRoleID: adminRole.ID,
+		Status:       "active",
+		IsDefault:    true, // First company is always default
+	}
+
+	if err := tx.Create(&membership).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// Commit transaction
+	if err := tx.Commit().Error; err != nil {
+		return nil, err
+	}
+
+	membershipID := membership.ID
+	companyID := company.ID
+	roleID := adminRole.ID
+	context := identity.Context{Type: identity.ContextTenant, CompanyID: &companyID, MembershipID: &membershipID, TenantRoleID: &roleID, Role: adminRole.Key}
+	accessToken, refreshToken, err := s.issueTokens(&admin, context)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RegisterCompanyResponseDTO{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		Company: CompanyResponse{
+			ID:       company.ID,
+			Name:     company.Name,
+			Slug:     company.Slug,
+			PlanTier: freePlan.Slug,
+		},
+		Admin: UserResponse{
+			ID:        admin.ID,
+			Email:     admin.Email,
+			FirstName: admin.FirstName,
+			LastName:  admin.LastName,
+			IsActive:  admin.IsActive,
+		},
+		ActiveContext: ToAuthContextResponse(context),
+	}, nil
+}
+
+// GetUserCompanies returns all companies that a user belongs to
+func (s *AuthService) GetUserCompanies(userID uint) ([]CompanyResponse, error) {
+	var memberships []models.Membership
+	err := s.db.Preload("Company").Preload("TenantRole").Where("user_id = ? AND status = ?", userID, "active").Find(&memberships).Error
+	if err != nil {
+		return nil, err
+	}
+
+	companies := make([]CompanyResponse, 0, len(memberships))
+	for _, membership := range memberships {
+		if membership.Company != nil {
+			planTier, err := s.companyPlanTier(membership.Company.ID)
+			if err != nil {
+				return nil, err
+			}
+			role := ToTenantRoleResponse(membership.TenantRole)
+			companies = append(companies, CompanyResponse{
+				ID:           membership.Company.ID,
+				Name:         membership.Company.Name,
+				Slug:         membership.Company.Slug,
+				PlanTier:     planTier,
+				MembershipID: membership.ID,
+				TenantRoleID: membership.TenantRoleID,
+				TenantRole:   role,
+				Role:         membership.TenantRole.Key,
+			})
+		}
+	}
+
+	return companies, nil
+}
+
+// SwitchCompany generates a new token for a different company context
+func (s *AuthService) SwitchCompany(userID uint, dto *SwitchCompanyDTO) (*SwitchCompanyResponseDTO, error) {
+	// Verify user has membership in this company
+	var membership models.Membership
+	err := s.db.Preload("Company").Preload("TenantRole").
+		Where("user_id = ? AND company_id = ? AND status = ?", userID, dto.CompanyID, "active").
+		First(&membership).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrNoMembership
+		}
+		return nil, err
+	}
+
+	if membership.Company == nil {
+		return nil, ErrCompanyNotFound
+	}
+	planTier, err := s.companyPlanTier(membership.Company.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get user email
+	user, err := s.userRepo.FindByID(int(userID))
+	if err != nil {
+		return nil, ErrUserNotFound
+	}
+
+	membershipID := membership.ID
+	roleID := membership.TenantRoleID
+	context := identity.Context{Type: identity.ContextTenant, CompanyID: &dto.CompanyID, MembershipID: &membershipID, TenantRoleID: &roleID, Role: membership.TenantRole.Key}
+	accessToken, refreshToken, err := s.issueTokens(user, context)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SwitchCompanyResponseDTO{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		Company: CompanyResponse{
+			ID:           membership.Company.ID,
+			Name:         membership.Company.Name,
+			Slug:         membership.Company.Slug,
+			PlanTier:     planTier,
+			MembershipID: membership.ID,
+			TenantRoleID: membership.TenantRoleID,
+			TenantRole:   ToTenantRoleResponse(membership.TenantRole),
+			Role:         membership.TenantRole.Key,
+		},
+	}, nil
+}
+
+func (s *AuthService) companyPlanTier(companyID uint) (string, error) {
+	plan, err := billingctx.CurrentPlan(s.db, companyID)
+	if err != nil || plan == nil {
+		return "", err
+	}
+	return plan.Slug, nil
+}
+
+func (s *AuthService) SwitchToPlatform(userID uint) (*SwitchPlatformResponseDTO, error) {
+	user, err := s.userRepo.FindByID(int(userID))
+	if err != nil || user == nil {
+		return nil, ErrUserNotFound
+	}
+	var membership models.PlatformMembership
+	if err := s.db.Where("user_id = ? AND status = ?", userID, "active").First(&membership).Error; err != nil {
+		return nil, apperr.Forbidden("user has no active platform access")
+	}
+	membershipID := membership.ID
+	context := identity.Context{Type: identity.ContextPlatform, MembershipID: &membershipID, Role: membership.Role}
+	accessToken, refreshToken, err := s.issueTokens(user, context)
+	if err != nil {
+		return nil, err
+	}
+	return &SwitchPlatformResponseDTO{
+		AccessToken: accessToken, RefreshToken: refreshToken,
+		ActiveContext: ToAuthContextResponse(context),
+	}, nil
+}
+
+// LoginWithCompanies authenticates a user and returns tokens with companies list
+func (s *AuthService) LoginWithCompanies(dto *LoginDTO) (*LoginResponseWithCompaniesDTO, error) {
+	// Find user by email
+	user, err := s.userRepo.FindByEmail(dto.Email)
+	if err != nil || user == nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	// Check if user is active
+	if !user.IsActive {
+		return nil, apperr.Forbidden("account is inactive")
+	}
+
+	// Verify password
+	if err := ComparePassword(user.PasswordHash, dto.Password); err != nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	context, err := s.resolveInitialContext(user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get all user's companies
+	companies, err := s.GetUserCompanies(user.ID)
+	if err != nil {
+		return nil, err
+	}
+	platformAccess, err := s.getPlatformAccess(user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	accessToken, refreshToken, err := s.issueTokens(user, context)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update last login (best-effort: no debe bloquear el login)
+	_ = s.userRepo.UpdateLastLogin(user.ID)
+
+	return &LoginResponseWithCompaniesDTO{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		User: UserResponse{
+			ID:        user.ID,
+			Email:     user.Email,
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+			IsActive:  user.IsActive,
+		},
+		Companies:      companies,
+		ActiveContext:  ToAuthContextResponse(context),
+		PlatformAccess: platformAccess,
+	}, nil
+}
+
+// HashPassword hashes a plain text password
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(bytes), err
+}
+
+// ComparePassword compares a hashed password with plain text password
+func ComparePassword(hashedPassword, password string) error {
+	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+}
+
+func (s *AuthService) issueTokens(user *models.User, context identity.Context) (string, string, error) {
+	accessToken, err := s.jwtService.GenerateAccessToken(user.ID, user.Email, context)
+	if err != nil {
+		return "", "", err
+	}
+	refreshToken, err := s.jwtService.GenerateRefreshToken(user.ID, context)
+	if err != nil {
+		return "", "", err
+	}
+	return accessToken, refreshToken, nil
+}
+
+func (s *AuthService) resolveInitialContext(userID uint) (identity.Context, error) {
+	var platform models.PlatformMembership
+	err := s.db.Where("user_id = ? AND status = ?", userID, "active").First(&platform).Error
+	if err == nil {
+		membershipID := platform.ID
+		return identity.Context{Type: identity.ContextPlatform, MembershipID: &membershipID, Role: platform.Role}, nil
+	}
+	if err != gorm.ErrRecordNotFound {
+		return identity.Context{}, err
+	}
+
+	var membership models.Membership
+	err = s.db.Preload("TenantRole").Where("user_id = ? AND status = ?", userID, "active").
+		Order("is_default DESC, id ASC").First(&membership).Error
+	if err == nil {
+		companyID := membership.CompanyID
+		membershipID := membership.ID
+		roleID := membership.TenantRoleID
+		return identity.Context{Type: identity.ContextTenant, CompanyID: &companyID, MembershipID: &membershipID, TenantRoleID: &roleID, Role: membership.TenantRole.Key}, nil
+	}
+	if err != gorm.ErrRecordNotFound {
+		return identity.Context{}, err
+	}
+	var count int64
+	if err := s.db.Model(&models.Membership{}).Where("user_id = ?", userID).Count(&count).Error; err != nil {
+		return identity.Context{}, err
+	}
+	var platformCount int64
+	if err := s.db.Model(&models.PlatformMembership{}).Where("user_id = ?", userID).Count(&platformCount).Error; err != nil {
+		return identity.Context{}, err
+	}
+	if count+platformCount > 0 {
+		return identity.Context{}, apperr.Forbidden("user has no active authorization context")
+	}
+	return identity.Context{Type: identity.ContextIdentity}, nil
+}
+
+func (s *AuthService) resolveRefreshContext(userID uint, claims *RefreshClaims) (identity.Context, error) {
+	switch claims.ContextType {
+	case identity.ContextPlatform:
+		var platform models.PlatformMembership
+		if err := s.db.Where("id = ? AND user_id = ? AND status = ?", *claims.MembershipID, userID, "active").First(&platform).Error; err != nil {
+			return identity.Context{}, apperr.Forbidden("platform access is no longer active")
+		}
+		membershipID := platform.ID
+		return identity.Context{Type: identity.ContextPlatform, MembershipID: &membershipID, Role: platform.Role}, nil
+	case identity.ContextTenant:
+		var membership models.Membership
+		if err := s.db.Preload("TenantRole").Where("id = ? AND user_id = ? AND company_id = ? AND status = ?", *claims.MembershipID, userID, *claims.CompanyID, "active").First(&membership).Error; err != nil {
+			return identity.Context{}, apperr.Forbidden("tenant access is no longer active")
+		}
+		companyID := membership.CompanyID
+		membershipID := membership.ID
+		roleID := membership.TenantRoleID
+		return identity.Context{Type: identity.ContextTenant, CompanyID: &companyID, MembershipID: &membershipID, TenantRoleID: &roleID, Role: membership.TenantRole.Key}, nil
+	case identity.ContextIdentity:
+		return identity.Context{Type: identity.ContextIdentity}, nil
+	default:
+		return identity.Context{}, apperr.Unauthorized("invalid authorization context")
+	}
+}
+
+func (s *AuthService) getPlatformAccess(userID uint) (*PlatformAccessResponse, error) {
+	var membership models.PlatformMembership
+	if err := s.db.Where("user_id = ? AND status = ?", userID, "active").First(&membership).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &PlatformAccessResponse{MembershipID: membership.ID, Role: membership.Role}, nil
+}

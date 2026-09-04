@@ -1,39 +1,40 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
-	"dvra-api/internal/app/services"
+	"dvra-api/internal/shared/authctx"
+	"dvra-api/internal/shared/identity"
 
 	"github.com/gin-gonic/gin"
 )
 
-// AuthMiddleware validates JWT token and injects user info into context
-func AuthMiddleware(jwtService services.JWTService, rbac services.TenantAuthorizer) gin.HandlerFunc {
+// AuthMiddleware valida el token y deja la sesión en el contexto.
+//
+// En contexto tenant resuelve el rol contra la base en CADA petición, no desde
+// el token: así revocar un rol o suspender una membresía surte efecto en la
+// llamada siguiente, sin esperar a que el token caduque.
+func AuthMiddleware(auth Authenticator) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get Authorization header
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
+		header := c.GetHeader("Authorization")
+		if header == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
 			c.Abort()
 			return
 		}
 
-		// Check if it's a Bearer token
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
+		token, ok := bearerToken(header)
+		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
 			c.Abort()
 			return
 		}
 
-		tokenString := parts[1]
-
-		// Validate token
-		claims, err := jwtService.ValidateAccessToken(tokenString)
+		claims, err := auth.Session(token)
 		if err != nil {
-			if err == services.ErrExpiredToken {
+			if errors.Is(err, identity.ErrExpiredToken) {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Token has expired"})
 			} else {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
@@ -42,89 +43,35 @@ func AuthMiddleware(jwtService services.JWTService, rbac services.TenantAuthoriz
 			return
 		}
 
-		// Inject claims into context
-		c.Set("user_id", claims.UserID)
-		c.Set("email", claims.Email)
-		if claims.ContextType == "tenant" {
-			role, roleErr := rbac.RoleForMembership(*claims.MembershipID, claims.UserID, *claims.CompanyID)
+		if claims.ContextType == identity.ContextTenant {
+			if claims.MembershipID == nil || claims.CompanyID == nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+				c.Abort()
+				return
+			}
+
+			role, roleErr := auth.ResolveRole(*claims.MembershipID, claims.UserID, *claims.CompanyID)
 			if roleErr != nil {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant role is no longer active"})
 				c.Abort()
 				return
 			}
-			c.Set("tenant_role_id", role.ID)
-			c.Set("role", role.Key)
-		} else {
-			c.Set("role", claims.Role)
-		}
-		c.Set("context_type", claims.ContextType)
-		if claims.MembershipID != nil {
-			c.Set("membership_id", *claims.MembershipID)
+
+			roleID := role.ID
+			claims.TenantRoleID = &roleID
+			claims.Role = role.Key
 		}
 
-		if claims.CompanyID != nil {
-			c.Set("company_id", *claims.CompanyID)
-		}
-
+		authctx.SetSession(c, claims)
 		c.Next()
 	}
 }
 
-// RequireCompany checks if user has a company context
-func RequireCompany() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		_, exists := c.Get("company_id")
-		if !exists {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Company context required"})
-			c.Abort()
-			return
-		}
-
-		c.Next()
+// bearerToken extrae el token de un header Authorization con formato Bearer.
+func bearerToken(header string) (string, bool) {
+	parts := strings.SplitN(header, " ", 2)
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		return "", false
 	}
-}
-
-// OptionalAuth validates token if present, but doesn't require it
-func OptionalAuth(jwtService services.JWTService, rbac services.TenantAuthorizer) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.Next()
-			return
-		}
-
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.Next()
-			return
-		}
-
-		tokenString := parts[1]
-		claims, err := jwtService.ValidateAccessToken(tokenString)
-		if err == nil {
-			c.Set("user_id", claims.UserID)
-			c.Set("email", claims.Email)
-			if claims.ContextType == "tenant" {
-				role, roleErr := rbac.RoleForMembership(*claims.MembershipID, claims.UserID, *claims.CompanyID)
-				if roleErr != nil {
-					c.Next()
-					return
-				}
-				c.Set("tenant_role_id", role.ID)
-				c.Set("role", role.Key)
-			} else {
-				c.Set("role", claims.Role)
-			}
-			c.Set("context_type", claims.ContextType)
-			if claims.MembershipID != nil {
-				c.Set("membership_id", *claims.MembershipID)
-			}
-
-			if claims.CompanyID != nil {
-				c.Set("company_id", *claims.CompanyID)
-			}
-		}
-
-		c.Next()
-	}
+	return parts[1], true
 }

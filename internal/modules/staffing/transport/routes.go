@@ -1,7 +1,6 @@
 package transport
 
 import (
-	"dvra-api/internal/app/services"
 	"dvra-api/internal/modules/staffing/service"
 	"dvra-api/internal/shared/middleware"
 	"dvra-api/internal/shared/permissions"
@@ -15,14 +14,14 @@ func RegisterRoutes(
 	rg *gin.RouterGroup,
 	clientSvc *service.StaffingClientService,
 	placementSvc *service.PlacementService,
-	planService services.PlanService,
-	rbac services.TenantAuthorizer,
+	plans middleware.FeatureChecker,
+	rbac middleware.PermissionChecker,
 ) {
 	clientH := NewStaffingClientHandler(clientSvc)
 	placementH := NewPlacementHandler(placementSvc)
 
 	clients := rg.Group("/staffing-clients")
-	clients.Use(middleware.RequireFeature(planService, "staffing"))
+	clients.Use(middleware.RequireFeature(plans, "staffing"))
 	{
 		clients.GET("", middleware.RequirePermission(rbac, permissions.StaffingClientsView), clientH.GetStaffingClients)
 		clients.POST("", middleware.RequirePermission(rbac, permissions.StaffingClientsCreate), clientH.CreateStaffingClient)
@@ -32,7 +31,7 @@ func RegisterRoutes(
 	}
 
 	placements := rg.Group("/placements")
-	placements.Use(middleware.RequireFeature(planService, "staffing"))
+	placements.Use(middleware.RequireFeature(plans, "staffing"))
 	{
 		placements.GET("", middleware.RequirePermission(rbac, permissions.PlacementsView), placementH.GetPlacements)
 		placements.POST("", middleware.RequirePermission(rbac, permissions.PlacementsCreate), placementH.CreatePlacement)

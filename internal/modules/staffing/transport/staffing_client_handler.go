@@ -3,10 +3,10 @@
 package transport
 
 import (
+	"dvra-api/internal/modules/staffing/domain"
 	"net/http"
 	"strconv"
 
-	"dvra-api/internal/app/dtos"
 	"dvra-api/internal/modules/staffing/service"
 	"dvra-api/internal/shared/apperr"
 	"dvra-api/internal/shared/authctx"
@@ -32,7 +32,7 @@ func NewStaffingClientHandler(svc *service.StaffingClientService) *StaffingClien
 // @Security     BearerAuth
 // @Router       /staffing-clients [get]
 func (h *StaffingClientHandler) GetStaffingClients(c *gin.Context) {
-	var filters dtos.StaffingClientFilters
+	var filters domain.StaffingClientFilters
 	if err := c.ShouldBindQuery(&filters); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -52,7 +52,7 @@ func (h *StaffingClientHandler) GetStaffingClients(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status": "success",
 		"data": gin.H{
-			"staffing_clients": dtos.ToStaffingClientResponseList(clients),
+			"staffing_clients": service.ToStaffingClientResponseList(clients),
 			"count":            len(clients),
 		},
 	})
@@ -84,7 +84,7 @@ func (h *StaffingClientHandler) GetStaffingClient(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "data": dtos.ToStaffingClientResponse(client)})
+	c.JSON(http.StatusOK, gin.H{"status": "success", "data": service.ToStaffingClientResponse(client)})
 }
 
 // CreateStaffingClient godoc
@@ -92,12 +92,12 @@ func (h *StaffingClientHandler) GetStaffingClient(c *gin.Context) {
 // @Tags         StaffingClients
 // @Accept       json
 // @Produce      json
-// @Param        staffing_client  body      dtos.CreateStaffingClientDTO  true  "Datos del cliente final"
+// @Param        staffing_client  body      service.CreateStaffingClientDTO  true  "Datos del cliente final"
 // @Success      201              {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /staffing-clients [post]
 func (h *StaffingClientHandler) CreateStaffingClient(c *gin.Context) {
-	var dto dtos.CreateStaffingClientDTO
+	var dto service.CreateStaffingClientDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -121,7 +121,7 @@ func (h *StaffingClientHandler) CreateStaffingClient(c *gin.Context) {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": dtos.ToStaffingClientResponse(client)})
+	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": service.ToStaffingClientResponse(client)})
 }
 
 // UpdateStaffingClient godoc
@@ -130,7 +130,7 @@ func (h *StaffingClientHandler) CreateStaffingClient(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id               path      int                           true  "ID del cliente final"
-// @Param        staffing_client  body      dtos.UpdateStaffingClientDTO  true  "Campos a actualizar"
+// @Param        staffing_client  body      service.UpdateStaffingClientDTO  true  "Campos a actualizar"
 // @Success      200              {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /staffing-clients/{id} [put]
@@ -147,7 +147,7 @@ func (h *StaffingClientHandler) UpdateStaffingClient(c *gin.Context) {
 		return
 	}
 
-	var dto dtos.UpdateStaffingClientDTO
+	var dto service.UpdateStaffingClientDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -158,7 +158,7 @@ func (h *StaffingClientHandler) UpdateStaffingClient(c *gin.Context) {
 		c.JSON(apperr.StatusCode(err), gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "success", "data": dtos.ToStaffingClientResponse(updated)})
+	c.JSON(http.StatusOK, gin.H{"status": "success", "data": service.ToStaffingClientResponse(updated)})
 }
 
 // DeleteStaffingClient godoc

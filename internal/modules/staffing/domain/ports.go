@@ -3,8 +3,7 @@
 package domain
 
 import (
-	"dvra-api/internal/app/dtos"
-	"dvra-api/internal/app/models"
+	"dvra-api/internal/shared/models"
 )
 
 // StaffingClientRepository es el puerto de salida hacia la persistencia de clientes finales.
@@ -19,7 +18,7 @@ type StaffingClientRepository interface {
 
 // PlacementRepository es el puerto de salida hacia la persistencia de colocaciones.
 type PlacementRepository interface {
-	GetByCompanyID(companyID uint, filters dtos.PlacementFilters) ([]models.Placement, error)
+	GetByCompanyID(companyID uint, filters PlacementFilters) ([]models.Placement, error)
 	GetByID(id uint) (*models.Placement, error)
 	ExistsByApplicationID(applicationID uint) (bool, error)
 	Create(placement *models.Placement) (*models.Placement, error)

@@ -1,0 +1,112 @@
+package service
+
+import (
+	"dvra-api/internal/shared/models"
+	"time"
+)
+
+// JobFilters represents filters for listing jobs
+type JobFilters struct {
+	Status           string `form:"status"`
+	LocationType     string `form:"location_type"`
+	CityID           *uint  `form:"city_id"`
+	StaffingClientID *uint  `form:"staffing_client_id"`
+	DepartmentID     *uint  `form:"department_id"`
+}
+
+// JobResponseDTO represents the job data in API responses
+type JobResponseDTO struct {
+	ID                uint                `json:"id"`
+	CreatedAt         time.Time           `json:"created_at"`
+	UpdatedAt         time.Time           `json:"updated_at"`
+	CompanyID         uint                `json:"company_id"`
+	Company           *models.Company     `json:"company,omitempty"`
+	Title             string              `json:"title"`
+	Description       string              `json:"description"`
+	SalaryMin         *float64            `json:"salary_min,omitempty"`
+	SalaryMax         *float64            `json:"salary_max,omitempty"`
+	Requirements      string              `json:"requirements,omitempty"`
+	Benefits          string              `json:"benefits,omitempty"`
+	Status            string              `json:"status"`
+	LocationType      string              `json:"location_type"`
+	CityID            *uint               `json:"city_id,omitempty"`
+	City              *models.City        `json:"city,omitempty"`
+	AssignedRecruiter *uint               `json:"assigned_recruiter,omitempty"`
+	HiringManager     *uint               `json:"hiring_manager,omitempty"`
+	DepartmentID      *uint               `json:"department_id,omitempty"`
+	Department        *DepartmentResponse `json:"department,omitempty"`
+	StaffingClientID  *uint               `json:"staffing_client_id,omitempty"`
+}
+
+// CreateJobDTO represents the data needed to create a job
+type CreateJobDTO struct {
+	CompanyID         uint     `json:"company_id"`
+	Title             string   `json:"title" binding:"required,min=3,max=255"`
+	Description       string   `json:"description" binding:"required"`
+	SalaryMin         *float64 `json:"salary_min,omitempty"`
+	SalaryMax         *float64 `json:"salary_max,omitempty"`
+	Requirements      string   `json:"requirements,omitempty"`
+	Benefits          string   `json:"benefits,omitempty"`
+	Status            string   `json:"status" binding:"omitempty,oneof=draft published closed"`
+	LocationType      string   `json:"location_type" binding:"required"` // Validar contra system_values.work_mode
+	CityID            *uint    `json:"city_id,omitempty"`
+	AssignedRecruiter *uint    `json:"assigned_recruiter,omitempty"`
+	HiringManager     *uint    `json:"hiring_manager,omitempty"`
+	DepartmentID      *uint    `json:"department_id,omitempty"`
+	StaffingClientID  *uint    `json:"staffing_client_id,omitempty"` // opcional: activa modo staffing
+}
+
+// UpdateJobDTO represents the data needed to update a job
+type UpdateJobDTO struct {
+	Title             *string  `json:"title,omitempty" binding:"omitempty,min=3,max=255"`
+	Description       *string  `json:"description,omitempty"`
+	SalaryMin         *float64 `json:"salary_min,omitempty"`
+	SalaryMax         *float64 `json:"salary_max,omitempty"`
+	Requirements      *string  `json:"requirements,omitempty"`
+	Benefits          *string  `json:"benefits,omitempty"`
+	Status            *string  `json:"status,omitempty" binding:"omitempty,oneof=draft published closed"`
+	LocationType      *string  `json:"location_type,omitempty"` // Validar contra system_values.work_mode
+	CityID            *uint    `json:"city_id,omitempty"`
+	AssignedRecruiter *uint    `json:"assigned_recruiter,omitempty"`
+	HiringManager     *uint    `json:"hiring_manager,omitempty"`
+	DepartmentID      *uint    `json:"department_id,omitempty"` // use 0 para quitar el departamento
+	StaffingClientID  *uint    `json:"staffing_client_id,omitempty"`
+}
+
+// ToJobResponse converts a Job model to JobResponseDTO
+func ToJobResponse(job *models.Job) JobResponseDTO {
+	response := JobResponseDTO{
+		ID:                job.ID,
+		CreatedAt:         job.CreatedAt,
+		UpdatedAt:         job.UpdatedAt,
+		CompanyID:         job.CompanyID,
+		Company:           job.Company,
+		Title:             job.Title,
+		Description:       job.Description,
+		SalaryMin:         job.SalaryMin,
+		SalaryMax:         job.SalaryMax,
+		Requirements:      job.Requirements,
+		Benefits:          job.Benefits,
+		Status:            job.Status,
+		LocationType:      job.LocationType,
+		CityID:            job.CityID,
+		City:              job.City,
+		AssignedRecruiter: job.AssignedRecruiter,
+		HiringManager:     job.HiringManager,
+		DepartmentID:      job.DepartmentID,
+		StaffingClientID:  job.StaffingClientID,
+	}
+	if job.Department != nil {
+		response.Department = ToDepartmentResponse(job.Department)
+	}
+	return response
+}
+
+// ToJobResponseList converts a slice of Job models to JobResponseDTO slice
+func ToJobResponseList(jobs []models.Job) []JobResponseDTO {
+	result := make([]JobResponseDTO, len(jobs))
+	for i, job := range jobs {
+		result[i] = ToJobResponse(&job)
+	}
+	return result
+}

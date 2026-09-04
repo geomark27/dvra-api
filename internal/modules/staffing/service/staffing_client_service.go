@@ -3,10 +3,9 @@
 package service
 
 import (
-	"dvra-api/internal/app/dtos"
-	"dvra-api/internal/app/models"
 	"dvra-api/internal/modules/staffing/domain"
 	"dvra-api/internal/shared/apperr"
+	"dvra-api/internal/shared/models"
 	"dvra-api/internal/shared/tenant"
 )
 
@@ -19,7 +18,7 @@ func NewStaffingClientService(repo domain.StaffingClientRepository) *StaffingCli
 	return &StaffingClientService{repo: repo}
 }
 
-func (s *StaffingClientService) GetByCompanyID(companyID uint, filters dtos.StaffingClientFilters) ([]models.StaffingClient, error) {
+func (s *StaffingClientService) GetByCompanyID(companyID uint, filters domain.StaffingClientFilters) ([]models.StaffingClient, error) {
 	return s.repo.GetByCompanyID(companyID, filters.Status)
 }
 
@@ -37,7 +36,7 @@ func (s *StaffingClientService) GetByID(id uint, scope tenant.Scope) (*models.St
 	return client, nil
 }
 
-func (s *StaffingClientService) Create(dto dtos.CreateStaffingClientDTO) (*models.StaffingClient, error) {
+func (s *StaffingClientService) Create(dto CreateStaffingClientDTO) (*models.StaffingClient, error) {
 	exists, err := s.repo.ExistsBySlug(dto.CompanyID, dto.Slug, 0)
 	if err != nil {
 		return nil, err
@@ -67,7 +66,7 @@ func (s *StaffingClientService) Create(dto dtos.CreateStaffingClientDTO) (*model
 	return s.repo.Create(client)
 }
 
-func (s *StaffingClientService) Update(id uint, scope tenant.Scope, dto dtos.UpdateStaffingClientDTO) (*models.StaffingClient, error) {
+func (s *StaffingClientService) Update(id uint, scope tenant.Scope, dto UpdateStaffingClientDTO) (*models.StaffingClient, error) {
 	client, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
