@@ -374,8 +374,10 @@ merge: ## Fusiona el PR de la rama actual en develop con merge commit; pregunta 
 	@MERGE_YES=$(yes) bash scripts/merge.sh
 
 finish: ## Tras fusionar el PR: vuelve a develop, la actualiza y borra las ramas ya fusionadas
+	@git fetch $(REMOTE) $(BASE):$(BASE) 2>/dev/null || [ "$(BRANCH)" = "$(BASE)" ] || { echo "no se pudo actualizar $(BASE)"; exit 1; }
 	git switch $(BASE)
-	@$(MAKE) --no-print-directory sync prune
+	@git pull --ff-only $(REMOTE) $(BASE)
+	@$(MAKE) --no-print-directory prune
 
 push-pr: ## push + pr
 	@$(MAKE) --no-print-directory push

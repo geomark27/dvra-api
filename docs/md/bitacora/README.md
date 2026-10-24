@@ -26,6 +26,7 @@ se enlazan entre sí; no se usan subcarpetas.
 |---|---|---|---|---|
 | [001](./fase-0/001-plan-fase-0.md) | Plan de la fase 0 y estructura de la bitácora | `docs/fase-0-plan` | 2026-10-24 | Roadmap por fases, bitácora por carpetas, histórico congelado |
 | [002](./fase-0/002-makefile-flujo-git.md) | Makefile con el flujo de ramas y PR | `docs/fase-0-plan` | 2026-10-24 | `make start/commit/push/pr/merge/finish/ship` sobre `develop`, más `make promote`; `push` ya no hace `git add .` |
+| [003](./fase-0/003-finish-actualiza-base.md) | `make finish` actualiza develop antes de cambiar de rama | `fix/infra-finish-actualiza-base` | 2026-10-24 | Evita ejecutar el `sync` viejo cuando el PR cambia el `Makefile` |
 
 ## Formato de cada entrada
 
