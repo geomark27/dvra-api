@@ -1,8 +1,8 @@
-# Bitácora de Actividades — Dvra API
+# Bitácora histórica — Dvra API (hasta 2026-08-28)
 
 > Registro cronológico de implementaciones, auditorías y decisiones técnicas.
 > Consolida los antiguos `MULTI_COMPANY_IMPLEMENTATION.md`, `SECURITY_AUDIT.md` y `SUPERADMIN_IMPLEMENTATION.md`.
-> Las entradas más recientes van al inicio. Para detalle vigente de cada módulo, ver `docs/md/tecnico/`.
+> **Archivo congelado:** no se le añaden entradas. La bitácora vigente es por fases (`README.md` de esta carpeta). Las entradas más recientes van al inicio. Para detalle vigente de cada módulo, ver `docs/md/tecnico/`.
 
 ---
 
@@ -720,50 +720,3 @@ Se introdujo `tenant.Scope` fail-closed y se migraron repositorios ATS críticos
 - [ ] Fase 3: onboarding post-registro (wizard, configuración inicial, importación de datos)
 
 **Referencia vigente:** `tecnico/FLUJO_CLIENTE.md` y `tecnico/API_ENDPOINTS.md`
-
----
-
-## Formato para nuevas entradas
-
-Tres secciones **obligatorias** (`Qué se hizo`, `Pendientes`, `Referencia vigente`) y cinco
-opcionales que se usan cuando aportan. Entradas nuevas **al inicio** del archivo.
-
-```markdown
-## AAAA-MM-DD — Título corto
-
-**Contexto:** (opcional — 1-3 líneas: qué problema motivó el cambio)
-
-**Qué se hizo:**
-- ...
-
-**Decisiones clave:** (opcional — solo si condicionan código futuro; si la decisión
-es arquitectónica, aquí va el enlace al ADR, no la argumentación)
-- ...
-
-**Bugs corregidos:** (opcional)
-- ...
-
-**Verificado:** (opcional — comandos ejecutados y su resultado)
-- `make check` → OK
-
-**Operación:** (opcional — migraciones, variables de entorno, pasos de despliegue)
-- ...
-
-**Pendientes:**
-- [ ] ...
-
-**Referencia vigente:** `tecnico/...`
-
-**Contraparte:** dvra-web — entrada `AAAA-MM-DD — <mismo título>`
-  (obligatorio solo si el cambio toca ambos repositorios)
-```
-
-### Reglas
-
-- Una entrada por **feature o decisión técnica**, no por commit.
-- **Bitácora vs ADR:** la bitácora dice *qué se hizo y cuándo*; el ADR dice *por qué se decidió
-  así y qué se descartó*. Si una entrada tiene "Decisiones clave" que restringen código futuro,
-  debe enlazar un ADR existente o crear uno.
-- Cuando el cambio toca también el frontend, ambas bitácoras llevan una entrada con la **misma
-  fecha y el mismo título**, cada una describiendo su lado, y el campo `Contraparte` relleno.
-- La bitácora del frontend vive en la ruta espejo: `dvra-web/docs/md/bitacora/BITACORA.md`.
