@@ -1,5 +1,7 @@
 # dvra-api - Makefile
 
+SHELL := /bin/bash
+
 # Cargar variables de entorno desde .env
 ifneq (,$(wildcard .env))
 	include .env
@@ -9,13 +11,17 @@ endif
 .PHONY: help build run test test-coverage fmt vet fmt-check lint check hooks-install \
 	deps clean dev dev-full fresh install-tools up down restart logs logs-api \
 	ps rebuild db-up db-down db-restart db-logs db-clean clean-all db-shell \
-	db-fresh db-fresh-full db-migrate db-seed db-location push pull status sync swagger
+	db-fresh db-fresh-full db-migrate db-seed db-location swagger \
+	sync start commit push pr merge finish push-pr push-pr-merge merge-finish ship promote prune status
 
 # Variables
 APP_NAME=dvra-api
 BUILD_DIR=build
 CMD_DIR=cmd/$(APP_NAME)
 BRANCH := $(shell git branch --show-current)
+REMOTE ?= origin
+BASE   ?= develop
+type   ?= feat
 DOCKER ?= docker
 COMPOSE := $(DOCKER) compose
 COMPOSE_PROJECT := $(if $(COMPOSE_PROJECT_NAME),$(COMPOSE_PROJECT_NAME),dvra-ats)
@@ -71,11 +77,21 @@ help: ## Muestra esta ayuda
 	@echo "    lint               Ejecuta golangci-lint"
 	@echo "    check              Gate de calidad: fmt-check + vet + lint + test + build"
 	@echo ""
-	@echo "  Git (rama: $(BRANCH)):"
-	@echo "    push m='msg'       Add + Commit + Push a $(BRANCH)"
-	@echo "    pull               Pull desde origin/$(BRANCH)"
+	@echo "  Git (rama: $(BRANCH), base: $(BASE)):"
+	@echo "    sync               Trae origin y actualiza $(BASE) solo con fast-forward"
+	@echo "    start              Nueva rama desde $(BASE): make start name=<scope>-<slug> [type=feat|fix|docs|...]"
+	@echo "    commit m='msg'     Commit de lo staged (all=1 agrega todo); el hook valida el mensaje"
+	@echo "    push               Sube la rama y fija su upstream [force=1: --force-with-lease]"
+	@echo "    pr                 Crea el PR hacia $(BASE) (o muestra el abierto) [web=1]"
+	@echo "    merge              Fusiona el PR con merge commit, tras confirmar [yes=1]"
+	@echo "    finish             Vuelve a $(BASE), la actualiza y borra ramas fusionadas"
+	@echo "    push-pr            push + pr"
+	@echo "    push-pr-merge      push + pr + merge"
+	@echo "    merge-finish       merge + finish"
+	@echo "    ship               push + pr + merge + finish (se detiene si algo falla)"
+	@echo "    promote            Lleva develop a main (PR con merge commit, confirma antes)"
+	@echo "    prune              Borra ramas locales ya fusionadas en $(BASE)"
 	@echo "    status             Ver estado de git"
-	@echo "    sync m='msg'       Pull + Add + Commit + Push (sincronizar)"
 	@echo ""
 	@echo "  Utilidades:"
 	@echo "    clean              Limpia archivos generados"
@@ -99,9 +115,10 @@ help: ## Muestra esta ayuda
 	@echo "    make db-fresh-full && make run    Reset completo + ejecutar API"
 	@echo "    make dev-full                     Todo automatico (DB + API)"
 	@echo ""
-	@echo "  Git rapido:"
-	@echo "    make push m='fix: corregido bug en login'"
-	@echo "    make sync m='feat: nueva funcionalidad'"
+	@echo "  Ciclo de una tarea:"
+	@echo "    make start name=iam-dto-usuario   Rama feat/iam-dto-usuario desde $(BASE) al dia"
+	@echo "    make commit m='feat(iam): dto en GET /users/:id'"
+	@echo "    make ship                         push + PR + merge + volver a $(BASE)"
 	@echo ""
 	@echo "================================================================================"
 
@@ -316,57 +333,81 @@ db-location: ## Pobla datos de ubicaciones (countries, cities, etc)
 # ============================================
 # COMANDOS GIT
 # ============================================
+# Flujo: rama desde develop -> commits convencionales -> PR a develop -> merge commit;
+# develop llega a main con `make promote`. Nunca se sube ni se commitea directo a
+# develop ni a main.
 
-push: ## Push rapido: make push m='mensaje'
-	@if [ -z "$(m)" ]; then \
-		echo "Error: Debes proporcionar un mensaje"; \
-		echo "   Uso: make push m='tu mensaje de commit'"; \
-		exit 1; \
-	fi
-	@if [ "$(BRANCH)" = "main" ]; then \
-		echo "Error: no se commitea directo a main."; \
-		echo "   Crea una rama: git switch -c feat/<scope>-<slug>"; \
-		exit 1; \
-	fi
-	@echo "Agregando archivos..."
-	@git add .
-	@echo "Commiteando: $(m)"
-	@git commit -m "$(m)"
-	@echo "Pusheando a origin/$(BRANCH)..."
-	@git push origin $(BRANCH)
-	@echo "Push completado exitosamente!"
+sync: ## Trae origin y actualiza develop solo con fast-forward, estes en la rama que estes
+	@git fetch $(REMOTE)
+	@if [ "$(BRANCH)" = "$(BASE)" ]; then git pull --ff-only $(REMOTE) $(BASE); \
+	else git fetch $(REMOTE) $(BASE):$(BASE) && echo "$(BASE) al dia (sigues en $(BRANCH))"; fi
 
-pull: ## Pull desde origin
-	@echo "Pulling desde origin/$(BRANCH)..."
-	@git fetch origin
-	@git pull origin $(BRANCH)
-	@echo "Pull completado!"
+start: ## Nueva rama desde develop al dia: make start name=<scope>-<slug> [type=feat|fix|docs|refactor|chore|test|perf|build|ci]
+	@[[ "$(name)" =~ ^[a-z0-9]+(-[a-z0-9]+)*$$ ]] || { echo "name=<scope>-<slug> en minusculas y con guiones (ej: name=iam-dto-usuario)"; exit 1; }
+	@[[ "$(type)" =~ ^(feat|fix|docs|refactor|chore|test|perf|build|ci)$$ ]] || { echo "type invalido: feat, fix, docs, refactor, chore, test, perf, build o ci"; exit 1; }
+	@[ -z "$$(git status --porcelain)" ] || { echo "hay cambios sin commitear: guardalos o descartalos antes"; exit 1; }
+	@$(MAKE) --no-print-directory sync
+	git switch -c $(type)/$(name) $(BASE)
+	@git branch --unset-upstream 2>/dev/null || true
+
+commit: ## Commit de lo staged: make commit m='tipo(scope): resumen' [all=1 agrega todo lo rastreado y nuevo]
+	@[ -n "$(m)" ] || { echo "Uso: make commit m='tipo(scope): resumen'"; exit 1; }
+	@case "$(BRANCH)" in main|"$(BASE)"|"") echo "no se commitea directo a '$(BRANCH)': make start name=<scope>-<slug>"; exit 1;; esac
+	@$(if $(all),git add -A,:)
+	@[ -n "$$(git diff --cached --name-only)" ] || { echo "no hay nada staged (git add <archivos> o all=1)"; exit 1; }
+	git commit -m "$(m)"
+
+push: ## Sube la rama actual y fija su upstream [force=1 usa --force-with-lease]
+	@case "$(BRANCH)" in main|"$(BASE)"|"") echo "no se sube '$(BRANCH)' directo: make start name=<scope>-<slug>"; exit 1;; esac
+	git push -u $(REMOTE) $(BRANCH) $(if $(force),--force-with-lease,)
+
+pr: ## Crea el PR de la rama actual hacia develop (gh), o muestra el abierto; sin gh, el enlace [web=1]
+	@case "$(BRANCH)" in main|"$(BASE)"|"") echo "no hay PR desde '$(BRANCH)'"; exit 1;; esac
+	@if command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then \
+	open=$$(gh pr list --head $(BRANCH) --state open --json url --jq '.[0].url // empty'); \
+	if [ -n "$$open" ]; then echo "PR ya abierto: $$open"; \
+	else gh pr create --base $(BASE) --head $(BRANCH) --fill $(if $(web),--web,); fi; \
+	else url=$$(git remote get-url $(REMOTE) | sed -E 's#^git@([^:]+):#https://\1/#; s#\.git$$##'); \
+	echo "$$url/compare/$(BASE)...$(BRANCH)?expand=1"; fi
+
+merge: ## Fusiona el PR de la rama actual en develop con merge commit; pregunta antes [yes=1 no pregunta]
+	@MERGE_YES=$(yes) bash scripts/merge.sh
+
+finish: ## Tras fusionar el PR: vuelve a develop, la actualiza y borra las ramas ya fusionadas
+	git switch $(BASE)
+	@$(MAKE) --no-print-directory sync prune
+
+push-pr: ## push + pr
+	@$(MAKE) --no-print-directory push
+	@$(MAKE) --no-print-directory pr
+
+push-pr-merge: ## push + pr + merge
+	@$(MAKE) --no-print-directory push-pr
+	@$(MAKE) --no-print-directory merge
+
+merge-finish: ## merge + finish
+	@$(MAKE) --no-print-directory merge
+	@$(MAKE) --no-print-directory finish
+
+ship: ## Todo: push + pr + merge + finish; se detiene en el primer paso que falle
+	@$(MAKE) --no-print-directory push-pr-merge
+	@$(MAKE) --no-print-directory finish
+
+promote: ## Lleva develop a main: PR con merge commit, fusion confirmada, main y develop al dia
+	@bash scripts/promote.sh
+
+prune: ## Borra las ramas locales ya fusionadas en develop (ni main, ni develop, ni la actual, ni las recien creadas)
+	@tip=$$(git rev-parse $(BASE)); \
+	for b in $$(git branch --merged $(BASE) --format='%(refname:short)'); do \
+		case "$$b" in main|$(BASE)|$(BRANCH)) continue;; esac; \
+		[ "$$(git rev-parse "$$b")" = "$$tip" ] && continue; \
+		git branch -d "$$b"; \
+	done
 
 status: ## Ver estado de git
 	@echo "Estado de Git (rama: $(BRANCH)):"
 	@echo ""
 	@git status
-
-sync: ## Sincronizar (pull + push): make sync m='mensaje'
-	@if [ -z "$(m)" ]; then \
-		echo "Error: Debes proporcionar un mensaje"; \
-		echo "   Uso: make sync m='tu mensaje de commit'"; \
-		exit 1; \
-	fi
-	@if [ "$(BRANCH)" = "main" ]; then \
-		echo "Error: no se commitea directo a main."; \
-		echo "   Crea una rama: git switch -c feat/<scope>-<slug>"; \
-		exit 1; \
-	fi
-	@echo "Pulling cambios..."
-	@git pull origin $(BRANCH)
-	@echo "Agregando archivos..."
-	@git add .
-	@echo "Commiteando: $(m)"
-	@git commit -m "$(m)"
-	@echo "Pusheando a origin/$(BRANCH)..."
-	@git push origin $(BRANCH)
-	@echo "Sincronizacion completada!"
 
 # ============================================
 # DOCUMENTACION
